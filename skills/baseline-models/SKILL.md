@@ -1,179 +1,144 @@
 ---
 name: baseline-models
 description: >
-  Define and beat strong simple baselines before complex sports models.
-  Use when starting a modeling project, choosing reference models, or
-  checking whether a fancy model is actually earning its complexity.
-version: "0.1.0"
+  Build and evaluate strong simple sports baselines before complex models —
+  constant rates, home effects, logistic form differentials, and comparison
+  under walk-forward validation. Use at the start of every predictive project
+  and whenever an ML model needs an honesty check.
+version: "0.3.0"
 license: MIT
+metadata:
+  version: "0.3.0"
 ---
 
-# Baseline Models
+# Baseline Models for Sports
 
-Modeling-spine skill. No complex sports model is allowed to claim value
-until it beats relevant simple baselines under the same validation design.
+## Overview
 
-## When to use
+If a fancy model cannot beat simple baselines under time-safe validation, it is
+not progress. This skill defines the baseline ladder and runs it through `sports_ds`.
 
-- Starting a new predictive sports-modeling task
-- User jumps straight to ML/deep models
-- Reviewing a model with no reference comparisons
-- Deciding whether complexity is justified
-- Setting the minimum bar before richer models
+## When to Use
 
-## When not to use
+- Starting a predictive sports project
+- Auditing an ML result that looks shiny
+- Building the first model you might actually keep
 
-- Pure EDA with no predictive claim
-- Leakage inspection of an existing feature set → `leakage-audit`
-- Designing walk-forward mechanics → `validation-design`
-- Market-only evaluation with no model comparison → market skills
+---
 
-## Required inputs
+## Installation
 
-Minimum:
+```bash
+pip install -e .
+```
 
-- Prediction target (binary event, margin, total, rank, count, etc.)
-- Decision grain (game, player-game, team-season, possession, etc.)
-- Available historical window
+---
 
-Optional:
+## Baseline Ladder
 
-- Existing candidate model
-- Known strong domain baselines
-- Metric preferences tied to the decision
+| Tier | Baseline | Implemented |
+|---|---|---|
+| A | Constant train win rate / mean target | yes (`baseline_home_rate` name is constant rate on panel) |
+| B | Logistic on home + form differentials | yes (`fit_logistic_baseline`) |
+| C | Simple rating differential only | pattern below / ratings skill |
 
-## Baseline tiers
+---
 
-Build from lower to higher. A candidate model must beat the strongest
-applicable baseline tier you can implement honestly.
+## Run Baselines via Pipeline
 
-### Tier A — Naive / null
+```bash
+sports-ds nfl-win-pipeline --seasons 2018-2024
+```
 
-Examples (sport-agnostic forms):
+Reports constant vs logistic vs hist GBM on each walk-forward season.
 
-- Global base rate / mean / median
-- Home/away stratified base rate when that split is known pre-event
-- Season-to-date mean with time-safe availability
-- Last-value / moving average where appropriate
+## Python
 
-### Tier B — Simple structural
+```python
+from sports_ds.data.nfl import load_team_game_panel
+from sports_ds.features.team_form import add_pregame_form_features
+from sports_ds.models.baselines import baseline_home_rate, fit_logistic_baseline
+from sports_ds.validation.splits import season_walk_forward_masks
 
-Examples:
+df = add_pregame_form_features(load_team_game_panel(list(range(2018, 2025)))).dropna()
+features = [
+    "is_home",
+    "feature_win_pct_diff",
+    "feature_diff_diff",
+    "feature_roll3_win_diff",
+    "feature_roll5_diff_diff",
+]
 
-- Linear / logistic model on a few pre-event ratings or form features
-- Elo-like or strength-difference baseline
-- Poisson/negbin mean model for counts
-- Opponent-adjusted average where computable without leakage
+for season, tr, te in season_walk_forward_masks(df):
+    c = baseline_home_rate(df, tr, te)
+    _, loc, _ = fit_logistic_baseline(df, features, tr, te)
+    print(season, c.log_loss, loc.log_loss, loc.accuracy)
+```
 
-### Tier C — Strong classical
+Code:
 
-Examples:
+- `src/sports_ds/models/baselines.py`
+- `src/sports_ds/pipelines/nfl_win_model.py`
 
-- Regularized linear models with a small curated feature set
-- Gradient-boosted trees only after A/B exist as references
-- Simple ensembles of strong simples (not stack-of-stacks first)
+---
 
-Rule: **Tier C is not a free pass.** It still must beat A/B on time-safe validation.
+## What “Good” Looks Like
+
+- Logistic log-loss < constant on most folds
+- Coefficients point the right way (home > 0 in log-odds)
+- Gains are not from one freak season only
+
+If trees barely beat logistic, prefer logistic unless you have a strong reason.
+
+---
+
+## Home-only Baseline Pattern
+
+```python
+import statsmodels.formula.api as smf
+import statsmodels.api as sm
+
+fit = smf.glm("won ~ is_home", data=train, family=sm.families.Binomial()).fit()
+print(fit.summary())
+```
+
+---
 
 ## Procedure
 
-1. **Freeze the target and prediction time**
-   - What is predicted?
-   - At what timestamp must all inputs be known?
+1. Define target + metric.
+2. Implement Tier A constant baseline.
+3. Implement Tier B simple model with legal features.
+4. Walk-forward evaluate both.
+5. Only then try ML (`predictive-modeling`).
+6. Keep the simplest model that wins.
 
-2. **Choose metrics that match the decision**
-   - Classification: log-loss / Brier first; accuracy secondary
-   - Continuous: MAE/RMSE plus bias checks
-   - Ranking: appropriate ranking loss if rank is the product
-   - Do not optimize only vanity accuracy
+---
 
-3. **Implement Tier A baselines**
-   - Document formulas
-   - Ensure time-safe computation (no future data)
+## Bundled Resources
 
-4. **Implement at least one Tier B baseline**
-   - Prefer interpretable strength/form models
-   - Same splits/metrics as candidate
+### references/
 
-5. **Only then train the candidate model**
-   - Same features availability timestamp
-   - Same validation scheme (`validation-design`)
+- `baseline_ladder.md`
 
-6. **Compare on the held-out / walk-forward windows**
-   - Absolute metric deltas
-   - Stability across seasons/regimes
-   - Calibration if probabilities are produced (`risk` / `calibration-check`)
+### scripts/
 
-7. **Complexity verdict**
+- `run_baselines.py` — print constant vs logistic fold metrics
 
-| Result | Verdict |
-|---|---|
-| Candidate loses to A or B | `reject-complexity` |
-| Ties within noise | `not-earned` |
-| Beats B honestly and stably | `complexity-justified` |
-| Beats B only in-sample | `invalid-comparison` |
-
-8. **Record baseline card**
-   - Baseline definitions
-   - Metrics
-   - Windows
-   - Verdict
-
-## Hard constraints
-
-- Never evaluate a complex model without at least Tier A and one Tier B baseline
-- Never compare models on different splits or different row filters
-- Never tune baselines on the final test window after candidate tuning
-- Never report only the metric that favors the candidate
-- Never use future-knowing baselines (final standings, post-event restatements)
-- If baseline data is unavailable, downgrade claim level instead of skipping baselines quietly
-
-## Anti-patterns
-
-- **Deep learning first**
-- **Baseline as strawman:** intentionally weak null to make ML look good
-- **Train-test contamination in baseline stats**
-- **One-season miracle comparisons**
-- **Metric laundering:** switch metrics after seeing results
-- **Feature mismatch:** candidate gets extra leaked fields baselines never had
-- **Ensemble theater:** stacking weak models instead of improving the baseline
-
-## Output contract
-
-Done means:
-
-- [ ] Target + prediction timestamp defined
-- [ ] Metrics justified
-- [ ] Tier A baseline implemented/documented
-- [ ] Tier B baseline implemented/documented
-- [ ] Candidate compared on the same validation design
-- [ ] Complexity verdict issued
-- [ ] What must improve before more complexity is allowed
+---
 
 ## Handoffs
 
-- `sports-modeling-doctrine` — update standards after baseline results
-- `feature-rules` — build cleaner simple features for Tier B/C
-- `validation-design` — formalize splits/walk-forward
-- `leakage-audit` — if baseline or candidate may be time-contaminated
-- `results-reporting` — publish baseline comparisons
-- `model-card` — persist baseline comparisons
-- **Stop** on `reject-complexity` unless a new design/data plan exists
+- Features → `feature-rules`
+- ML comparison → `predictive-modeling`
+- Inference writeup → `statistical-modeling`
+- Validation design → `validation-design`
 
-## Worked example
+---
 
-**Request:** “Train XGBoost to predict home win probability.”
+## Command Card
 
-1. Target: home win; prediction time = scheduled start.
-2. Metrics: log-loss + Brier; accuracy secondary.
-3. Tier A: home win base rate by season-to-date (time-safe).
-4. Tier B: logistic model on pre-event rating difference + rest indicator.
-5. Candidate: XGBoost on expanded pre-event features.
-6. Walk-forward result (illustrative): XGBoost log-loss worse than Tier B.
-7. Verdict: `reject-complexity`. Keep/improve Tier B; do not ship XGBoost as progress.
-
-## References
-
-- Doctrine baselines requirement: `skills/doctrine`
-- Validation mechanics: `skills/validation-design`
-- Feature timing: `skills/feature-rules`
+```bash
+python skills/baseline-models/scripts/run_baselines.py --seasons 2018-2024
+sports-ds nfl-win-pipeline --seasons 2018-2024
+```

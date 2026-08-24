@@ -32,7 +32,7 @@ node_modules/
 .vscode/
 
 # Data dumps / notebooks checkpoints (keep examples intentional)
-data/
+/data/
 *.parquet
 *.feather
 *.h5

@@ -1,191 +1,188 @@
 ---
 name: validation-design
 description: >
-  Design time-safe validation for sports models: walk-forward splits,
-  embargoes, regime awareness, and metric plans. Use before training or
-  when a backtest needs a trustworthy evaluation design.
-version: "0.1.0"
+  Design and run time-safe validation for sports models — season walk-forward,
+  embargo rules, metric locks, and fold reporting. Use before claiming a model
+  works, when replacing random K-fold on games/seasons, or when wiring
+  sports_ds.validation into a new pipeline.
+version: "0.3.0"
 license: MIT
+metadata:
+  version: "0.3.0"
 ---
 
-# Validation Design
+# Validation Design for Sports
 
-Modeling-spine skill that locks how sports models are evaluated before
-results can be trusted. Chronology is the default; random splits are guilty
-until proven innocent.
+## Overview
 
-## When to use
+Sports results are ordered in time. Random row splits leak future structure.
+This skill standardizes walk-forward validation and hooks it to `sports_ds`.
 
-- Before training candidates for a paper claim
-- User asks for train/test split advice on sports data
-- Replacing random K-fold on games/seasons
-- Defining walk-forward, expanding windows, or embargo gaps
-- Setting metric plan tied to the decision
+## When to Use
 
-## When not to use
+- Any predictive sports model evaluation
+- Designing folds for a new pipeline
+- Reviewing someone else’s backtest design
+- Choosing metrics before fitting
 
-- Feature legality details → `feature-rules` / `leakage-audit`
-- Baseline selection → `baseline-models`
-- Final narrative claim gate → `doctrine`
-- Calibration deep-dive → `calibration-check` / `risk`
+## When Not to Use
 
-## Required inputs
+- Pure EDA with no model
+- One-off coefficient exploration on a fixed window (still say it is not walk-forward)
 
-Minimum:
+---
 
-- Prediction timestamp rule T
-- Target + grain
-- Historical time span available
-- Claim level sought (`explore` / `paper` / `market-relative`)
+## Installation
 
-Optional:
+```bash
+pip install -e .
+```
 
-- Season/regime boundaries
-- Sample size constraints
-- Production retraining cadence
+---
 
-## Default stance
+## Default Protocol
 
-For almost all sports event prediction:
+1. Sort entities by time (`season`, `week`, `gameday`).
+2. Choose primary metric **before** fitting (log-loss for probs; MAE for margins).
+3. Walk forward by season (or another honest time block).
+4. Train only on past blocks.
+5. Tune only inside training data.
+6. Report per-fold and mean metrics vs baselines.
+7. Do not revisit the final fold repeatedly to shop results.
 
-- Order by time
-- Train on past → validate on future
-- Re-run across multiple forward steps
-- Keep a final untouched holdout if enough history exists
+---
 
-Random row K-fold is inappropriate for standard pre-event prediction.
+## Implemented Splitter
 
-## Validation patterns
+```python
+from sports_ds.validation.splits import season_walk_forward_masks
 
-### 1) Walk-forward (default)
+for test_season, train_mask, test_mask in season_walk_forward_masks(df, min_train_seasons=2):
+    ...
+```
 
-- Fold i train: events with time < t_i
-- Fold i test: events in [t_i, t_{i+1})
-- Step through seasons or month/week blocks
+Behavior:
 
-### 2) Expanding window
+- seasons sorted ascending
+- for test season S, train = all seasons < S
+- skips until `min_train_seasons` prior seasons exist
 
-- Train from origin to t_i, test next block
-- Good when early history is scarce but still relevant
+---
 
-### 3) Sliding window
+## Full Evaluation Example
 
-- Train only recent W history before each test block
-- Use when regimes shift and ancient history hurts
+```python
+from sports_ds.data.nfl import load_team_game_panel
+from sports_ds.features.team_form import add_pregame_form_features
+from sports_ds.models.baselines import baseline_home_rate, fit_logistic_baseline
+from sports_ds.validation.splits import season_walk_forward_masks
 
-### 4) Embargo / gap
+panel = load_team_game_panel(list(range(2018, 2025)))
+df = add_pregame_form_features(panel).dropna()
+features = ["is_home", "feature_win_pct_diff", "feature_diff_diff"]
 
-- Leave a gap between train and test when labels or features settle late
-- Required when post-event corrections or delayed reports exist
+for season, tr, te in season_walk_forward_masks(df):
+    b = baseline_home_rate(df, tr, te)
+    _, m, _ = fit_logistic_baseline(df, features, tr, te)
+    print(season, b.log_loss, m.log_loss)
+```
 
-### 5) Grouped time splits
+Or:
 
-- Group by event/game ID so related rows do not cross splits
-- Player-game rows from the same event stay together
+```bash
+sports-ds nfl-win-pipeline --seasons 2018-2024
+```
 
-### 6) Final holdout
+---
 
-- Last season/block sealed until one end evaluation
-- Not for repeated peeking
+## Metric Lock Guide
 
-## Procedure
+| Task | Primary | Secondary |
+|---|---|---|
+| Win probability | log-loss | Brier, calibration |
+| Margin | MAE | RMSE, bias |
+| Counts | MAE / deviance | calibration of rates |
+| Ranking | Spearman on holdout period | pairwise accuracy |
 
-1. **Confirm task chronology**
-   - Pre-event, in-game, or post-event analytical?
-   - Choose split family accordingly
+Accuracy alone is not enough for imbalanced or base-rate-driven outcomes.
 
-2. **Choose primary metrics before fitting**
-   - Probabilistic: log-loss, Brier
-   - Continuous: MAE/RMSE + bias
-   - Decision-aware metrics only if decision rule is explicit
-   - Secondary metrics allowed; primary locked first
+---
 
-3. **Pick split scheme**
-   - Default walk-forward by season or date block
-   - Add group constraints by event ID
-   - Add embargo if needed
+## Design Patterns
 
-4. **Define regime slices in advance**
-   - Seasons, rule-change eras, pre/post structural breaks
-   - Report performance by slice, not only pooled
+### Season walk-forward (default)
 
-5. **Lock tuning rules**
-   - Hyperparams tuned inside training folds only
-   - No retuning on final holdout repeatedly
-   - Early stopping must not peek across the fold boundary improperly
+Best default for NFL/NBA/MLB season sports.
 
-6. **Sample-size sanity**
-   - If test blocks are tiny, widen blocks or demote claim level
-   - Do not manufacture certainty from 30 events
+### Expanding vs sliding train window
 
-7. **Write the validation charter**
-   - Split diagram in words
-   - Metrics
-   - Tuning scope
-   - Success threshold vs baselines
-   - Failure conditions
+- Expanding: all past seasons (more data)
+- Sliding: last K seasons only (if rules/style changed)
 
-8. **Only then train/evaluate**
-   - Hand off execution to modeling code
-   - After results: `doctrine` verdict, maybe `backtest-critique`
+### Grouping
 
-## Hard constraints
+Never split rows from the same game across train/test for game-level leakage edge cases. Team-game panels used here evaluate each team row; be careful interpreting accuracy as game accuracy (double rows per game).
 
-- Never random-split time-ordered sports events by default
-- Never choose the split method after seeing which one makes the model win
-- Never tune on the final holdout
-- Never pool regimes to hide failures without reporting slices
-- Never claim robustness from a single test season unless data forces it (and then claim level stays humble)
-- Success thresholds must be stated relative to baselines
+### Embargo
 
-## Anti-patterns
+If features settle days after a game (official corrections), leave a gap between train max date and test min date.
 
-- **K-fold cosplay** on games
-- **Shuffle then scale then split** pipelines that bleed info
-- **Holdout tourism:** repeat visits to the “final” season
-- **Metric fishing after results**
-- **One giant test set with no walk-forward path for production realism**
-- **Ignoring event grouping** so half a game’s rows train and half test
-- **Optimistic early stopping** using true test labels indirectly
+---
 
-## Output contract
+## Anti-Patterns
 
-Done means:
+- Random K-fold on games
+- StandardScaler fit on full dataset before split
+- Early stopping against the true test fold
+- Dropping the ugly season after seeing scores
+- Tuning until one holdout looks good
 
-- [ ] Task chronology stated
-- [ ] Primary metrics locked
-- [ ] Split scheme specified (including grouping/embargo)
-- [ ] Regime slices predefined
-- [ ] Tuning rules locked
-- [ ] Success threshold vs baselines stated
-- [ ] Validation charter written before candidate worship
-- [ ] Claim-level implications noted if history is short
+---
+
+## Validation Charter Template
+
+```text
+Target: …
+Grain: …
+Decision time T: …
+Primary metric: …
+Baselines: …
+Split: season walk-forward, min_train_seasons=2
+Tune: inside training seasons only
+Success: beat baselines on mean walk-forward primary metric and on ≥ majority of folds
+```
+
+---
+
+## Bundled Resources
+
+### references/
+
+- `split_patterns.md`
+
+### scripts/
+
+- `print_folds.py` — show walk-forward fold sizes for a season range
+
+### package code
+
+- `src/sports_ds/validation/splits.py`
+- `src/sports_ds/pipelines/nfl_win_model.py`
+
+---
 
 ## Handoffs
 
-- `baseline-models` — evaluate baselines under this charter
-- `feature-rules` / `leakage-audit` — ensure inputs match split time safety
-- `backtest-critique` — review results produced under (or without) a charter
-- `doctrine` — convert outcomes into ship/revise/kill
-- `calibration-check` — probability quality on forward folds
-- `experiment-log` — store charter + results
-- **Stop** if no honest split is possible with available data; stay `explore`
+- Features → `feature-rules`
+- Models → `statistical-modeling` / `predictive-modeling`
+- Leakage → `leakage-audit`
+- Report → `results-reporting`
 
-## Worked example
+---
 
-**Request:** “We have 8 seasons of team-game data. Split it for a home-win model.”
+## Command Card
 
-1. Chronology: pre-event.
-2. Metrics: log-loss primary, Brier secondary.
-3. Scheme: walk-forward by season; train past seasons → test next season.
-4. Grouping: game-level rows already unique by game ID.
-5. Embargo: none if all features are pre-event final; else gap for delayed stats.
-6. Holdout: optional final season sealed after model family chosen on earlier folds.
-7. Success: beat Tier A base rate and Tier B rating model on log-loss in ≥ majority of forward seasons, no single-season-only miracle.
-8. Charter written before XGBoost tuning begins.
-
-## References
-
-- Doctrine evidence hierarchy: `skills/doctrine`
-- Baselines: `skills/baseline-models`
-- Leakage: `skills/leakage-audit`
+```bash
+python skills/validation-design/scripts/print_folds.py --seasons 2018-2024
+sports-ds nfl-win-pipeline --seasons 2018-2024
+```

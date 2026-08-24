@@ -1,164 +1,169 @@
 ---
 name: feature-rules
 description: >
-  Design time-safe, leakage-aware features for sports models. Use when
-  building feature pipelines, deciding what may enter a model before an
-  event, or reviewing whether features could know the future.
-version: "0.1.0"
+  Build time-safe sports features for pre-game modeling — as-of joins, shifted
+  rolling form, opponent differentials, and legality labels. Use when creating
+  feature matrices for wins/margins/player stats or reviewing whether features
+  could know the future. Includes sports_ds.team_form builders.
+version: "0.3.0"
 license: MIT
+metadata:
+  version: "0.3.0"
 ---
 
-# Feature Rules
+# Feature Rules for Sports
 
-Modeling-spine skill for sport-agnostic feature design. Features are legal
-only if they would have been knowable at the declared prediction timestamp.
+## Overview
 
-## When to use
+A feature is legal for prediction at time T only if it would have been knowable
+at T. This skill defines the rules and the `sports_ds` builders that implement them.
 
-- Creating or reviewing a feature set
-- User says “add more stats” without timing discipline
-- Translating box scores / tracking / odds into model inputs
-- Preparing inputs for baselines or candidate models
-- Before `leakage-audit` on a finished matrix
+## When to Use
 
-## When not to use
+- Building pre-game team/player features
+- Reviewing a feature matrix for look-ahead
+- Extending form windows, rest features, rating differentials
 
-- Choosing claim level → `doctrine`
-- Full audit of an already-built pipeline → `leakage-audit`
-- Market line cleaning specifics → `market-data-hygiene`
-- Sport-rule encyclopedia dumping with no prediction timestamp
+---
 
-## Required inputs
+## Installation
 
-Minimum:
+```bash
+pip install -e .
+```
 
-- Prediction timestamp rule (e.g. scheduled start, lineup lock, midnight before)
-- Target variable
-- Raw source tables/fields available
+---
 
-Optional:
+## Legality Test
 
-- Refresh delays (injury reports, official stat corrections)
-- Feature store / as-of join support
-- Known sport-module constraints (if any)
+For every feature:
 
-## Feature legality test
+> At prediction time T, could an analyst know this value from published info at or before T?
 
-For every candidate feature ask:
+| Answer | Action |
+|---|---|
+| Yes | legal |
+| Only with delay | shift by delay |
+| No | illegal for this T |
+| Partially | encode known portion only |
 
-> At prediction time T, could an honest analyst have known this value using only information published by T?
+---
 
-If no → illegal.  
-If only with delay → shift by delay or drop.  
-If partially known → encode the known portion only.
+## Implemented Builder: pre-game team form
 
-## Feature families (sport-agnostic)
+```python
+from sports_ds.data.nfl import load_team_game_panel
+from sports_ds.features.team_form import add_pregame_form_features
 
-### Usually safe (if time-aligned)
+panel = load_team_game_panel([2022, 2023, 2024])
+feat = add_pregame_form_features(panel, windows=[3, 5])
+```
 
-- Prior-event performance aggregates ending before T
-- Pre-event market lines available at T (if using markets)
-- Schedule context known pre-event (rest days, home/away, travel distance if computed from known schedule)
-- Stable roster attributes known pre-event
+Creates shifted features:
 
-### Dangerous / often leaked
+- `pre_win_pct`, `pre_avg_pf`, `pre_avg_pa`, `pre_avg_diff`, `pre_games_played`
+- `rollW_win_pct`, `rollW_diff`
+- opponent mirrors (`opp_*`)
+- differentials used by the win model:
+  - `feature_win_pct_diff`
+  - `feature_diff_diff`
+  - `feature_roll3_win_diff`
+  - `feature_roll5_diff_diff`
 
-- Same-event box score fields
-- Final score components
-- Post-event adjusted stats restated later
-- “Season averages” that accidentally include the current event
-- Injury/lineup status not yet public at T
-- Betting results / closes after T when predicting at open
-- Target encodings computed with full-sample leakage
+All group operations use `shift(1)` before expanding/rolling.
+
+Code: `src/sports_ds/features/team_form.py`
+
+---
+
+## Feature Families
+
+### Usually legal if as-of T
+
+- prior-game aggregates ending before T
+- schedule context (home/away, rest days from known schedule)
+- ratings computed only from past games
+
+### Illegal for pre-game T
+
+- current game points/yards/EPA
+- final season averages applied to early weeks
+- post-game player participation used as pre-game availability without timestamp
 
 ### Conditional
 
-- Opening line vs close: legal only relative to declared T
-- In-game features: only for in-game prediction tasks with matching T
-- Player availability: only with timestamped source
+- injury reports (only with timestamped source)
+- in-game live features (only if T is in-game)
+
+---
+
+## Rest Days Example (pattern)
+
+```python
+# conceptual pattern: sort team games, compute days since previous game, shift-safe
+g = panel.sort_values(["team", "gameday"]).groupby("team")
+panel["rest_days"] = g["gameday"].diff().dt.days
+# rest_days already refers to gap before current game when computed as diff on sorted games
+```
+
+Validate with EDA before trusting.
+
+---
 
 ## Procedure
 
-1. **Declare T (prediction timestamp)**
-   - Write it as a rule, not a vibe
-   - One T per model claim
+1. Declare T.
+2. List raw fields + known-times.
+3. Build features with shift/as-of only.
+4. Label each feature legal/illegal.
+5. Drop illegal features.
+6. Set min history thresholds (`pre_games_played >= n`).
+7. Pass to baselines/models under walk-forward validation.
+8. Run leakage smoke tests.
 
-2. **Inventory raw fields**
-   - Source, grain, update time, correction policy
+```bash
+python skills/predictive-modeling/scripts/leakage_smoke.py
+python skills/feature-rules/scripts/feature_preview.py --seasons 2023-2024
+```
 
-3. **Propose features with as-of logic**
-   - Prefer explicit `as_of_join(entity, T)` patterns
-   - Rolling windows must end at last completed event before T
+---
 
-4. **Label each feature**
-   - `legal`
-   - `illegal`
-   - `needs-delay-shift`
-   - `needs-source-timestamp`
+## Anti-Patterns
 
-5. **Block illegal features**
-   - Do not “just try them”
-   - If user insists, mark experiment as contaminated and claim level `explore` only
+- `rolling(5).mean()` without `shift(1)`
+- merging final opponent season stats onto week 1
+- using `won` as a feature
+- mean-target encoding fit on full shuffled dataset
 
-6. **Simplify**
-   - Strong simple features before giant kitchensink sets
-   - Keep a baseline-friendly subset for Tier B models
+---
 
-7. **Emit feature contract**
-   - Name, definition, source, grain, legal status, known failure modes
+## Bundled Resources
 
-## Hard constraints
+### references/
 
-- Never include same-event outcome fields in pre-event models
-- Never compute aggregates that include the row being predicted
-- Never use future market information for earlier decision timestamps
-- Never rely on silently corrected historical stats without a versioning rule
-- Never treat anonymous “season average” columns as safe without as-of proof
-- If timestamps are missing, assume leakage risk is high and say so
+- `legality_matrix.md`
 
-## Anti-patterns
+### scripts/
 
-- **Join-and-pray:** merge tables on IDs only, ignore times
-- **Current-year leakage:** season-to-date includes current game
-- **Target sniffing:** encodings built with full dataset target history unordered
-- **Injury clairvoyance:** using final inactive list for a model stamped earlier
-- **Statboard dump:** 300 features, 0 legality labels
-- **Restatement blindness:** official corrected stats treated as available live
-- **Window cheat:** rolling(n) computed centered or backward-from-end of season
+- `feature_preview.py` — show feature null rates and head
 
-## Output contract
+### package code
 
-Done means:
+- `src/sports_ds/features/team_form.py`
 
-- [ ] Prediction timestamp rule stated
-- [ ] Feature list with legality labels
-- [ ] As-of / rolling rules specified
-- [ ] Illegal features removed or explicitly quarantined
-- [ ] Baseline-friendly subset identified
-- [ ] Residual timing risks listed
-- [ ] Ready for `leakage-audit` or modeling
+---
 
 ## Handoffs
 
-- `leakage-audit` — adversarial check of the built matrix/pipeline
-- `baseline-models` — use legal simple features in Tier B
-- `validation-design` — ensure split logic matches feature availability
-- `market-data-hygiene` — if features include odds/lines
-- `doctrine` — if feature uncertainty forces claim downgrade
-- **Stop** if T cannot be defined; do not model yet
+- EDA → `eda-sports`
+- Leakage audit → `leakage-audit`
+- Models → `baseline-models` / `statistical-modeling` / `predictive-modeling`
 
-## Worked example
+---
 
-**Request:** “Use team points per game to predict tonight’s winner.”
+## Command Card
 
-1. T = scheduled start.
-2. Illegal version: season PPG including tonight.
-3. Legal version: PPG from completed games before T only, min-games guard.
-4. Conditional: if source updates next-day corrections, use snapshot available at T or prior official dump.
-5. Output: legal feature `team_ppg_pre_event`, illegal feature rejected `team_ppg_season_final`.
-
-## References
-
-- Leakage audit: `skills/leakage-audit`
-- Validation: `skills/validation-design`
-- Doctrine time-safety: `skills/doctrine`
+```bash
+python skills/feature-rules/scripts/feature_preview.py --seasons 2022-2024
+sports-ds nfl-win-pipeline --seasons 2018-2024
+```
