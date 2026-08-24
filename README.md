@@ -6,7 +6,7 @@ A portable skill pack that turns an AI coding agent into a sports data science a
 
 Works with any host that supports the open [Agent Skills](https://agentskills.io/) standard. Also ships as an [Agent Plugins](https://agent-plugins.org/) package (`plugin.json` + `skills/`). Compatible with Cursor, Claude Code, Codex, and similar agent hosts.
 
-Skills are not thin prompt stubs. Each topic skill is an operator manual with workflows, code, reference material, and runnable scripts. The skills drive a real Python toolkit (`sports_ds`) on public data (nflverse, SportsDataverse, pybaseball, and more).
+Every skill is a full operator manual — not a thin prompt stub — with workflows, decision tables, code, reference docs, and runnable scripts. The skills drive a real Python toolkit (`sports_ds`) on public data (nflverse, SportsDataverse, pybaseball, and more).
 
 ---
 
@@ -14,6 +14,7 @@ Skills are not thin prompt stubs. Each topic skill is an operator manual with wo
 
 - [Why use this](#why-use-this)
 - [What's included](#whats-included)
+- [Skill structure](#skill-structure)
 - [Getting started](#getting-started)
 - [Prerequisites](#prerequisites)
 - [Quick examples](#quick-examples)
@@ -54,11 +55,9 @@ While an agent can use any Python package on its own, these skills give curated 
 
 ## What's included
 
-This repository provides:
-
 1. **23 sports modeling skills** under `skills/`
-   - Each skill: `SKILL.md` + `references/` + `scripts/` when applicable
-   - Topics span data loading, EDA, features, ratings, statistical modeling, ML, validation, simulation, and reporting
+   - Each skill ships `SKILL.md` + `references/` + `scripts/`
+   - Topics: doctrine, data loading, EDA, features, ratings, statistical modeling, ML, validation, leakage, calibration, simulation, interpretation, reporting
 
 2. **Installable Python toolkit: `sports_ds`**
    - Load NFL schedules / team-game panels (nflverse via nflreadpy)
@@ -77,6 +76,32 @@ This repository provides:
 
 ---
 
+## Skill structure
+
+Every skill folder looks like this:
+
+```text
+skills/<skill-id>/
+  SKILL.md          # full operator manual
+  references/       # deep method notes, checklists, templates
+  scripts/          # runnable Python helpers agents can execute
+```
+
+A skill manual typically includes:
+
+- long discovery description (when to load it)
+- overview and goal
+- when to use / boundaries
+- installation
+- ordered workflow
+- sports decision tables
+- working code against `sports_ds` or public loaders
+- reporting templates
+- hard constraints and anti-patterns
+- links to scripts and related skills
+
+---
+
 ## Getting started
 
 ### Option 1: Install skills into your agent host
@@ -91,6 +116,7 @@ After install, ask your agent things like:
 - “Build a pre-game win model with walk-forward validation”
 - “Audit these features for leakage”
 - “Fit a logistic GLM and report odds ratios and calibration”
+- “Build as-of Elo ratings and simulate 2024 win totals”
 
 ### Option 2: Clone and use the toolkit locally
 
@@ -126,11 +152,12 @@ Point your plugin-capable host at this checkout (host-specific path), reload, an
 
 ```bash
 pytest -q
-sports-ds nfl-eda --seasons 2024
 python skills/environment-setup/scripts/verify_install.py
+sports-ds nfl-eda --seasons 2024
+python skills/predictive-modeling/scripts/leakage_smoke.py
 ```
 
-You should see tests pass and a team-game panel summary (rows, teams, home win rate).
+You should see tests pass, an OK panel load, a team-game summary, and a clean leakage smoke check.
 
 ---
 
@@ -151,15 +178,17 @@ You should see tests pass and a team-game panel summary (rows, teams, home win r
 ```bash
 sports-ds nfl-eda --seasons 2023-2024
 python skills/eda-sports/scripts/panel_report.py --seasons 2023-2024 --out data/eda_panel.json
+python skills/eda-sports/scripts/coverage_table.py --seasons 2023-2024
 ```
 
 ### End-to-end walk-forward win model
 
 ```bash
 sports-ds nfl-win-pipeline --seasons 2018-2024
+python skills/predictive-modeling/scripts/run_fold_table.py --seasons 2018-2024
 ```
 
-What that does:
+What the pipeline does:
 
 1. loads NFL schedules from nflverse
 2. builds a team-game panel
@@ -167,24 +196,38 @@ What that does:
 4. walk-forward validates by season
 5. compares constant baseline vs logistic vs hist gradient boosting
 
-### Statistical model diagnostics
+### Statistical diagnostics and calibration
 
 ```bash
 python skills/statistical-modeling/scripts/glm_diagnostics.py --seasons 2018-2023
 python skills/calibration-check/scripts/calibration_report.py --seasons 2018-2024
+python skills/calibration-check/scripts/segment_calibration.py --seasons 2018-2024
+```
+
+### Features, leakage, baselines
+
+```bash
+python skills/feature-rules/scripts/feature_preview.py --seasons 2022-2024
+python skills/feature-rules/scripts/legality_report.py --seasons 2023-2024
+python skills/leakage-audit/scripts/audit_pregame_features.py --seasons 2023-2024
+python skills/baseline-models/scripts/run_baselines.py --seasons 2018-2024
 ```
 
 ### Ratings and season simulation
 
 ```bash
 python skills/ratings-strength-models/scripts/elo_asof.py --seasons 2023-2024 --out data/elo_asof.csv
+python skills/ratings-strength-models/scripts/eval_elo_baseline.py --seasons 2018-2024
 python skills/simulation-sports/scripts/season_win_sim.py --elo-csv data/elo_asof.csv --season 2024 --n-sims 5000
 ```
 
-### Leakage audit
+### Interpretation and reporting
 
 ```bash
-python skills/leakage-audit/scripts/audit_pregame_features.py --seasons 2023-2024
+python skills/model-interpretation/scripts/slice_errors.py --seasons 2018-2024
+python skills/model-interpretation/scripts/largest_misses.py --seasons 2018-2024
+sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win_pipeline.json
+python skills/results-reporting/scripts/render_pipeline_report.py --json data/nfl_win_pipeline.json
 ```
 
 ### Example agent prompts
@@ -248,23 +291,26 @@ on elo_diff + home under season walk-forward. Compare to a constant baseline.
 The pack is a pipeline, not a random pile of files:
 
 ```text
-1. Lock the question and primary metric          → sports-modeling-doctrine
-2. Install / verify runtime                      → environment-setup\n3. Choose public data source                     → data-sources
-4. Load data                                     → nflreadpy / sportsdataverse-py / pybaseball
-5. Explore                                       → eda-sports, sports-visualization
-6. Build time-safe features                      → feature-rules, time-series-sports, ratings-strength-models
-7. Fit strong simple baselines                   → baseline-models
-8. Fit statistical models and/or ML              → statistical-modeling, predictive-modeling
-9. Validate out of time                          → validation-design
-10. Audit leakage + calibration                  → leakage-audit, calibration-check
-11. Simulate if needed                           → simulation-sports
-12. Interpret and report                         → model-interpretation, results-reporting, model-card, experiment-log
-13. Clean presentation                           → anti-slop-analytics
+1. Lock the question and primary metric     → sports-modeling-doctrine
+2. Install / verify runtime                 → environment-setup
+3. Choose public data source                → data-sources
+4. Load data                                → nflreadpy / sportsdataverse-py / pybaseball
+5. Explore                                  → eda-sports, sports-visualization
+6. Build time-safe features                 → feature-rules, time-series-sports, ratings-strength-models
+7. Fit strong simple baselines              → baseline-models
+8. Fit statistical models and/or ML         → statistical-modeling, predictive-modeling
+9. Validate out of time                     → validation-design
+10. Audit leakage + calibration             → leakage-audit, calibration-check
+11. Simulate if needed                      → simulation-sports
+12. Interpret and report                    → model-interpretation, results-reporting, model-card, experiment-log
+13. Clean presentation                      → anti-slop-analytics
 ```
 
 ---
 
 ## Available skills
+
+Open any skill at `skills/<name>/SKILL.md`.
 
 ### Foundation
 | Skill | Purpose |
@@ -312,8 +358,6 @@ The pack is a pipeline, not a random pile of files:
 | [results-reporting](skills/results-reporting/) | Writeups with baselines, sample size, limits, repro |
 | [model-card](skills/model-card/) | Durable model documentation |
 | [experiment-log](skills/experiment-log/) | Reproducible experiment records |
-
-Open any skill at `skills/<name>/SKILL.md`.
 
 ---
 
@@ -386,7 +430,7 @@ sports-analytic-skills/
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-Short version: new skills should ship as full operator manuals with references and scripts where useful, stay time-safe for predictive work, and help a stranger run a real sports analysis path.
+Short version: new skills should ship as full operator manuals with references and scripts, stay time-safe for predictive work, and help a stranger run a real sports analysis path.
 
 ---
 
