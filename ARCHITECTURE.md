@@ -1,74 +1,63 @@
-# Architecture — Sports Analytic Skills
+# Architecture
 
-**Center of gravity:** sports data science for analysis, modeling, and prediction.
+## Product
 
-## 1. Goal
+A **sports data science system**:
 
-An agent-usable skill library so a coding agent can:
+1. Python package (`sports_ds`) that loads sports data, explores it, engineers features, models, validates, and reports
+2. CLI entrypoints for real workflows
+3. Agent skills that operate the package
 
-1. set up an environment
-2. load public sports data (nflverse, SportsDataverse, pybaseball, etc.)
-3. explore and visualize it
-4. engineer time-safe features
-5. fit baselines + statistical/ML models
-6. validate over time
-7. interpret, simulate, and report
+Code is the product. Skills are the interface for agents.
 
-## 2. Layers
+## Layout
 
 ```text
-┌──────────────────────────────────────────────┐
-│ Analysis & modeling skills                   │
-│ EDA, stats, ML, ratings, form, simulation    │
-├──────────────────────────────────────────────┤
-│ Data plane                                   │
-│ env setup, source choice, package loaders    │
-├──────────────────────────────────────────────┤
-│ Supporting validation / ops                  │
-│ walk-forward, leakage, calibration, logs     │
-└──────────────────────────────────────────────┘
+src/sports_ds/
+  data/          loaders (nflverse first)
+  eda/           exploratory summaries
+  features/      time-safe feature builders
+  models/        baselines + predictive models
+  validation/    walk-forward splits / metrics helpers
+  pipelines/     end-to-end workflows
+  cli.py
+skills/          agent operator manuals for the above
+scripts/         thin runners
+tests/           unit tests
 ```
 
-## 3. Domain map
-
-| Domain | Skills |
-|---|---|
-| Foundation | sports-modeling-doctrine |
-| Data | environment-setup, data-sources, nflreadpy, sportsdataverse-py, pybaseball |
-| EDA/Viz | eda-sports, sports-visualization, anti-slop-analytics |
-| Modeling | baseline-models, feature-rules, statistical-modeling, predictive-modeling, ratings-strength-models, time-series-sports |
-| Validation | validation-design, leakage-audit, calibration-check |
-| Simulation | simulation-sports |
-| Reporting | model-interpretation, model-card, results-reporting, experiment-log |
-
-## 4. Default workflow
+## Core workflow
 
 ```text
-environment-setup
- → data-sources → loader skill
- → eda-sports
- → sports-modeling-doctrine
- → feature-rules + baseline-models
- → statistical-modeling | ratings-strength-models | predictive-modeling
- → validation-design + leakage-audit
- → model-interpretation + sports-visualization
- → simulation-sports (optional)
- → results-reporting / model-card / experiment-log
+load data
+ → EDA
+ → time-safe features
+ → baselines
+ → model
+ → walk-forward validation
+ → interpret / report
 ```
 
-## 5. Package skill shape
+## Current implemented pipeline
 
-Package skills may include:
+`sports-ds nfl-win-pipeline`
 
-- `SKILL.md` workflow
-- `scripts/` smoke tests and loaders
-- pointers to upstream docs
+- data: nflverse schedules via nflreadpy
+- panel: team-game rows
+- features: pre-game form only (shifted)
+- models: constant baseline, logistic, hist GBM
+- validation: season walk-forward
 
-They teach agents how to use upstream sports data packages. They do not reimplement them.
+## Next pipelines
 
-## 6. Later
+- NFL margin/total models
+- ratings/Elo module with as-of ratings
+- NBA/MLB loaders + one model each
+- richer EDA/viz exports
 
-- deeper ML where earned
-- sport modules (NFL/MLB/NBA/NHL/soccer/golf/…)
-- more package skills when needed
-- optional workflow runner that composes skills end-to-end
+## Design rules
+
+- no future-using features in pre-game models
+- baselines before celebrating ML
+- walk-forward over random splits for season sports
+- keep package usable without any agent host

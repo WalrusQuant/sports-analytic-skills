@@ -1,0 +1,16 @@
+numpy>=1.24
+pandas>=2.0
+polars>=0.20
+pyarrow>=14.0
+scipy>=1.10
+scikit-learn>=1.3
+statsmodels>=0.14
+matplotlib>=3.7
+nflreadpy>=0.1.0
+
+[dev]
+pytest>=7.0
+
+[multi]
+sportsdataverse>=0.0.40
+pybaseball>=2.2.0
