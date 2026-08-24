@@ -3,12 +3,14 @@ name: calibration-check
 description: >
   Measure whether sports-model probabilities mean what they say. Use when
   evaluating probability quality, reliability curves, Brier score, expected
-  calibration error, or probabilistic prediction models for wins/covers/events.
-  Includes a runnable calibration report script on sports_ds pipeline outputs.
-version: "0.3.0"
+  calibration error, segment calibration, sharpness, or recalibration for
+  win/event models — even if the user only asks "how confident is this" or
+  "do these percentages make sense." Includes runnable walk-forward calibration
+  reports on sports_ds outputs and a clear verdict scale.
+version: "0.4.0"
 license: MIT
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # Calibration Check (Sports)
@@ -16,10 +18,18 @@ metadata:
 ## Overview
 
 A model can rank teams well and still be miscalibrated. If the model says 30%,
-about 30% of those cases should hit. This skill measures probability reliability
-for sports models and produces a verdict an agent can act on.
+about 30% of those cases should hit.
+
+This skill measures probability reliability for sports models and produces a
+verdict an agent can act on.
+
+Discrimination metrics (AUC, accuracy) do **not** replace calibration.
+
+---
 
 ## When to Use This Skill
+
+Use when:
 
 - Model outputs win/event probabilities
 - User asks how confident / how reliable the probs are
@@ -27,7 +37,7 @@ for sports models and produces a verdict an agent can act on.
 - Before writing results that quote probability levels
 - Comparing raw vs recalibrated probabilities
 
-## When Not to Use
+Do **not** use when:
 
 - Pure ranking tasks with no probabilistic interpretation
 - Hard labels only with no probability outputs
@@ -46,14 +56,14 @@ pip install -e .
 
 ## What to Measure
 
-1. **Reliability / calibration curve** (bin predicted prob vs observed rate)
+1. **Reliability / calibration curve** — bin predicted prob vs observed rate
 2. **Expected Calibration Error (ECE)**
-3. **Brier score** (and reliability/resolution decomposition when useful)
-4. **Log-loss** (discrimination + calibration together; not a substitute for ECE)
-5. **Segment calibration** (by season, home/away, probability tail)
-6. **Sharpness** (are probs informative, not all ~0.5?)
+3. **Brier score** (+ reliability/resolution decomposition when useful)
+4. **Log-loss** — discrimination + calibration together; not a substitute for ECE
+5. **Segment calibration** — by season, home/away, probability tail
+6. **Sharpness** — are probs informative, not all ~0.5?
 
-Discrimination metrics (AUC, accuracy) do **not** replace calibration.
+Definitions: `references/calibration_metrics.md`
 
 ---
 
@@ -66,6 +76,7 @@ Discrimination metrics (AUC, accuracy) do **not** replace calibration.
 5. Slice by season and by probability tails.
 6. Issue a verdict (table below).
 7. If recalibrating, only with nested/train-proper methods — never fit isotonic on the final test fold and call it validated.
+8. Write the calibration report.
 
 ---
 
@@ -78,6 +89,13 @@ Discrimination metrics (AUC, accuracy) do **not** replace calibration.
 | `poorly-calibrated` | Probability numbers not trustworthy as probabilities |
 | `invalid-eval` | Leakage/split issues block judgment |
 
+Heuristic defaults used by the script (not laws):
+
+- ECE ≤ 0.03 and adequate n → often `well-calibrated`
+- ECE ≤ 0.07 → `usable-with-caveats`
+- else → `poorly-calibrated`
+- tiny n → caveats regardless
+
 ---
 
 ## Run on sports_ds NFL pipeline predictions
@@ -85,32 +103,37 @@ Discrimination metrics (AUC, accuracy) do **not** replace calibration.
 ### Preferred script
 
 ```bash
-# runs walk-forward logistic probs and writes calibration JSON
 python skills/calibration-check/scripts/calibration_report.py \
   --seasons 2018-2024 \
   --out data/calibration_report.json
 ```
 
-### Python API pattern
+Walk-forward logistic probs on sports_ds form features → Brier, log-loss, ECE, bin table, per-season rows, verdict.
+
+### Python API
 
 ```python
 import numpy as np
 import sys
 from pathlib import Path
 sys.path.append(str(Path("skills/calibration-check/scripts").resolve()))
-from calibration_report import calibration_table, expected_calibration_error, brier_score
+from calibration_report import (
+    calibration_table,
+    expected_calibration_error,
+    brier_score,
+    log_loss,
+)
 
 y = np.array([0, 1, 1, 0, 1], dtype=float)
 p = np.array([0.2, 0.7, 0.8, 0.4, 0.6], dtype=float)
 print(calibration_table(y, p, n_bins=5))
-print(expected_calibration_error(y, p), brier_score(y, p))
+print(expected_calibration_error(y, p), brier_score(y, p), log_loss(y, p))
 ```
 
-### From pipeline folds
+### Segment script
 
-```python
-from sports_ds.pipelines.nfl_win_model import run_nfl_win_pipeline
-# pipeline already walk-forward scores models; use calibration_report.py for full path
+```bash
+python skills/calibration-check/scripts/segment_calibration.py --seasons 2018-2024
 ```
 
 ---
@@ -121,23 +144,25 @@ from sports_ds.pipelines.nfl_win_model import run_nfl_win_pipeline
 |---|---|
 | Equal-width (10 bins 0–1) | default sports win probs |
 | Quantile bins | probs clump in a narrow range |
-| Tail focus (0–0.2, 0.8–1.0) | decision thresholds live in extremes |
+| Tail focus (0–0.2, 0.8–1.0) | decisions live in extremes |
 
 Always report **bin counts**. Empty bins are not evidence.
+
+See `references/binning.md`.
 
 ---
 
 ## Recalibration Rules
 
-Allowed:
-
+**Allowed**
 - Platt scaling / isotonic fit **inside training folds only**, applied to test fold
 - Nested walk-forward recalibration
 
-Not allowed:
-
-- Fit isotonic on final test labels and report that as validated calibration
+**Not allowed**
+- Fit isotonic on final test labels and call it validated
 - Hand-edit probabilities after seeing outcomes
+
+After recalibration, re-report ECE/Brier on true forward folds.
 
 ---
 
@@ -165,51 +190,70 @@ Not allowed:
 
 ```text
 Calibration report
-Model: …
+Model:
 Eval: walk-forward seasons …
-n: …
-Brier: …
-ECE (10 equal-width bins): …
-Log-loss: …
-Notes by season: …
-Tail behavior: …
+n:
+Brier:
+ECE (bins=…):
+Log-loss:
+Notes by season:
+Tail behavior:
 Verdict: well-calibrated | usable-with-caveats | poorly-calibrated | invalid-eval
-Actions: …
+Actions:
 ```
 
 ---
 
 ## Worked Example
 
-**Model:** pre-game home/team win probabilities from logistic form features.  
-**Design:** season walk-forward, 10 equal-width bins.  
-**Finding:** predictions near 0.70 hit only ~0.60 over several seasons; tails overconfident.  
-**Verdict:** `poorly-calibrated` for strong confidence language.  
-**Actions:** nested recalibration experiment; until then quote ranks more carefully than exact percents.
+**Model:** pre-game team win probabilities from logistic form features  
+**Design:** season walk-forward, 10 equal-width bins  
+**Finding:** predictions near 0.70 hit only ~0.60 over several seasons; tails overconfident  
+**Verdict:** `poorly-calibrated` for strong confidence language  
+**Actions:** nested recalibration experiment; until then quote ranks more carefully than exact percents
+
+```bash
+python skills/calibration-check/scripts/calibration_report.py --seasons 2018-2024
+```
 
 ---
 
 ## Bundled Resources
 
-### scripts/
-
-- `calibration_report.py` — walk-forward calibration metrics for sports_ds NFL features
-
 ### references/
+| File | Contents |
+|---|---|
+| `calibration_metrics.md` | ECE/Brier/log-loss definitions |
+| `binning.md` | bin strategy notes |
+| `recalibration.md` | allowed recalibration patterns |
 
-- `calibration_metrics.md` — ECE/Brier definitions and pitfalls
+### scripts/
+| File | Contents |
+|---|---|
+| `calibration_report.py` | walk-forward calibration JSON |
+| `segment_calibration.py` | home/away and tail slices |
 
 ### package code
-
-- `src/sports_ds/pipelines/nfl_win_model.py`
 - `src/sports_ds/models/baselines.py`
+- `src/sports_ds/pipelines/nfl_win_model.py`
 
 ---
 
 ## Related Skills
 
-- Validation design: `validation-design`
-- Predictive models: `predictive-modeling`
-- Statistical models: `statistical-modeling`
-- Results writeup: `results-reporting`
-- Model card: `model-card`
+| Need | Skill |
+|---|---|
+| Validation design | `validation-design` |
+| Predictive models | `predictive-modeling` |
+| Statistical models | `statistical-modeling` |
+| Results writeup | `results-reporting` |
+| Model card | `model-card` |
+
+---
+
+## Quick Command Card
+
+```bash
+python skills/calibration-check/scripts/calibration_report.py --seasons 2018-2024
+python skills/calibration-check/scripts/segment_calibration.py --seasons 2018-2024
+```
