@@ -63,13 +63,19 @@ While an agent can use any Python package on its own, these skills give curated 
    - Load NFL schedules / team-game panels (nflverse via nflreadpy)
    - EDA summaries
    - Time-safe pre-game form features
-   - Baselines and classifiers
+   - As-of Elo ratings
+   - Baselines, classifiers, margin regressors
+   - Calibration + leakage audit helpers
    - Season walk-forward validation
-   - End-to-end win model pipeline
+   - End-to-end win, margin, and Elo baseline pipelines
 
 3. **CLI entrypoints**
    - `sports-ds nfl-eda`
    - `sports-ds nfl-win-pipeline`
+   - `sports-ds nfl-margin-pipeline`
+   - `sports-ds nfl-elo`
+   - `sports-ds calibrate`
+   - `sports-ds leakage-audit`
 
 4. **Agent plugin manifest**
    - `plugin.json` for hosts that load skill packs as plugins
@@ -181,14 +187,16 @@ python skills/eda-sports/scripts/panel_report.py --seasons 2023-2024 --out data/
 python skills/eda-sports/scripts/coverage_table.py --seasons 2023-2024
 ```
 
-### End-to-end walk-forward win model
+### End-to-end walk-forward pipelines
 
 ```bash
 sports-ds nfl-win-pipeline --seasons 2018-2024
+sports-ds nfl-margin-pipeline --seasons 2018-2024
+sports-ds nfl-elo --seasons 2018-2024
 python skills/predictive-modeling/scripts/run_fold_table.py --seasons 2018-2024
 ```
 
-What the pipeline does:
+What the win pipeline does:
 
 1. loads NFL schedules from nflverse
 2. builds a team-game panel
@@ -196,12 +204,13 @@ What the pipeline does:
 4. walk-forward validates by season
 5. compares constant baseline vs logistic vs hist gradient boosting
 
-### Statistical diagnostics and calibration
+### Calibration and leakage (package CLI)
 
 ```bash
+sports-ds calibrate --seasons 2018-2024
+sports-ds leakage-audit --seasons 2023-2024
 python skills/statistical-modeling/scripts/glm_diagnostics.py --seasons 2018-2023
 python skills/calibration-check/scripts/calibration_report.py --seasons 2018-2024
-python skills/calibration-check/scripts/segment_calibration.py --seasons 2018-2024
 ```
 
 ### Features, leakage, baselines
@@ -216,8 +225,8 @@ python skills/baseline-models/scripts/run_baselines.py --seasons 2018-2024
 ### Ratings and season simulation
 
 ```bash
+sports-ds nfl-elo --seasons 2018-2024
 python skills/ratings-strength-models/scripts/elo_asof.py --seasons 2023-2024 --out data/elo_asof.csv
-python skills/ratings-strength-models/scripts/eval_elo_baseline.py --seasons 2018-2024
 python skills/simulation-sports/scripts/season_win_sim.py --elo-csv data/elo_asof.csv --season 2024 --n-sims 5000
 ```
 
@@ -390,6 +399,9 @@ sports-analytic-skills/
 │   ├── data/
 │   ├── eda/
 │   ├── features/
+│   ├── ratings/
+│   ├── metrics/
+│   ├── audit/
 │   ├── models/
 │   ├── validation/
 │   ├── pipelines/
@@ -417,6 +429,7 @@ sports-analytic-skills/
 | Doc | Purpose |
 |---|---|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | How the skill pack and toolkit fit together |
+| [docs/product-charter.md](./docs/product-charter.md) | Product definition, scope, success criteria |
 | [docs/getting-started.md](./docs/getting-started.md) | Install and first runs |
 | [docs/data-ecosystem.md](./docs/data-ecosystem.md) | Public sports data sources |
 | [docs/environment.md](./docs/environment.md) | Runtime dependencies |

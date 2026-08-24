@@ -21,9 +21,16 @@ pip install -e ".[multi]"
 ```bash
 sports-ds nfl-eda --seasons 2023-2024
 sports-ds nfl-win-pipeline --seasons 2018-2024
+sports-ds nfl-margin-pipeline --seasons 2018-2024
+sports-ds nfl-elo --seasons 2018-2024
+sports-ds calibrate --seasons 2018-2024
+sports-ds leakage-audit --seasons 2023-2024
 ```
 
-`nfl-win-pipeline` pulls nflverse schedules, builds a team-game panel, engineers shifted pre-game form features, and walk-forward scores constant vs logistic vs hist GBM baselines.
+- `nfl-win-pipeline` — team win walk-forward (constant / logistic / hist GBM)
+- `nfl-margin-pipeline` — point-diff walk-forward (constant / ridge / hist GBR)
+- `nfl-elo` — as-of Elo + logistic baseline under walk-forward
+- `calibrate` / `leakage-audit` — trust checks on the form feature path
 
 ## Run skill scripts
 

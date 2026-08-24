@@ -1,3 +1,3 @@
-"""Sports data science toolkit."""
+"""sports_ds — sports data science toolkit."""
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
