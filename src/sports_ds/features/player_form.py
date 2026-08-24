@@ -102,6 +102,7 @@ MLB_STAT_COLS = [
     "plate_appearances",
     "at_bats",
     "hits",
+    "singles",
     "total_bases",
     "home_runs",
     "doubles",
@@ -111,31 +112,37 @@ MLB_STAT_COLS = [
     "rbi",
     "runs",
     "stolen_bases",
+    "avg",
+    "obp",
+    "slg",
+    "ops",
+    "iso",
+    "k_rate",
+    "bb_rate",
 ]
 MLB_POSITIONS = ("C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH", "OF", "TWP", "P")
 DEFAULT_MLB_PLAYER_FEATURE_COLS = [
     "is_home",
     "season_week",
+    "rest_days",
+    "batting_order_slot",
     "pre_games_played",
     "pre_fantasy_points",
-    "roll3_fantasy_points",
-    "roll5_fantasy_points",
     "ewma5_fantasy_points",
+    "roll5_fantasy_points",
+    "roll10_fantasy_points",
     "pre_plate_appearances",
-    "roll3_plate_appearances",
-    "pre_hits",
-    "roll3_hits",
+    "roll5_plate_appearances",
+    "pre_ops",
+    "ewma5_ops",
+    "roll5_ops",
+    "pre_iso",
+    "roll5_iso",
+    "pre_k_rate",
+    "pre_bb_rate",
     "pre_total_bases",
-    "roll3_total_bases",
-    "pre_home_runs",
-    "roll3_home_runs",
-    "pre_walks",
-    "roll3_walks",
-    "pre_strikeouts",
-    "roll3_strikeouts",
-    "pre_rbi",
-    "pre_runs",
-    "pre_stolen_bases",
+    "roll5_total_bases",
+    "opp_k9",
 ]
 
 
@@ -153,13 +160,19 @@ def add_pregame_player_form_features(
     Entity key: player_id. Sort: player, season, week, gameday, game_id.
     """
     if windows is None:
-        windows = [3, 5]
+        # include 10 for MLB-style longer form windows when useful
+        windows = [3, 5, 10]
     if ewma_spans is None:
         ewma_spans = [5]
     if stat_cols is None:
         # auto-detect common targets present on the panel
         candidates = list(
-            dict.fromkeys(NFL_STAT_COLS + NBA_STAT_COLS + MLB_STAT_COLS + ["fantasy_points_ppr", "fantasy_points"])
+            dict.fromkeys(
+                NFL_STAT_COLS
+                + NBA_STAT_COLS
+                + MLB_STAT_COLS
+                + ["fantasy_points_ppr", "fantasy_points"]
+            )
         )
         stat_cols = [c for c in candidates if c in panel.columns]
     if position_values is None:
@@ -185,18 +198,39 @@ def add_pregame_player_form_features(
     for col in stat_cols:
         if col not in df.columns:
             continue
-        df[f"pre_{col}"] = g[col].apply(lambda s: s.shift(1).expanding().mean())
+        s = pd.to_numeric(df[col], errors="coerce")
+        df[col] = s
+        df[f"pre_{col}"] = g[col].apply(lambda x: x.shift(1).expanding().mean())
         for w in windows:
             df[f"roll{w}_{col}"] = g[col].apply(
-                lambda s, ww=w: s.shift(1).rolling(ww, min_periods=1).mean()
+                lambda x, ww=w: x.shift(1).rolling(ww, min_periods=1).mean()
             )
         for sp in ewma_spans:
             df[f"ewma{sp}_{col}"] = g[col].apply(
-                lambda s, span=sp: s.shift(1).ewm(span=span, min_periods=1).mean()
+                lambda x, span=sp: x.shift(1).ewm(span=span, min_periods=1).mean()
             )
 
     if "week" in df.columns:
         df["season_week"] = pd.to_numeric(df["week"], errors="coerce")
+
+    # batting order slot known pre-game when lineup is set; normalize 100/200.. -> 1..9
+    if "batting_order" in df.columns:
+        bo = pd.to_numeric(df["batting_order"], errors="coerce")
+        # API often uses 100,200,...,900 or 1-9
+        slot = bo.where(bo <= 9, (bo // 100).where(bo >= 100, bo))
+        df["batting_order_slot"] = slot.clip(lower=1, upper=9)
+
+    if "rest_days" not in df.columns and "gameday" in df.columns:
+        prev = g["gameday"].shift(1)
+        df["rest_days"] = (pd.to_datetime(df["gameday"]) - pd.to_datetime(prev)).dt.days
+        df.loc[df["rest_days"].notna(), "rest_days"] = df.loc[
+            df["rest_days"].notna(), "rest_days"
+        ].clip(lower=0, upper=15)
+
+    # opp pitcher quality is game-level known at lineup time if starter is announced;
+    # keep as-is (not player-shifted). Coerce numeric.
+    if "opp_k9" in df.columns:
+        df["opp_k9"] = pd.to_numeric(df["opp_k9"], errors="coerce")
 
     if "position" in df.columns and position_values:
         for pos in position_values:

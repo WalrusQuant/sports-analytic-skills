@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.1
+
+### MLB player path to parity
+- Parallel boxscore fetch + resume cache; optional full panel parquet cache
+- Richer batter features: OPS/ISO/K%/BB% form, rest days, batting-order slot, opp starter K/9
+- Lean proven feature set + starter filter + shrunk player baseline + hist-GBR/ridge/blend ladder
+- Live dense 2023→2024 walk-forward beats constant on fantasy points (and TB/hits/PA)
+- `mlb-player-pipeline` supports `--target fantasy_points|total_bases|hits|plate_appearances`
+
 ## 0.11.0
 
 ### Player paths (NBA + MLB)

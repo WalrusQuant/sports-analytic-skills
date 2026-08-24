@@ -104,6 +104,7 @@ def main(argv: list[str] | None = None) -> int:
         default=0,
         help="Cap schedule games (0=all). Useful for smokes.",
     )
+    p_mlb_player.add_argument("--workers", type=int, default=8)
     p_mlb_player.add_argument("--json-out", default="")
 
     p_mlb_player_eda = sub.add_parser("mlb-player-eda", help="MLB player-game panel EDA summary")
@@ -319,6 +320,7 @@ def main(argv: list[str] | None = None) -> int:
             min_train_seasons=args.min_train_seasons,
             min_pa=args.min_pa,
             max_games=max_games,
+            workers=getattr(args, "workers", 8),
         )
         print(format_mlb_player_report(result))
         _maybe_json(args.json_out, result)
