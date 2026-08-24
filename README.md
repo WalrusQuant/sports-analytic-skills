@@ -72,8 +72,10 @@ While an agent can use any Python package on its own, these skills give curated 
 3. **CLI entrypoints**
    - `sports-ds nfl-eda`
    - `sports-ds nfl-win-pipeline`
+   - `sports-ds nfl-win-rich` (EWMA/rest features + logistic/GBM/Elo ensemble)
    - `sports-ds nfl-margin-pipeline`
    - `sports-ds nfl-elo`
+   - `sports-ds nfl-player-eda` / `nfl-player-pipeline` (player-level fantasy/volume models)
    - `sports-ds calibrate`
    - `sports-ds leakage-audit`
    - `sports-ds nba-eda` / `nba-win-pipeline` / `nba-margin-pipeline` / `nba-elo` (requires `pip install -e ".[multi]"`)
@@ -207,6 +209,17 @@ What the win pipeline does:
 3. engineers **pre-game only** form features (shifted, no future leak)
 4. walk-forward validates by season
 5. compares constant baseline vs logistic vs hist gradient boosting
+
+### Richer team models + player-level
+
+```bash
+sports-ds nfl-win-rich --seasons 2018-2024
+sports-ds nfl-player-eda --seasons 2023-2024
+sports-ds nfl-player-pipeline --seasons 2022-2024 --target fantasy_points_ppr
+```
+
+- `nfl-win-rich` — EWMA/rest/offense-vs-defense features + logistic / hist-GBM / form+Elo ensemble
+- `nfl-player-pipeline` — skill-position player form features, walk-forward ridge vs hist-GBR on PPR (or other targets)
 
 ### Calibration and leakage (package CLI)
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.0
+
+### Package depth
+- Richer team form features: EWMA, rest days, home/away split form, calendar week, offense-vs-defense proxies
+- `RICH_WIN_FEATURE_COLS` + `sports-ds nfl-win-rich` (logistic / hist-gbm / form+Elo ensemble ladder)
+- Form+Elo probability ensemble (`sports_ds.models.ensemble`)
+- NFL player-level path: `load_player_game_panel`, player form features, `sports-ds nfl-player-pipeline` / `nfl-player-eda`
+- Feature registry expanded for rich + player features
+- Unit tests for rich features, ensemble, player form; optional live rich/player integration tests
+
+## 0.9.1
+
+### Skill depth + tests
+- Full operator-manual pass across skill pack
+- Heavier offline integration tests (25 passing at tag)
+
 ## 0.9.0
 
 ### Package depth

@@ -21,15 +21,20 @@ pip install -e ".[multi]"
 ```bash
 sports-ds nfl-eda --seasons 2023-2024
 sports-ds nfl-win-pipeline --seasons 2018-2024
+sports-ds nfl-win-rich --seasons 2018-2024
 sports-ds nfl-margin-pipeline --seasons 2018-2024
 sports-ds nfl-elo --seasons 2018-2024
+sports-ds nfl-player-eda --seasons 2023-2024
+sports-ds nfl-player-pipeline --seasons 2022-2024 --target fantasy_points_ppr
 sports-ds calibrate --seasons 2018-2024
 sports-ds leakage-audit --seasons 2023-2024
 ```
 
 - `nfl-win-pipeline` — team win walk-forward (constant / logistic / hist GBM)
+- `nfl-win-rich` — richer features + logistic / hist-GBM / form+Elo ensemble ladder
 - `nfl-margin-pipeline` — point-diff walk-forward (constant / ridge / hist GBR)
 - `nfl-elo` — as-of Elo + logistic baseline under walk-forward
+- `nfl-player-eda` / `nfl-player-pipeline` — player-level skill-position form + walk-forward fantasy/volume models
 - `calibrate` / `leakage-audit` — trust checks on the form feature path
 - `nba-eda` / `nba-win-pipeline` / `nba-margin-pipeline` / `nba-elo` — NBA path (requires `pip install -e ".[multi]"`)
 - `mlb-eda` / `mlb-win-pipeline` / `mlb-margin-pipeline` / `mlb-elo` — MLB path (requires `[multi]`)

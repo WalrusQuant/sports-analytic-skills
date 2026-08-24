@@ -45,6 +45,34 @@ def main(argv: list[str] | None = None) -> int:
 
     p_feat = sub.add_parser("feature-registry", help="Print sports_ds feature registry")
 
+    p_rich = sub.add_parser(
+        "nfl-win-rich",
+        help="NFL rich team-win ladder (EWMA/rest features + logistic/GBM/Elo ensemble)",
+    )
+    p_rich.add_argument("--seasons", default="2018-2024")
+    p_rich.add_argument("--min-train-seasons", type=int, default=2)
+    p_rich.add_argument("--k", type=float, default=20.0)
+    p_rich.add_argument("--home-adv", type=float, default=65.0)
+    p_rich.add_argument("--json-out", default="")
+
+    p_player = sub.add_parser(
+        "nfl-player-pipeline",
+        help="NFL player-level walk-forward (fantasy/volume targets)",
+    )
+    p_player.add_argument("--seasons", default="2022-2024")
+    p_player.add_argument("--min-train-seasons", type=int, default=1)
+    p_player.add_argument("--target", default="fantasy_points_ppr")
+    p_player.add_argument(
+        "--positions",
+        default="QB,RB,WR,TE",
+        help="Comma-separated positions",
+    )
+    p_player.add_argument("--json-out", default="")
+
+    p_player_eda = sub.add_parser("nfl-player-eda", help="NFL player-game panel EDA summary")
+    p_player_eda.add_argument("--seasons", default="2023-2024")
+    p_player_eda.add_argument("--positions", default="QB,RB,WR,TE")
+
     # multi-sport win/margin/elo/eda (NBA + MLB primary; NHL kept for load/eda only)
     for sport in ("nba", "mlb", "nhl"):
         p = sub.add_parser(f"{sport}-eda", help=f"Load {sport.upper()} team-game panel EDA")
@@ -126,6 +154,60 @@ def main(argv: list[str] | None = None) -> int:
 
         seasons = _parse_seasons(args.seasons)
         print(format_summary(summarize_team_game_panel(load_team_game_panel(seasons))))
+        return 0
+
+    if args.cmd == "nfl-win-rich":
+        from sports_ds.data.nfl import load_team_game_panel
+        from sports_ds.pipelines.team_win_rich import (
+            format_team_win_rich_report,
+            run_team_win_rich_pipeline,
+        )
+
+        seasons = _parse_seasons(args.seasons)
+        panel = load_team_game_panel(seasons)
+        result = run_team_win_rich_pipeline(
+            panel,
+            sport="nfl",
+            seasons=seasons,
+            min_train_seasons=args.min_train_seasons,
+            elo_k=args.k,
+            elo_home_adv=args.home_adv,
+        )
+        print(format_team_win_rich_report(result))
+        _maybe_json(args.json_out, result, drop_keys=("eda_text",))
+        return 0
+
+    if args.cmd == "nfl-player-eda":
+        from sports_ds.data.nfl_players import load_player_game_panel
+
+        seasons = _parse_seasons(args.seasons)
+        positions = {p.strip().upper() for p in args.positions.split(",") if p.strip()}
+        panel = load_player_game_panel(seasons, positions=positions)
+        print(
+            f"NFL player panel seasons={seasons} positions={sorted(positions)}\n"
+            f"rows={len(panel)} players={panel['player_id'].nunique()}\n"
+            f"by_pos:\n{panel['position'].value_counts().to_string()}\n"
+            f"mean_ppr={panel['fantasy_points_ppr'].mean():.2f} "
+            f"median_ppr={panel['fantasy_points_ppr'].median():.2f}"
+        )
+        return 0
+
+    if args.cmd == "nfl-player-pipeline":
+        from sports_ds.pipelines.nfl_player_model import (
+            format_nfl_player_report,
+            run_nfl_player_pipeline,
+        )
+
+        seasons = _parse_seasons(args.seasons)
+        positions = {p.strip().upper() for p in args.positions.split(",") if p.strip()}
+        result = run_nfl_player_pipeline(
+            seasons,
+            target_col=args.target,
+            positions=positions,
+            min_train_seasons=args.min_train_seasons,
+        )
+        print(format_nfl_player_report(result))
+        _maybe_json(args.json_out, result)
         return 0
 
     if args.cmd in {"nba-eda", "mlb-eda", "nhl-eda"}:

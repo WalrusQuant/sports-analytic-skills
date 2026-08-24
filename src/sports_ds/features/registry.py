@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
+from sports_ds.features.team_form import DEFAULT_WIN_FEATURE_COLS, RICH_WIN_FEATURE_COLS
+
 
 @dataclass(frozen=True)
 class FeatureSpec:
@@ -52,6 +54,24 @@ FORM_FEATURE_SPECS: list[FeatureSpec] = [
         shift_rule="groupby(team).shift(1).rolling(5, min_periods=1).mean()",
     ),
     FeatureSpec(
+        name="ewma5_win",
+        formula="EWMA of prior won (span 5)",
+        legality="pre-game only",
+        shift_rule="groupby(team).shift(1).ewm(span=5).mean()",
+    ),
+    FeatureSpec(
+        name="ewma5_diff",
+        formula="EWMA of prior point_diff (span 5)",
+        legality="pre-game only",
+        shift_rule="groupby(team).shift(1).ewm(span=5).mean()",
+    ),
+    FeatureSpec(
+        name="rest_days",
+        formula="days since previous team game",
+        legality="pre-game (schedule known)",
+        shift_rule="gameday - prior gameday",
+    ),
+    FeatureSpec(
         name="feature_win_pct_diff",
         formula="pre_win_pct - opp_pre_win_pct",
         legality="pre-game only (both sides shifted)",
@@ -76,6 +96,36 @@ FORM_FEATURE_SPECS: list[FeatureSpec] = [
         shift_rule="opponent join on game_id after shift",
     ),
     FeatureSpec(
+        name="feature_ewma5_win_diff",
+        formula="ewma5_win - opp_ewma5_win",
+        legality="pre-game only",
+        shift_rule="opponent join after shift",
+    ),
+    FeatureSpec(
+        name="feature_ewma5_diff_diff",
+        formula="ewma5_diff - opp_ewma5_diff",
+        legality="pre-game only",
+        shift_rule="opponent join after shift",
+    ),
+    FeatureSpec(
+        name="feature_pf_vs_opp_pa",
+        formula="roll5_pf - opp_roll5_pa",
+        legality="pre-game only",
+        shift_rule="offense form vs opponent defense form",
+    ),
+    FeatureSpec(
+        name="feature_rest_diff",
+        formula="rest_days - opp_rest_days",
+        legality="pre-game",
+        shift_rule="schedule-derived",
+    ),
+    FeatureSpec(
+        name="season_week",
+        formula="schedule week number",
+        legality="known pre-game",
+        shift_rule="n/a",
+    ),
+    FeatureSpec(
         name="elo_pre",
         formula="as-of Elo before game update",
         legality="pre-game only",
@@ -88,17 +138,25 @@ FORM_FEATURE_SPECS: list[FeatureSpec] = [
         legality="pre-game only",
         shift_rule="as-of before game",
     ),
-]
-
-
-DEFAULT_WIN_FEATURE_COLS = [
-    "is_home",
-    "feature_win_pct_diff",
-    "feature_diff_diff",
-    "feature_roll3_win_diff",
-    "feature_roll5_diff_diff",
-    "pre_games_played",
-    "opp_pre_games_played",
+    FeatureSpec(
+        name="pre_fantasy_points_ppr",
+        formula="player expanding mean of prior PPR fantasy points",
+        legality="pre-game only",
+        shift_rule="groupby(player_id).shift(1).expanding().mean()",
+        notes="player-level; sports_ds.features.player_form",
+    ),
+    FeatureSpec(
+        name="roll3_fantasy_points_ppr",
+        formula="player rolling mean prior PPR (window 3)",
+        legality="pre-game only",
+        shift_rule="groupby(player_id).shift(1).rolling(3).mean()",
+    ),
+    FeatureSpec(
+        name="ewma5_fantasy_points_ppr",
+        formula="player EWMA prior PPR (span 5)",
+        legality="pre-game only",
+        shift_rule="groupby(player_id).shift(1).ewm(span=5).mean()",
+    ),
 ]
 
 
@@ -107,7 +165,16 @@ def list_feature_specs() -> list[dict]:
 
 
 def print_feature_registry() -> str:
-    lines = ["# sports_ds feature registry", ""]
+    lines = [
+        "# sports_ds feature registry",
+        "",
+        f"## default win cols ({len(DEFAULT_WIN_FEATURE_COLS)})",
+        ", ".join(DEFAULT_WIN_FEATURE_COLS),
+        "",
+        f"## rich win cols ({len(RICH_WIN_FEATURE_COLS)})",
+        ", ".join(RICH_WIN_FEATURE_COLS),
+        "",
+    ]
     for s in FORM_FEATURE_SPECS:
         lines.append(f"## {s.name}")
         lines.append(f"- formula: {s.formula}")
