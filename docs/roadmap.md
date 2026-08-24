@@ -32,7 +32,7 @@ Living list. Not a commitment contract.
 
 - [ ] Sport modules only after core is stable (NFL/MLB/NBA/NHL/soccer/golf/etc.; no favorite)
 - [ ] Optional harness (plan → run → critique)
-- [ ] Install docs polish for Claude Code / Cursor / OpenClaw consumers
+- [ ] Install docs polish for major Agent Skills hosts
 
 ## Never (default)
 

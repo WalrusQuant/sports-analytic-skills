@@ -1,8 +1,7 @@
 # Architecture — Sports Analytic Skills
 
-**Audience:** Adam + Kirby while building  
 **Status:** v0 design (2026-08-24)  
-**Principle:** Steal K-Dense’s *shape*, not its *size*. Steal Taste’s *judgment encoding*, not its UI domain.
+**Principle:** Portable judgment first. Small sharp core over encyclopedic skill dumps. Modeling engine first; market evaluation layered in where it earns a slot.
 
 ### Locked decisions (2026-08-24)
 
@@ -23,10 +22,7 @@ General agents are fluent and sloppy at sports analytics:
 - skip closing-line / calibration reality checks
 - invent “systems” without kill criteria
 
-Taste fixed “generic UI slop” with portable design constraints.  
-K-Dense fixed “science workflow amnesia” with a large skill library + optional harness.
-
-We want the sports-betting/analytics version of that: **portable judgment**.
+The missing piece is **portable judgment**: when a method is valid, what evidence outranks what, and when to stop.
 
 ---
 
@@ -38,7 +34,7 @@ We want the sports-betting/analytics version of that: **portable judgment**.
 **Value:** consistent sharp methodology under automation  
 **Non-goals:** tips, bankroll product, paid SaaS, live betting bot
 
-This is a **global public library project**, not an OpenClaw private skill.
+This is a **global public library project**, not a single-runtime private skill pack.
 
 ---
 
@@ -61,8 +57,8 @@ Three layers. Only layer 1 is required for v0.
          │
          ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Host runtime (Claude Code, Codex, Cursor, OpenClaw…)   │
-│  + user data/tools/MCP (not owned by this repo)         │
+│  Host runtime (any Agent Skills-compatible agent)       │
+│  + user data/tools/APIs (not owned by this repo)        │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -252,17 +248,15 @@ Rule: a sport module ships only if it encodes **domain constraints the core cann
                                │ install
           ┌────────────────────┼────────────────────┐
           ▼                    ▼                    ▼
-   Claude Code             Cursor               OpenClaw
-   ~/.agents/skills        project skills       workspace skills
+   Claude Code             Cursor              other hosts
+   ~/.agents/skills        project skills      host skill paths
 ```
 
 **Important separation:**
 
 - **Library repo** (this project) = global artifact
 - **Any one agent install** = optional consumer
-- OpenClaw may eventually install selected skills, but that is a later deliberate act — not part of scaffolding
-
-No Skill Workshop apply. No live gateway skill registration during design.
+- Publishing skills and enabling them on a specific machine are different acts
 
 ---
 
@@ -274,7 +268,7 @@ Skills are **procedure + judgment**. They are not the data plane.
 [User question]
     → host discovers skill via description frontmatter
     → agent reads SKILL.md
-    → agent uses whatever tools exist (code exec, DB, ESPN MCP, files…)
+    → agent uses whatever tools exist (code exec, DB, APIs, files…)
     → skill constraints still bind the work
 ```
 
@@ -284,7 +278,7 @@ This repo may later include:
 - example notebooks (synthetic data only by default)
 - validation scripts
 
-It should **not** require Adam’s private pipelines to understand a skill.
+It should **not** require any author’s private pipelines to understand a skill.
 
 ---
 
@@ -298,7 +292,7 @@ A skill is ready to merge when:
 4. Output contract is checkable
 5. It does not assume live bankroll or paid APIs
 6. It has at least one worked example (synthetic OK)
-7. Adam would trust it on X as free useful craft
+7. A stranger could use it as free, useful methodology without chat history
 
 ---
 
@@ -310,12 +304,10 @@ A skill is ready to merge when:
 4. Write modeling spine: `baseline-models`, `feature-rules`, `leakage-audit`, `validation-design`
 5. Write critique/output: `backtest-critique`, `model-card`, `experiment-log`
 6. Layer market skills: `market-data-hygiene`, `clv-evaluation`, `calibration-check`
-7. Dogfood on synthetic or public historical data (no private bankroll required)
-8. Publish repo when ~5–8 skills are non-embarrassing
+7. Dogfood on synthetic or public historical data
+8. Harden drafts to ready
 9. Multi-sport modules (NFL/MLB/NBA/NHL/soccer/golf/etc.) only after core is stable — no single-sport favoritism
 10. Optional harness only after public skills stabilize
-
-Work style: bite-sized sessions (including during work breaks). No big-bang.
 
 ---
 
@@ -325,17 +317,15 @@ Still open; do not block drafts on them.
 
 1. **Quant depth in v0:** frequentist-first vs light Bayesian defaults in `risk` / validation
 2. **How early to require CLV** in `backtest-critique` handoffs (hard gate vs optional when no market data)
-3. **X cadence:** skill-by-skill posts only after a skill is real
-4. **Contribution style later:** solo craft vs eventual external PRs
+3. **Contribution model:** solo maintenance vs external PRs later
 
 ---
 
 ## 11. Success metrics (project, not betting P&L)
 
-- Skills are installable by a stranger without our private context
+- Skills are installable by a stranger without private context
 - Agents following skills produce fewer leaked/overfit analyses in spot checks
 - Each published skill stands alone as a useful public artifact
-- Project stays fun and small enough to touch during normal life
-- No pressure to monetize or “run a system” live
+- Documentation stays honest about draft vs ready
 
 Betting P&L is **not** a success metric for this library.

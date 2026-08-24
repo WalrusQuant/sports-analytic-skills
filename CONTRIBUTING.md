@@ -1,22 +1,22 @@
 # Contributing
 
-This project is currently private craft work. This file still defines the contribution bar so the repo stays public-library quality from day one.
+Thanks for helping improve Sports Analytic Skills.
 
 ## Current mode
 
-- Design and documentation first
-- Skills are drafted in `skills/` only when ready to be real
-- Do not install into OpenClaw or other runtimes from this repo unless explicitly requested
-- Do not create Skill Workshop proposals unless explicitly requested
+- Skills are drafted under `skills/` with honest `draft` status until hardened
+- Prefer methodology quality over inventory growth
+- Review any skill before enabling it on an agent host
 
 ## What good looks like
 
 ### Docs changes
 
-- Keep planned vs shipped honest
+- Keep planned vs shipped vs ready honest
 - Update README badges/counts if skill inventory changes
 - Cross-link architecture, taxonomy, and roadmap when structure changes
-- No emoji-required style; plain clear writing wins
+- Keep public docs free of private tracker IDs, personal runtime notes, or internal process diary language
+- Plain clear writing; no tip-shop tone
 
 ### New skills
 
@@ -28,7 +28,7 @@ This project is currently private craft work. This file still defines the contri
 
 ### Skill quality gate
 
-A skill may be considered mergeable when:
+A skill may be considered ready when:
 
 - discovery-grade frontmatter description exists
 - when/when-not gates are explicit
@@ -70,3 +70,4 @@ Out of scope:
 - [ ] Are claims honest?
 - [ ] Are docs complete enough for a stranger?
 - [ ] Did we avoid fake “complete library” language?
+- [ ] Did we keep private tracking/process notes out of public docs?

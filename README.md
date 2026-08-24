@@ -11,14 +11,12 @@
 > Multi-sport data science judgment for AI agents.  
 > Portable `SKILL.md` packages that teach an agent how a sharp analyst models sports — and how to refuse bad work.
 
-**Sports Analytic Skills** is an open, free Agent Skills library for **sports modeling and sports analytics across sports**. It is built on the same open standards as [K-Dense Scientific Agent Skills](https://github.com/K-Dense-AI/scientific-agent-skills) and judgment-style packs like [Taste](https://github.com/leonxlnx/taste-skill):
+**Sports Analytic Skills** is an open, free Agent Skills library for **sports modeling and sports analytics across sports**. It follows the open standards for portable agent skills:
 
 - [Agent Skills](https://agentskills.io/) (`SKILL.md` + frontmatter discovery)
 - [Agent Plugins](https://agent-plugins.org/) (`plugin.json` + `skills/`)
 
 The goal is not another prompt dump. The goal is a **documented, installable methodology pack** any compatible agent host can load: Claude Code, Codex, Cursor, OpenClaw, and others.
-
-**Cadence (private tracking):** Sports Analytic Skills (`3bdd6b88-4548-49f0-a0c1-f529695920d4`)
 
 ---
 
@@ -26,15 +24,14 @@ The goal is not another prompt dump. The goal is a **documented, installable met
 
 | Item | State |
 |---|---|
-| Architecture | Locked (v0) |
-| Public docs shape | Solid v0 |
-| Skills drafted | **15** drafts (foundation + modeling + critique/ops + market + comms) |
-| Published GitHub repo | Yes — https://github.com/WalrusQuant/sports-analytic-skills |
-| Installable package | Not yet (skills exist as files; no polished release) |
-| Installed on this OpenClaw instance | **No** (intentional) |
-| Skill Workshop / live apply | **No** (intentional) |
+| Version | 0.3.0 |
+| Architecture | v0 locked |
+| Skills drafted | **15** (foundation, modeling, validation, ops, markets, comms) |
+| Skills marked ready | 0 (all still `draft`) |
+| Repository | https://github.com/WalrusQuant/sports-analytic-skills |
+| Release maturity | early public draft — usable as methodology files, not a polished product release |
 
-This repository is being built as a **real global project**, not a private one-off skill. Documentation quality is a first-class deliverable, not an afterthought.
+Documentation quality is treated as part of the product. Counts and status labels stay honest: drafted is not the same as ready.
 
 ---
 
@@ -78,12 +75,9 @@ They will:
 
 Package docs alone do not fix that. Agents can already call pandas, scikit-learn, and statsmodels. What they lack is **portable judgment**: when a method is valid, what evidence ranks higher, and when to stop.
 
-Taste fixed generic UI slop with design constraints.  
-K-Dense fixed scientific workflow amnesia with a deep skill library and serious documentation.
+This project encodes that judgment as installable skills:
 
-This project is the sports-modeling version of that idea:
-
-> Encode sharp multi-sport analytic discipline as installable skills.
+> Sharp multi-sport analytic discipline, packaged so an agent can follow it consistently.
 
 ---
 
@@ -126,7 +120,6 @@ A **global open-source skill library** for:
 - Not an autobet / book-account bot pack
 - Not a 100-empty-stub museum
 - Not a single-sport hobby repo
-- Not installed into a personal OpenClaw runtime during design
 
 If a skill would mainly help someone spam picks, it does not belong here.
 
@@ -162,8 +155,8 @@ L1  Foundation triad
     doctrine | ethics | risk
 
 Host runtime
-    Claude Code / Codex / Cursor / OpenClaw / ...
-    + user tools, data, MCP (outside this repo)
+    any Agent Skills-compatible host
+    + user tools, data, and APIs (outside this repo)
 ```
 
 ### Center of gravity
@@ -181,8 +174,6 @@ Skills are **procedure + judgment**. They are not the data plane. Agents use wha
 ---
 
 ## What's included (repo)
-
-The repository is structured like a real public pack:
 
 | Piece | Purpose |
 |---|---|
@@ -304,7 +295,7 @@ When hosts support selective install, prefer subsets over “all forever”:
 | Market-capable core | full offline core + market-data-hygiene, clv-evaluation |
 | Publish pack | market-capable core + edge-writeup, anti-slop-analytics |
 
-Runtime install into personal agents is still optional and deliberate.
+Install only the subset you need. Review skills before enabling them on a host.
 
 ---
 
@@ -360,12 +351,12 @@ git clone https://github.com/WalrusQuant/sports-analytic-skills.git ~/.agents/sk
 
 This repo already carries a valid-shaped [`plugin.json`](./plugin.json). Plugin clients discover immediate children of `skills/` that contain `SKILL.md`.
 
-### Local development right now
+### Local checkout
 
 ```bash
-cd projects/sports-analytic-skills
-ls
-# read ARCHITECTURE.md + docs/* before drafting any skill
+git clone https://github.com/WalrusQuant/sports-analytic-skills.git
+cd sports-analytic-skills
+# start with README.md, ARCHITECTURE.md, and skills/
 ```
 
 Detailed host notes: [docs/getting-started.md](./docs/getting-started.md)
@@ -405,8 +396,6 @@ Authoring rules: [docs/skill-authoring.md](./docs/skill-authoring.md)
 
 ## Documentation standard
 
-We are explicitly matching the **documentation seriousness** of packs like K-Dense, not their skill count on day one.
-
 Public docs must answer:
 
 | Question | Where it lives |
@@ -439,8 +428,6 @@ Rules for this project:
 - no skill should require hidden network calls as a default path
 - no skill should teach ToS-hostile scraping as the normal method
 - treat community contributions (if/when open) as untrusted until reviewed
-
-During private design: do not apply these skills to production agents.
 
 ---
 
@@ -479,25 +466,18 @@ Living detail: [docs/roadmap.md](./docs/roadmap.md)
 
 ## Contributing
 
-Right now this is a private craft project. Contribution rules are still written so the repo behaves like a real public library from day one.
-
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-Working rules:
+Core expectations:
 
-1. Design in this repo; skills stay uninstalled on personal runtimes until explicitly enabled
-2. Do not apply skills to a live OpenClaw instance from this project unless asked
-3. Do not create Skill Workshop proposals until asked
-4. Prefer fewer sharp skills over many shallow ones
-5. Keep docs honest about planned vs shipped
+1. Prefer fewer sharp skills over many shallow ones
+2. Keep docs honest about planned vs shipped vs ready
+3. No tip-service or autobet behavior
+4. Core skills stay sport-agnostic unless the change is a declared sport module
 
 ---
 
 ## FAQ
-
-### Is this just K-Dense with sports words?
-
-No. We steal K-Dense’s **shape** (standards, docs depth, skill packaging, optional later harness), not its scientific domain or “ship 160 skills” scale.
 
 ### Is this a betting bot framework?
 
@@ -507,21 +487,21 @@ No. Modeling and evaluation first. Market tools are an evaluation layer. No auto
 
 None. Core is sport-agnostic. Modules for NFL, MLB, NBA, NHL, soccer, golf, and others come later as equals.
 
-### Why keep the README this deep?
+### Why is the README this deep?
 
-Because the public artifact is a library, not a vibe. Docs quality is part of the product — same lesson as K-Dense.
+Because the public artifact is a library. Docs quality is part of the product.
 
-### Will this be installed into OpenClaw automatically?
+### Do I have to install every skill?
 
-No. Library repo and runtime install are separate on purpose.
+No. Prefer topical subsets. See [Suggested install subsets](#suggested-install-subsets).
 
 ### Can agents use any Python package anyway?
 
 Yes. Skills do not replace libraries. They constrain method, evidence, and claims when doing sports modeling work.
 
-### When is a skill “done”?
+### When is a skill “ready”?
 
-When a stranger can install it, follow it, and an agent is less likely to leak, overfit, or overclaim. See quality bar in [ARCHITECTURE.md](./ARCHITECTURE.md).
+When a stranger can install it, follow it, and an agent is less likely to leak, overfit, or overclaim. See the quality bar in [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 

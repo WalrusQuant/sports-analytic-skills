@@ -1,6 +1,6 @@
 # Documentation standard
 
-We are matching the **documentation seriousness** of high-quality public skill libraries (especially K-Dense), not their inventory size.
+Documentation is part of the product. Public docs should help a stranger understand and use the library without private context.
 
 ## Why this file exists
 
@@ -11,29 +11,38 @@ A skill pack fails quietly when:
 - install story is missing
 - skill contracts are inconsistent
 - strangers cannot tell what the system is for
+- public docs mix in private trackers or internal process notes
 
-Documentation is part of the product.
+## Public vs internal
+
+Public docs (README, architecture, skill files, getting started, contributing):
+
+- no private project-tracker IDs
+- no personal runtime install state
+- no internal chat/process diary language
+- prior art belongs in a short dedicated section, not constant comparisons
+
+Internal notes, if needed, stay out of the public front door.
 
 ## Public front door (README) must include
 
 1. One-sentence identity
-2. Honest status table (planned vs shipped)
+2. Honest status table (planned vs drafted vs ready)
 3. Why it exists / problem statement
 4. What it is / what it is not
 5. Design principles
 6. Architecture overview with pointer to deep doc
-7. Inventory section (real counts only)
-8. Planned map clearly labeled planned
-9. Repo layout
-10. Getting started (even if “not installable yet”)
-11. Skill structure contract
-12. Security/trust notes
-13. Disclaimer
-14. Roadmap pointer
-15. Contributing pointer
-16. FAQ
-17. Prior art
-18. License + citation
+7. Inventory / available skills section
+8. Repo layout
+9. Getting started
+10. Skill structure contract
+11. Security/trust notes
+12. Disclaimer
+13. Roadmap pointer
+14. Contributing pointer
+15. FAQ
+16. Prior art
+17. License + citation
 
 ## Deep docs map
 
@@ -52,9 +61,9 @@ Documentation is part of the product.
 ## Honesty rules
 
 - Never badge a skill count higher than drafted skills
-- Use “planned”, “draft”, “shipped” language explicitly
+- Use “planned”, “draft”, “ready” language explicitly
 - Examples must be synthetic or public unless user-supplied private data is clearly marked
-- Do not imply runtime install when none exists
+- Do not imply a polished product release when drafts are early
 - Do not imply multi-agent harness until it exists
 
 ## Writing style
@@ -64,6 +73,7 @@ Documentation is part of the product.
 - No single-sport favoritism in core docs
 - Prefer tables and contracts over vibes
 - Short sections with anchors over walls of lore
+- Write for strangers, not for the authors’ private workflow
 
 ## Skill doc minimum
 
@@ -80,27 +90,10 @@ Every `SKILL.md` needs:
 - worked example
 - references
 
-## Definition of “docs are good enough to publish”
+## Definition of “docs are good enough”
 
 - stranger understands the project in 3 minutes from README
 - stranger can find architecture and authoring rules without chat history
 - no section claims capabilities that are not in the repo
-- install path is either real or clearly marked planned
-- at least one complete example skill exists before public launch
-
-## K-Dense lessons we are copying
-
-- deep README with TOC and explicit sections
-- clear compatibility/standard badges
-- install story for multiple hosts
-- security/trust framing
-- FAQ and contribution path
-- skill packaging consistency
-- separation of “what’s included” from marketing fluff
-
-## K-Dense lessons we are not copying yet
-
-- 100+ skill inventory on day one
-- commercial support positioning
-- webinar/product funnel language
-- emoji-heavy presentation
+- install path is clear
+- public pages do not leak private tracking or machine-specific state

@@ -1,8 +1,6 @@
 # Getting started
 
-**Status:** repo is public; skills are not drafted yet. Install-as-skills is still planned.
-
-This page exists so the install/use story is designed up front, K-Dense-style, instead of bolted on later.
+**Status:** repository is public; skills are drafted as files. Host install UX still varies by client.
 
 ## Who this is for
 
@@ -14,22 +12,23 @@ This page exists so the install/use story is designed up front, K-Dense-style, i
 
 - users looking for picks
 - users wanting an autobet bot
-- users expecting a finished 100-skill library today
+- users expecting a finished mega-library today
 
-## Right now (development)
+## Clone the repo
 
 ```bash
-cd projects/sports-analytic-skills
-# read first
-# README.md
-# ARCHITECTURE.md
-# docs/documentation-standard.md
-# docs/skill-authoring.md
+git clone https://github.com/WalrusQuant/sports-analytic-skills.git
+cd sports-analytic-skills
 ```
 
-There is nothing to install into an agent runtime yet.
+Read first:
 
-## After skills exist and repo is public
+- `README.md`
+- `ARCHITECTURE.md`
+- `docs/skill-authoring.md`
+- skills under `skills/`
+
+## Install options
 
 ### Option A — standards installer
 
@@ -71,14 +70,15 @@ Reload the client and confirm skills appear.
 
 ## Recommended install shape
 
-Do **not** install everything forever by default once the library grows.
+Do **not** install everything by default once the library grows.
 
 Suggested topical subsets:
 
 1. Foundation only: `doctrine`, `ethics`, `risk`
-2. Modeling spine: foundation + baselines/features/leakage/validation/critique
-3. Full core: modeling spine + market layer
-4. Core + one sport module
+2. Modeling core: foundation + baselines/features/leakage/validation/experiment-log
+3. Full offline core: modeling core + critique/model-card/calibration
+4. Market-capable core: full offline core + market hygiene/CLV
+5. Publish pack: market-capable core + writeup/anti-slop
 
 ## Using a skill
 
@@ -92,12 +92,7 @@ You can also invoke explicitly:
 
 > Use the `leakage-audit` skill on this feature pipeline.
 
-## Local OpenClaw note
-
-This repository is a **global library project**.  
-Installing into a personal OpenClaw instance is optional, deliberate, and not part of early design work.
-
-## Verify setup (future checklist)
+## Verify setup
 
 - [ ] host can see skill names/descriptions
 - [ ] opening one `SKILL.md` works
