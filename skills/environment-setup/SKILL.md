@@ -5,11 +5,12 @@ description: >
   multi-sport paths. Use when setting up a new machine, onboarding an agent, or
   checking that loaders, tests, CLI pipelines, and skill scripts all run — even
   if the user only says "it doesn't import" or "set this up." Includes verify
-  scripts, multi-sport extras, and troubleshooting.
-version: "0.5.0"
+  scripts, multi-sport extras, integration-test expectations, and
+  troubleshooting.
+version: "0.6.0"
 license: MIT
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # Environment Setup
@@ -20,8 +21,10 @@ Get a clean Python environment that can run:
 
 - the `sports_ds` package (`0.9+`)
 - `sports-ds` CLI (NFL + NBA/MLB pipelines)
-- tests
+- unit + integration tests
 - skill scripts against public sports data
+
+This is the install/verify operator manual for the whole pack.
 
 ---
 
@@ -34,11 +37,15 @@ Use when:
 - “It doesn’t import” / CLI missing / tests fail
 - Verifying skill scripts after install
 - Enabling multi-sport extras (`[multi]`)
+- Confirming integration tests before claiming the product works
 
 Do **not** use when:
 
-- Choosing which data source → `data-sources`
-- Debugging a single model fold → modeling skills
+| Need | Go instead |
+|---|---|
+| Choosing which data source | `data-sources` |
+| Debugging a single model fold | modeling skills |
+| Writing a model card | `model-card` |
 
 ---
 
@@ -78,7 +85,7 @@ pip install -e ".[multi,dev]"
 ## Verify (in order)
 
 ```bash
-# 1. unit tests
+# 1. unit + integration tests
 pytest -q
 
 # 2. package import + tiny load + ratings/audit modules
@@ -99,6 +106,8 @@ sports-ds nba-eda --seasons 2024
 sports-ds mlb-eda --seasons 2024
 sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1
 sports-ds mlb-win-pipeline --seasons 2023-2024 --min-train-seasons 1
+sports-ds nba-margin-pipeline --seasons 2023-2024 --min-train-seasons 1
+sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1
 
 # 6. representative skill scripts
 python skills/predictive-modeling/scripts/leakage_smoke.py
@@ -108,7 +117,7 @@ python skills/ratings-strength-models/scripts/eval_elo_baseline.py --seasons 202
 
 Expected:
 
-- pytest passes (13+ tests)
+- pytest passes (unit + integration)
 - verify script prints `OK`
 - EDA prints row/game/team summary
 - leakage audit returns `CLEAN`
@@ -125,6 +134,7 @@ Checklist: `references/verify_checklist.md`
 - Python 3.10+ recommended
 - Disk: multi-season extracts can be hundreds of MB+
 - Multi-sport is optional; NFL path works with base install
+- Integration tests may skip multi-sport if `[multi]` is not installed
 
 ---
 
@@ -140,6 +150,7 @@ Checklist: `references/verify_checklist.md`
 | skill script import errors | run from repo root with venv active |
 | seaborn/pingouin missing | optional installs above |
 | NBA/MLB CLI fails after base install only | install `[multi]` |
+| integration tests skipped | expected without network/`[multi]`; read skip reasons |
 
 More: `references/troubleshooting.md`
 
@@ -161,6 +172,7 @@ Skills live under `skills/<name>/SKILL.md` with `scripts/` and `references/`.
 2. Do not claim multi-sport works without `[multi]`.
 3. Prefer package CLI over ad-hoc notebooks for smoke checks.
 4. Keep secrets out of env files committed to git.
+5. Do not call the environment verified if pytest fails.
 
 ---
 
@@ -173,6 +185,22 @@ Done means:
 - [ ] at least one NFL CLI pipeline runs
 - [ ] multi-sport path stated as installed or skipped
 - [ ] any remaining blockers named
+
+---
+
+## Worked Example
+
+Fresh machine:
+
+```bash
+git clone https://github.com/WalrusQuant/sports-analytic-skills.git
+cd sports-analytic-skills
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[multi,dev]"
+pytest -q
+python skills/environment-setup/scripts/verify_install.py
+sports-ds nfl-win-pipeline --seasons 2023-2024 --min-train-seasons 1
+```
 
 ---
 

@@ -6,11 +6,11 @@ description: >
   NFL acquisition step before EDA or modeling — even if the user only says
   "get NFL data" or "load schedules." Prefer sports_ds wrappers for modeling
   panels; use raw nflreadpy for lower-level releases. Includes full CLI path
-  into win/margin/Elo pipelines.
-version: "0.5.0"
+  into win/margin/Elo pipelines, panel traps, and snapshot rules.
+version: "0.6.0"
 license: MIT
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # nflreadpy / nflverse Loader
@@ -23,6 +23,9 @@ NFL data plane for this repo.
 - Use **raw `nflreadpy`** when you need PBP, rosters, or other nflverse releases directly
 
 Upstream ecosystem: nflverse data releases + `nflreadpy`.
+
+This skill gets data into a clean panel. It does not replace doctrine, EDA, or
+leakage checks.
 
 ---
 
@@ -37,8 +40,12 @@ Use when:
 
 Do **not** use when:
 
-- Non-NFL leagues → `sportsdataverse-py` / `pybaseball`
-- Environment missing → `environment-setup`
+| Need | Go instead |
+|---|---|
+| Non-NFL leagues | `sportsdataverse-py` / `pybaseball` |
+| Environment missing | `environment-setup` |
+| Source undecided | `data-sources` |
+| Feature legality | `feature-rules` |
 
 ---
 
@@ -72,6 +79,7 @@ sports-ds nfl-margin-pipeline --seasons 2018-2024
 sports-ds nfl-elo --seasons 2018-2024
 sports-ds leakage-audit --sport nfl --seasons 2023-2024
 sports-ds calibrate --sport nfl --seasons 2018-2024
+sports-ds feature-registry | head
 ```
 
 Code: `src/sports_ds/data/nfl.py`  
@@ -116,10 +124,11 @@ Panel notes: `references/panel_contract.md`
 
 1. Confirm NFL + grain (schedule vs team-game vs pbp).
 2. Load via `sports_ds` for modeling panels.
-3. Run EDA (`sports-ds nfl-eda` or `eda-sports` scripts).
-4. Build time-safe features / Elo as needed.
-5. Hand off to validation + modeling skills.
-6. Snapshot any custom join tables you create.
+3. Sanity-check row counts, seasons, home win rate.
+4. Run EDA (`sports-ds nfl-eda` or `eda-sports` scripts).
+5. Build time-safe features / Elo as needed.
+6. Hand off to validation + modeling skills.
+7. Snapshot any custom join tables you create.
 
 ---
 
@@ -140,6 +149,7 @@ python skills/nflreadpy/scripts/describe_panel.py --seasons 2023-2024
 3. Completed games only for outcome models unless forecasting future slates intentionally.
 4. Snapshot data used for claims.
 5. Keep team abbreviations consistent within a season (nflverse standard).
+6. Do not model the doubled panel without understanding home/away rows.
 
 ---
 
@@ -149,6 +159,7 @@ python skills/nflreadpy/scripts/describe_panel.py --seasons 2023-2024
 - Using post-game EPA as a pre-kickoff feature
 - Mixing home and away rows without understanding the doubled panel
 - Silent schema drift across nflreadpy versions
+- Claiming home advantage from overall win rate on the full panel
 
 ---
 
@@ -159,7 +170,19 @@ Done means:
 - [ ] Grain/window stated
 - [ ] Load succeeded with row counts
 - [ ] Panel contract verified if modeling
+- [ ] Home-rate trap checked if relevant
 - [ ] Next skill handoff named
+
+---
+
+## Worked Example
+
+```bash
+sports-ds nfl-eda --seasons 2018-2024
+# expect overall win rate ~0.5; home win rate > 0.5 on is_home==1
+sports-ds nfl-win-pipeline --seasons 2018-2024
+sports-ds leakage-audit --sport nfl --seasons 2023-2024
+```
 
 ---
 

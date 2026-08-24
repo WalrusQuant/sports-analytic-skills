@@ -5,12 +5,12 @@ description: >
   target and decision time T, data, features, baselines, validation, results,
   limits, maintenance, and kill conditions. Use when documenting a kept model
   version for reuse or sharing — even if the user only says "document this
-  model." Includes card templates, package-path examples for NFL/NBA/MLB, and a
-  stub writer script.
-version: "0.5.0"
+  model." Includes card templates, package-path examples for NFL/NBA/MLB,
+  decision rules for freezing versions, and a stub writer script.
+version: "0.6.0"
 license: MIT
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # Model Card (Sports)
@@ -19,11 +19,18 @@ metadata:
 
 Durable documentation for a sports analysis/prediction model.
 
-A model card freezes what the model is for, how it was evaluated, what it must
-not be used for, and when to kill or retrain it.
+A model card freezes:
+
+- what the model is for
+- how it was evaluated
+- what it must not be used for
+- when to kill or retrain it
 
 Use after a model is worth keeping. Pair with `experiment-log` for the trial
-history that led here.
+history that led here. Pair with `results-reporting` for the human writeup of
+the latest run.
+
+A card is not a marketing page. It is an operating contract.
 
 ---
 
@@ -35,11 +42,16 @@ Use when:
 - Before sharing results beyond a scratch note
 - Versioning a kept model
 - User says “document this model” or “write a model card”
+- Promoting a `keep` experiment into a named version
 
 Do **not** use when:
 
-- No model yet
-- Quick scratch experiment with no keep decision → `experiment-log` only
+| Need | Go instead |
+|---|---|
+| No model yet | `sports-modeling-doctrine` / modeling skills |
+| Quick scratch experiment | `experiment-log` only |
+| One-off results writeup | `results-reporting` |
+| Figure honesty only | `anti-slop-analytics` |
 
 ---
 
@@ -50,6 +62,8 @@ pip install -e .
 # multi-sport models:
 pip install -e ".[multi]"
 ```
+
+No special deps for the card itself.
 
 ---
 
@@ -64,6 +78,9 @@ pip install -e ".[multi]"
 - Leakage audit status
 - Limits / failure modes
 - Kill / retrain conditions
+- Linked experiment IDs and exact package commands
+
+If any required field is unknown, write `unknown` — do not invent.
 
 ---
 
@@ -89,15 +106,31 @@ Kill examples: `references/kill_conditions.md`
 ## Workflow
 
 1. Gather evidence from modeling + validation + leakage work.
-2. Draft all sections; use `unknown` explicitly when needed.
-3. Remove unsupported claims.
-4. Link `experiment-log` entries and exact CLI commands.
-5. Freeze version (do not silently edit a frozen card — bump version).
+2. Confirm the model earned a `keep` under the locked primary metric.
+3. Draft all sections; use `unknown` explicitly when needed.
+4. Remove unsupported claims.
+5. Link `experiment-log` entries and exact CLI commands.
+6. Freeze version (do not silently edit a frozen card — bump version).
+7. Store the card next to the experiment artifacts.
 
 ```bash
 python skills/model-card/scripts/write_card_stub.py --out data/model_card.md
 python skills/model-card/scripts/write_card_stub.py --name nba_win_logit --version v1 --out data/nba_win_card.md
 ```
+
+---
+
+## Freeze Rules
+
+| Event | Action |
+|---|---|
+| First keep under charter | create `v1` |
+| Feature set change | bump major/minor; new card |
+| Data window change only | bump minor; note window |
+| Hyperparam tweak with same features/data | bump patch; note experiment id |
+| Failed kill condition | mark abandoned; do not silently rewrite |
+
+Never overwrite a frozen card in place to make history look better.
 
 ---
 
@@ -108,6 +141,18 @@ python skills/model-card/scripts/write_card_stub.py --name nba_win_logit --versi
 3. Never present exploration as production-ready without saying so.
 4. Kill conditions must be concrete and checkable.
 5. Sport/grain/T must be explicit.
+6. Package commands must reproduce the claimed evaluation window.
+7. If calibration was not checked, say so.
+
+---
+
+## Anti-Patterns
+
+- Card written before a walk-forward exists
+- “Works well” with no metric/baseline
+- Silent edits to frozen versions
+- Copy-pasting NFL commands for an NBA model
+- Kill conditions like “if it feels off”
 
 ---
 
@@ -153,6 +198,19 @@ Package paths:
 
 ---
 
+## Output Contract
+
+Done means:
+
+- [ ] All required sections present
+- [ ] Baseline + primary metric present
+- [ ] Leakage status present
+- [ ] Kill conditions checkable
+- [ ] Linked experiments/commands present
+- [ ] Version freeze rule stated
+
+---
+
 ## Bundled Resources
 
 ### references/
@@ -172,6 +230,7 @@ Package paths:
 - `baseline-models`
 - `sports-modeling-doctrine`
 - `leakage-audit`
+- `calibration-check`
 
 ---
 

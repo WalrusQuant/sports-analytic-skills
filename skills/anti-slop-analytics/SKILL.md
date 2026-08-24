@@ -6,11 +6,12 @@ description: >
   unreproducible screenshot science. Use when reviewing figures, tables,
   notebooks, or report visuals for sports modeling — even if the user only says
   "make this look better" or "clean up the charts." Includes slop catalog,
-  replacements, and figure audit scripts tied to sports_ds pipeline outputs.
-version: "0.5.0"
+  replacements, decision tables, and figure audit scripts tied to sports_ds
+  pipeline outputs.
+version: "0.6.0"
 license: MIT
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # Anti-Slop Analytics (Sports)
@@ -30,6 +31,8 @@ Works on:
 - model cards / README figures
 - notebook output dumps
 
+Pretty is optional. Honest is required.
+
 ---
 
 ## When to Use This Skill
@@ -44,9 +47,22 @@ Use when:
 
 Do **not** use when:
 
-- Designing validation/metrics from scratch → `validation-design`
-- Leakage mechanics → `leakage-audit`
-- No visual/table exists yet
+| Need | Go instead |
+|---|---|
+| Designing validation/metrics | `validation-design` |
+| Leakage mechanics | `leakage-audit` |
+| No visual/table exists yet | create figure first via `sports-visualization` |
+| Need the full writeup | `results-reporting` |
+
+---
+
+## Installation
+
+```bash
+pip install -e .
+```
+
+No special deps for the audit template.
 
 ---
 
@@ -100,6 +116,18 @@ python skills/anti-slop-analytics/scripts/figure_audit_template.py --out data/nb
 
 ---
 
+## Verdict Rubric
+
+| Verdict | When |
+|---|---|
+| `keep` | claim, labels, baseline, n/period all honest |
+| `fix` | salvageable with axis/label/baseline repairs |
+| `kill` | manufactured drama, missing baseline on model claim, unreproducible |
+
+If unsure between fix and kill, kill the decorative version and redraw simply.
+
+---
+
 ## Replacement Defaults
 
 | Instead of | Prefer |
@@ -121,6 +149,7 @@ python skills/anti-slop-analytics/scripts/figure_audit_template.py --out data/nb
 4. Every key figure needs: period, n (or event count), metric definition, sport/grain.
 5. If uncertainty is unknown, say unknown — do not draw fake error bars.
 6. Baseline required whenever a model claim is made.
+7. Repro path required for any figure used in a public claim.
 
 ---
 

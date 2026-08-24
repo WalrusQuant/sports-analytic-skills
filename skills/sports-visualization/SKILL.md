@@ -5,12 +5,12 @@ description: >
   form charts, calibration plots, rating trajectories, walk-forward metric
   bars, and publication-quality figures that do not lie. Use when exploring or
   communicating model/data findings — even if the user only says "plot this" or
-  "make a chart." Includes plot catalog, honest-label rules, and runnable
-  scripts wired to sports_ds.
-version: "0.5.0"
+  "make a chart." Includes plot catalog, honest-label rules, multi-sport
+  scripts, and pipeline-JSON charting wired to sports_ds.
+version: "0.6.0"
 license: MIT
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # Sports Visualization
@@ -19,9 +19,18 @@ metadata:
 
 Plotting and visual analysis skill for sports data science.
 
-Every key figure needs: **period, n, metric definition**, and a baseline when comparing models.
+Every key figure needs:
 
-Prefer package data (`sports_ds` panels) over one-off CSV dumps so figures stay reproducible.
+- period
+- n
+- metric definition
+- sport/grain when not obvious
+- a baseline when comparing models
+
+Prefer package data (`sports_ds` panels) and pipeline JSON over mystery CSV dumps
+so figures stay reproducible.
+
+This skill draws honest figures. `anti-slop-analytics` judges whether they still lie.
 
 ---
 
@@ -38,8 +47,12 @@ Use when:
 
 Do **not** use when:
 
-- No question/metric defined yet
-- Decorative dashboard junk with no analytic purpose → `anti-slop-analytics`
+| Need | Go instead |
+|---|---|
+| No question/metric defined yet | `sports-modeling-doctrine` / `eda-sports` |
+| Decorative dashboard junk | `anti-slop-analytics` (kill it) |
+| Full results writeup | `results-reporting` |
+| Probability reliability deep-dive | `calibration-check` |
 
 ---
 
@@ -86,6 +99,7 @@ Label rules: `references/honest_labels.md`
 5. Include baselines where comparison matters.
 6. Export reproducible plotting code + output path.
 7. Run an anti-slop pass (`anti-slop-analytics`).
+8. If used in a claim, store path + command in experiment log.
 
 ---
 
@@ -108,7 +122,22 @@ Generate pipeline JSON first:
 ```bash
 sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1 --json-out data/nba_win_pipeline.json
 sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win_pipeline.json
+sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/mlb_elo.json
 ```
+
+---
+
+## Encoding Defaults
+
+| Comparison | Prefer |
+|---|---|
+| Rates over seasons | bars/lines with n annotated |
+| Model vs baseline | grouped bars or paired table |
+| Distributions | histogram/density + mean/median line |
+| Probabilities | reliability curve, not pie |
+| Rankings | ordered dots, not rainbow spaghetti |
+
+Default y-axis for win rates: full enough to avoid drama (do not start at 0.55).
 
 ---
 
@@ -120,6 +149,7 @@ sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win_pipeline.
 4. Probabilities shown as probabilities, not destiny.
 5. Repro path required for any figure used in a claim.
 6. Sport/grain labeled when not obvious.
+7. Walk-forward figures must not be labeled as in-sample fit.
 
 ---
 
@@ -131,27 +161,41 @@ sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win_pipeline.
 - Charts without code/repro path
 - Missing baselines on model comparisons
 - Plotting in-sample fit as validation
+- Cropping axes to manufacture home-field drama
 
 ---
 
 ## Output Contract
 
+Done means:
+
 - [ ] Figure purpose stated
 - [ ] Code path/repro noted
 - [ ] Labels complete (period, n, metric, sport)
+- [ ] Baseline present when claim is comparative
 - [ ] Anti-slop check done
 
 ---
 
-## Worked Example
+## Worked Examples
 
-**Claim:** NFL home win rate is stable above 0.5 across recent seasons.
-
+### Home win rate
 ```bash
-python skills/sports-visualization/scripts/plot_home_win_rate.py --seasons 2018-2024 --out data/nfl_home_wr.png
+python skills/sports-visualization/scripts/plot_home_win_rate.py \
+  --sport nfl --seasons 2018-2024 --out data/nfl_home_wr.png
 ```
-
 Caption must include seasons + n games + “home rows only”.
+
+### Walk-forward model vs baseline
+```bash
+sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win.json
+python skills/sports-visualization/scripts/plot_walkforward_metrics.py \
+  --json data/nfl_win.json \
+  --metric logistic_log_loss \
+  --baseline constant_log_loss \
+  --out data/nfl_wf.png
+python skills/anti-slop-analytics/scripts/figure_audit_template.py --out data/nfl_wf_audit.md
+```
 
 ---
 

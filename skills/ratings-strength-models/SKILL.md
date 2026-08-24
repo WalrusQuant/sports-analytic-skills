@@ -5,12 +5,13 @@ description: >
   ratings, offense/defense splits, least-squares power ratings, hierarchical
   strength, and strict as-of ratings for matchup prediction. Use for team or
   player strength baselines and as features in win/margin models — even if the
-  user only says "build Elo" or "power ratings." Includes a runnable Elo as-of
-  builder, walk-forward evaluation patterns, and parameter guidance.
-version: "0.4.0"
+  user only says "build Elo" or "power ratings." Includes sports_ds Elo package
+  APIs, NFL/NBA/MLB CLI paths, runnable Elo as-of builders, walk-forward
+  evaluation, and parameter guidance.
+version: "0.6.0"
 license: MIT
 metadata:
-  version: "0.4.0"
+  version: "0.6.0"
 ---
 
 # Ratings & Strength Models (Sports)
@@ -23,6 +24,11 @@ ratings only as they existed **before** game T.
 Ratings are often the strongest simple sports baselines and strong features for
 logistic/ML models. The non-negotiable rule: **as-of only**.
 
+Package path:
+
+- `sports_ds.ratings.elo`
+- `sports-ds nfl-elo` / `nba-elo` / `mlb-elo`
+
 ---
 
 ## When to Use This Skill
@@ -34,6 +40,7 @@ Use when:
 - Opponent adjustment
 - Strong baselines before feature-heavy ML
 - User says “Elo,” “power ratings,” or “team strength”
+- NFL/NBA/MLB package Elo baselines
 
 Do **not** use as a substitute for:
 
@@ -42,6 +49,7 @@ Do **not** use as a substitute for:
 | Raw form windows only | `time-series-sports` / `feature-rules` |
 | Full ML horse race | `predictive-modeling` |
 | Validation design | `validation-design` |
+| Season win distributions from ratings | `simulation-sports` |
 
 ---
 
@@ -49,6 +57,8 @@ Do **not** use as a substitute for:
 
 ```bash
 pip install -e .
+# multi-sport Elo:
+pip install -e ".[multi]"
 ```
 
 ---
@@ -61,8 +71,9 @@ pip install -e .
 4. Export an **as-of rating** for each team before each game.
 5. Predict matchups from rating differentials (+ home).
 6. Evaluate with season walk-forward (`validation-design`).
-7. Compare to constant / home baselines (`baseline-models`).
+7. Compare to constant / home / form baselines (`baseline-models`).
 8. Report params, as-of rule, metrics, limits.
+9. Optional: feed into `simulation-sports`.
 
 ---
 
@@ -78,13 +89,23 @@ pip install -e .
 
 Start with Elo-like or margin power ratings before exotic variants.
 
-Details: `references/rating_families.md`
+Details: `references/rating_families.md`  
+Params: `references/parameters.md`  
+Evaluation: `references/evaluation.md`
 
 ---
 
-## Elo (implemented script)
+## Elo (package + scripts)
 
-Classic Elo update after each game, with home advantage and optional margin multiplier.
+### Package CLI (preferred)
+
+```bash
+sports-ds nfl-elo --seasons 2018-2024
+sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1
+sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1 --k 4 --home-adv 20
+```
+
+### Skill scripts
 
 ```bash
 python skills/ratings-strength-models/scripts/elo_asof.py \
@@ -92,49 +113,34 @@ python skills/ratings-strength-models/scripts/elo_asof.py \
   --k 20 \
   --home-adv 65 \
   --out data/elo_asof.csv
+python skills/ratings-strength-models/scripts/eval_elo_baseline.py --seasons 2018-2024
 ```
-
-Outputs one row per team-game with:
-
-- `elo_pre` — team rating before the game
-- `opp_elo_pre` — opponent rating before the game
-- `elo_diff` — matchup differential including home advantage on the home side
 
 ### Python API
 
 ```python
-import sys
-from pathlib import Path
-sys.path.append(str(Path("skills/ratings-strength-models/scripts").resolve()))
-from elo_asof import build_elo_asof_table
-
 from sports_ds.data.nfl import load_team_game_panel
+from sports_ds.ratings.elo import add_elo_asof, build_elo_asof_table
+from sports_ds.pipelines.team_elo import run_team_elo_baseline
 
 panel = load_team_game_panel(list(range(2018, 2025)))
-elo = build_elo_asof_table(panel, k=20.0, home_adv=65.0, init=1500.0, use_margin=True)
-print(elo.head())
+elo = add_elo_asof(panel, k=20.0, home_adv=65.0)
+print(elo[["team", "opponent", "elo_pre", "elo_diff", "won"]].head())
+
+result = run_team_elo_baseline(
+    panel, sport="nfl", seasons=list(range(2018, 2025)), min_train_seasons=2
+)
+print(result["mean_metrics"], result.get("calibration"))
 ```
 
-### Using Elo as a model feature (walk-forward)
+Outputs / fields:
 
-```python
-from sports_ds.models.baselines import baseline_home_rate, fit_logistic_baseline
-from sports_ds.validation.splits import season_walk_forward_masks
+- `elo_pre` — team rating before the game
+- `opp_elo_pre` — opponent rating before the game
+- `elo_diff` — matchup differential including home advantage on the home side
+- `elo_expected` — expected score from pre ratings
 
-df = elo.dropna(subset=["elo_diff"]).copy()
-df["is_home"] = df["is_home"].astype(float)
-
-for season, tr, te in season_walk_forward_masks(df, min_train_seasons=2):
-    c = baseline_home_rate(df, tr, te)
-    _, res, _ = fit_logistic_baseline(df, ["is_home", "elo_diff"], tr, te)
-    print(season, c.log_loss, res.log_loss, res.accuracy)
-```
-
-Or:
-
-```bash
-python skills/ratings-strength-models/scripts/eval_elo_baseline.py --seasons 2018-2024
-```
+Code: `src/sports_ds/ratings/elo.py`, `src/sports_ds/pipelines/team_elo.py`
 
 ---
 
@@ -143,11 +149,12 @@ python skills/ratings-strength-models/scripts/eval_elo_baseline.py --seasons 201
 ### K factor
 - Higher K: reacts faster, noisier
 - Lower K: stabler, slower to adapt
-- NFL starting point: K ≈ 20 on 1500-scale Elo
+- NFL/NBA starting point: K ≈ 20 on 1500-scale Elo
+- MLB default in package CLI: lower K (long season)
 
 ### Home advantage
 - Add `home_adv` to home team pre-game Elo when computing expected score
-- Start fixed (e.g. 65 Elo points); estimate later from data if needed
+- Start fixed; estimate later from data if needed
 
 ### Margin
 - Optional multiplier on K using point differential
@@ -160,8 +167,6 @@ python skills/ratings-strength-models/scripts/eval_elo_baseline.py --seasons 201
 ### Initialization
 - Common: all teams 1500
 - Report init explicitly
-
-See `references/parameters.md`.
 
 ---
 
@@ -202,6 +207,7 @@ Partial pooling when player n is uneven (`statistical-modeling` mixed models / B
 3. Do not fit K on the final test season repeatedly without nested validation.
 4. Report initialization and scale (e.g. mean 1500).
 5. Do not treat ratings as causal player quality without more structure.
+6. Package Elo claims must name sport + seasons + params.
 
 ---
 
@@ -212,6 +218,7 @@ Partial pooling when player n is uneven (`statistical-modeling` mixed models / B
 - Ignoring home advantage
 - Mixing playoffs and regular season without a flag
 - Claiming ranking quality without forward prediction metrics
+- Using form and Elo interchangeably without a bakeoff
 
 ---
 
@@ -219,13 +226,39 @@ Partial pooling when player n is uneven (`statistical-modeling` mixed models / B
 
 ```text
 Rating model: Elo
+Sport:
 Signal: win (margin multiplier: …)
 Params: K=…, home_adv=…, init=1500
 As-of rule: pre-game rating before update
 Validation: season walk-forward
 Metrics vs constant / home / form logistic: …
+Calibration:
 Limits: no roster continuity, no injuries, …
-Reproduce: python skills/ratings-strength-models/scripts/elo_asof.py ...
+Reproduce: sports-ds <sport>-elo --seasons ...
+```
+
+---
+
+## Output Contract
+
+Done means:
+
+- [ ] As-of rule stated
+- [ ] Params stated
+- [ ] Walk-forward metrics vs baselines present
+- [ ] Limits stated
+- [ ] Repro command present
+
+---
+
+## Worked Examples
+
+```bash
+sports-ds nfl-elo --seasons 2018-2024 --json-out data/nfl_elo.json
+sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/nba_elo.json
+sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/mlb_elo.json
+python skills/ratings-strength-models/scripts/elo_asof.py --seasons 2018-2024 --out data/elo_asof.csv
+python skills/simulation-sports/scripts/season_win_sim.py --elo-csv data/elo_asof.csv --season 2024
 ```
 
 ---
@@ -245,9 +278,12 @@ Reproduce: python skills/ratings-strength-models/scripts/elo_asof.py ...
 | `elo_asof.py` | build pre-game Elo table |
 | `eval_elo_baseline.py` | walk-forward logistic on elo_diff |
 
-### package handoff
-- validation: `sports_ds.validation.season_walk_forward_masks`
-- baselines: `sports_ds.models.baselines`
+### package code
+- `src/sports_ds/ratings/elo.py`
+- `src/sports_ds/pipelines/team_elo.py`
+- `src/sports_ds/pipelines/nfl_elo_baseline.py`
+- `src/sports_ds/pipelines/nba_elo_baseline.py`
+- `src/sports_ds/pipelines/mlb_elo_baseline.py`
 
 ---
 
@@ -267,6 +303,9 @@ Reproduce: python skills/ratings-strength-models/scripts/elo_asof.py ...
 ## Quick Command Card
 
 ```bash
+sports-ds nfl-elo --seasons 2018-2024
+sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1
+sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1
 python skills/ratings-strength-models/scripts/elo_asof.py --seasons 2018-2024 --out data/elo_asof.csv
 python skills/ratings-strength-models/scripts/eval_elo_baseline.py --seasons 2018-2024
 python skills/simulation-sports/scripts/season_win_sim.py --elo-csv data/elo_asof.csv --season 2024

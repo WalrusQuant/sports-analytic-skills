@@ -5,12 +5,12 @@ description: >
   cut, validation charter, metrics, leakage status, decision, and artifacts.
   Use when running trials, comparing model versions, or preventing notebook
   amnesia — even if the user only says "log this run." Includes schema,
-  decision rules, and a new-experiment stub script wired to sports_ds CLI paths
-  for NFL/NBA/MLB.
-version: "0.5.0"
+  decision rules, package command patterns for NFL/NBA/MLB, and a new-experiment
+  stub script.
+version: "0.6.0"
 license: MIT
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # Experiment Log
@@ -23,6 +23,9 @@ Ops skill for reproducible sports-modeling work.
 
 Use before/after `sports-ds` pipeline runs so wins and losses both leave a trail.
 
+This is the trial history. A model card is the frozen contract. A results report
+is the human writeup of one evaluation.
+
 ---
 
 ## When to Use This Skill
@@ -30,15 +33,29 @@ Use before/after `sports-ds` pipeline runs so wins and losses both leave a trail
 Use when:
 
 - Starting a training/evaluation run
-- Comparing model variants (form vs Elo, win vs margin, NFL vs NBA)
+- Comparing model variants (form vs Elo, win vs margin, NFL vs NBA/MLB)
 - After critique/audit decisions
 - Before writing a model card version bump
 - Any time an agent is about to overwrite results in a notebook cell and move on
 
 Do **not** use when:
 
-- Pure discussion with no run
-- Designing the first validation charter only → `validation-design`
+| Need | Go instead |
+|---|---|
+| Pure discussion with no run | conversation only |
+| Designing the first validation charter | `validation-design` |
+| Durable frozen model contract | `model-card` after keep |
+| One-off human writeup | `results-reporting` |
+
+---
+
+## Installation
+
+```bash
+pip install -e .
+# multi-sport experiments:
+pip install -e ".[multi]"
+```
 
 ---
 
@@ -59,6 +76,7 @@ Optional:
 - Config YAML / Elo params
 - Random seeds
 - Links to plots/metrics JSON
+- Exact package commands
 
 ---
 
@@ -136,6 +154,19 @@ sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_
 sports-ds leakage-audit --sport nba --seasons 2023-2024
 sports-ds calibrate --sport mlb --seasons 2023-2024 --min-train-seasons 1
 ```
+
+---
+
+## Decision Rules
+
+| Decision | When |
+|---|---|
+| `keep` | success rule met on locked primary metric under walk-forward |
+| `discard` | failed honestly vs baselines / charter |
+| `follow-up` | inconclusive; next test must be one concrete experiment |
+
+Do not keep because the story is nice.  
+Do not discard silently without logging metrics.
 
 ---
 
@@ -221,7 +252,7 @@ decision: keep | discard | follow-up  # fill after run
 ## Quick Command Card
 
 ```bash
-python skills/experiment-log/scripts/new_experiment.py --slug nba-form-vs-elo
+python skills/experiment-log/scripts/new_experiment.py --slug nba-form-vs-elo --sport nba
 sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_nba_win.json
 sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_nba_elo.json
 python skills/results-reporting/scripts/render_pipeline_report.py --json data/exp_nba_elo.json

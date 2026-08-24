@@ -4,12 +4,14 @@ description: >
   Build and evaluate strong simple sports baselines before complex models —
   constant rates, home effects, logistic/linear form differentials, rating
   differentials, and walk-forward comparison tables. Use at the start of every
-  predictive project and whenever an ML result needs an honesty check. Includes
-  sports_ds baseline APIs and runnable fold scripts.
-version: "0.4.0"
+  predictive project and whenever an ML result needs an honesty check — even if
+  the user only says "what's the baseline" or "does this beat home field."
+  Includes sports_ds baseline APIs, NFL/NBA/MLB package CLI paths, and runnable
+  fold scripts.
+version: "0.6.0"
 license: MIT
 metadata:
-  version: "0.4.0"
+  version: "0.6.0"
 ---
 
 # Baseline Models for Sports
@@ -22,6 +24,8 @@ not progress.
 This skill defines the **baseline ladder**, implements constant and logistic
 baselines via `sports_ds`, and standardizes walk-forward comparison before ML.
 
+Baselines are not disposable. Often they are the ship candidate.
+
 ---
 
 ## When to Use This Skill
@@ -32,16 +36,17 @@ Use when:
 - Auditing an ML result that looks shiny
 - Building the first model you might actually keep
 - User says “what’s the baseline?” or “does this beat home field?”
+- Comparing form vs Elo vs constant on NFL/NBA/MLB
 
 Do **not** skip this skill and jump to trees.
 
-Related:
-
-- validation folds → `validation-design`
-- features → `feature-rules`
-- ML candidates → `predictive-modeling`
-- GLM inference writeup → `statistical-modeling`
-- ratings baseline → `ratings-strength-models`
+| Need | Go instead |
+|---|---|
+| Validation folds | `validation-design` |
+| Features | `feature-rules` |
+| ML candidates after baselines | `predictive-modeling` |
+| GLM inference writeup | `statistical-modeling` |
+| Ratings baseline detail | `ratings-strength-models` |
 
 ---
 
@@ -49,6 +54,8 @@ Related:
 
 ```bash
 pip install -e .
+# multi-sport:
+pip install -e ".[multi]"
 ```
 
 ---
@@ -58,9 +65,9 @@ pip install -e .
 | Tier | Baseline | Implemented here |
 |---|---|---|
 | A | Constant train win rate / mean target | yes — `baseline_home_rate` (constant rate on panel) |
-| B | Home-only logistic / mean home margin | pattern below |
-| C | Logistic/linear on home + form differentials | yes — `fit_logistic_baseline` |
-| D | Rating differential logistic/linear | via `ratings-strength-models` Elo table |
+| B | Home-only logistic / mean home margin | pattern + script |
+| C | Logistic/linear on home + form differentials | yes — `fit_logistic_baseline` / package win pipelines |
+| D | Rating differential logistic/linear | package `*-elo` + ratings skill |
 
 Climb to ML only after Tier A–C (or A–D) exist under walk-forward evaluation.
 
@@ -75,7 +82,7 @@ See `references/baseline_ladder.md`.
 3. Create walk-forward folds (`validation-design`).
 4. Fit Tier A constant baseline each fold.
 5. Fit Tier C logistic/linear baseline each fold.
-6. Optional: rating-diff baseline.
+6. Optional: rating-diff baseline (`*-elo`).
 7. Compare per-fold and mean metrics.
 8. Only then try ML (`predictive-modeling`).
 9. Keep the simplest model that wins.
@@ -85,10 +92,20 @@ See `references/baseline_ladder.md`.
 
 ## Run Baselines
 
-### CLI / pipeline (includes ML for comparison)
+### Package CLI (preferred)
 
 ```bash
+# NFL
 sports-ds nfl-win-pipeline --seasons 2018-2024
+sports-ds nfl-margin-pipeline --seasons 2018-2024
+sports-ds nfl-elo --seasons 2018-2024
+
+# NBA / MLB
+sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1
+sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1
+sports-ds mlb-win-pipeline --seasons 2023-2024 --min-train-seasons 1
+sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1
+sports-ds mlb-margin-pipeline --seasons 2023-2024 --min-train-seasons 1
 ```
 
 ### Baseline-only fold table
@@ -104,7 +121,7 @@ python skills/baseline-models/scripts/home_only_baseline.py --seasons 2018-2024
 from sports_ds.data.nfl import load_team_game_panel
 from sports_ds.features.team_form import add_pregame_form_features
 from sports_ds.models.baselines import baseline_home_rate, fit_logistic_baseline
-from sports_ds.pipelines.nfl_win_model import FEATURE_COLS
+from sports_ds.pipelines.team_win import FEATURE_COLS
 from sports_ds.validation.splits import season_walk_forward_masks
 
 df = add_pregame_form_features(load_team_game_panel(list(range(2018, 2025))))
@@ -120,46 +137,31 @@ for season, tr, te in season_walk_forward_masks(df):
 Code:
 
 - `src/sports_ds/models/baselines.py`
-- `src/sports_ds/pipelines/nfl_win_model.py`
+- `src/sports_ds/pipelines/team_win.py`
+- `src/sports_ds/pipelines/team_elo.py`
+- `src/sports_ds/pipelines/team_margin.py`
 
 ---
 
 ## Tier Details
 
 ### Tier A — Constant rate
-
 `baseline_home_rate` predicts the training-set mean of `won` for every test row.
-
 On balanced team-game panels this is near 0.5 and log-loss near ~0.693.
 
 ### Tier B — Home only
-
-```python
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
-
-fit = smf.glm("won ~ is_home", data=train, family=sm.families.Binomial()).fit()
-print(fit.summary())
-# odds ratio for home:
-import numpy as np
-print(float(np.exp(fit.params["is_home"])))
-```
-
-Or:
-
 ```bash
 python skills/baseline-models/scripts/home_only_baseline.py --seasons 2018-2023
 ```
 
 ### Tier C — Form logistic
-
-Uses `FEATURE_COLS` from the win pipeline (home + shifted form differentials).
+Uses form differentials from `FEATURE_COLS` / package win pipelines.
 
 ### Tier D — Rating differential
-
 ```bash
-python skills/ratings-strength-models/scripts/elo_asof.py --seasons 2018-2024 --out data/elo_asof.csv
-# then logistic on is_home + elo_diff under walk-forward (see ratings skill)
+sports-ds nfl-elo --seasons 2018-2024
+sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1
+sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1
 ```
 
 ---
@@ -182,49 +184,69 @@ python skills/ratings-strength-models/scripts/elo_asof.py --seasons 2018-2024 --
 
 ---
 
-## Reporting Template
-
-```text
-Baseline report
-Target: …
-T: …
-Features: …
-Validation: season walk-forward
-Tier A mean metric:
-Tier C mean metric:
-Per-season table:
-Decision: promote to ML | keep logistic | debug features
-```
-
----
-
-## Integrity Rules
+## Hard Constraints
 
 1. No predictive project without Tier A.
 2. Walk-forward only for claims of generalization.
 3. Do not hide folds where baseline wins.
 4. Simplest winning model is the default ship candidate.
+5. Multi-sport baseline claims must use the matching sport CLI/path.
+
+---
+
+## Anti-Patterns
+
+- Jumping to GBM with no constant baseline
+- Reporting accuracy without log-loss/MAE
+- One-season hero baselines
+- Calling home-rate on the full doubled panel “home advantage”
+- Hiding folds where ML loses to logistic
+
+---
+
+## Reporting Template
+
+```text
+Baseline report
+Sport/target/T:\nFeatures:
+Validation: season walk-forward
+Tier A mean metric:
+Tier C mean metric:
+Tier D mean metric (if any):
+Per-season table:
+Decision: promote to ML | keep logistic | debug features
+Reproduce:
+```
+
+---
+
+## Output Contract
+
+Done means:
+
+- [ ] Tier A present
+- [ ] At least one stronger baseline (B/C/D) present
+- [ ] Walk-forward comparison table present
+- [ ] Decision stated
+- [ ] Repro commands present
 
 ---
 
 ## Bundled Resources
 
 ### references/
-
 | File | Contents |
 |---|---|
 | `baseline_ladder.md` | ladder and promotion rules |
 | `interpretation.md` | how to read baseline comparisons |
 
 ### scripts/
-
 | File | Contents |
 |---|---|
 | `run_baselines.py` | const vs logistic walk-forward table |
 | `home_only_baseline.py` | home-only logistic on pooled train window + note |
 
 ### package code
-
 - `src/sports_ds/models/baselines.py`
 
 ---
@@ -248,4 +270,6 @@ Decision: promote to ML | keep logistic | debug features
 python skills/baseline-models/scripts/run_baselines.py --seasons 2018-2024
 python skills/baseline-models/scripts/home_only_baseline.py --seasons 2018-2023
 sports-ds nfl-win-pipeline --seasons 2018-2024
+sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1
+sports-ds mlb-win-pipeline --seasons 2023-2024 --min-train-seasons 1
 ```

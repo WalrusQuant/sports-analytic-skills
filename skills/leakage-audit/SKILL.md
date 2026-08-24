@@ -6,11 +6,12 @@ description: >
   that looks too good — even if the user only says "why is this so accurate"
   or "check for leaks." Covers pre-game legality, same-game contamination,
   season-aggregate bleed, split mistakes, opponent-join bugs, and automated
-  sports_ds feature checks with a written CLEAN / NOT CLEAN verdict.
-version: "0.4.0"
+  sports_ds feature checks for NFL/NBA/MLB with a written CLEAN / NOT CLEAN
+  verdict.
+version: "0.6.0"
 license: MIT
 metadata:
-  version: "0.4.0"
+  version: "0.6.0"
 ---
 
 # Leakage Audit (Sports)
@@ -27,6 +28,12 @@ contaminated fields, required fixes, and a final verdict:
 
 A strong metric is never evidence of cleanliness.
 
+Package path:
+
+```bash
+sports-ds leakage-audit --sport nfl|nba|mlb --seasons ...
+```
+
 ---
 
 ## When to Use This Skill
@@ -39,6 +46,7 @@ Use when:
 - After `feature-rules` as a second pass
 - Before publishing model results
 - User says “why so accurate?” or “check for leaks”
+- NFL/NBA/MLB package form features
 
 Do **not** use as a substitute for:
 
@@ -54,6 +62,8 @@ Do **not** use as a substitute for:
 
 ```bash
 pip install -e .
+# multi-sport audits:
+pip install -e ".[multi]"
 ```
 
 ---
@@ -94,41 +104,44 @@ See `references/leakage_patterns.md` and `references/case_studies.md`.
 
 ---
 
-## Automated Audit (`sports_ds` NFL features)
+## Automated Audit (package)
+
+### CLI (preferred)
+
+```bash
+sports-ds leakage-audit --sport nfl --seasons 2023-2024
+sports-ds leakage-audit --sport nba --seasons 2023-2024
+sports-ds leakage-audit --sport mlb --seasons 2023-2024
+```
+
+### Skill scripts
 
 ```bash
 python skills/leakage-audit/scripts/audit_pregame_features.py --seasons 2023-2024
 python skills/leakage-audit/scripts/audit_pregame_features.py --seasons 2018-2024 --out data/leakage_audit.json
-```
-
-Checks:
-
-- banned outcome columns not in `FEATURE_COLS`
-- first team game has NA pre-game form
-- `pre_win_pct` not identical to current `won`
-- required feature columns present
-
-Python:
-
-```python
-import sys
-from pathlib import Path
-sys.path.append(str(Path("skills/leakage-audit/scripts").resolve()))
-from audit_pregame_features import audit_frame
-
-from sports_ds.data.nfl import load_team_game_panel
-from sports_ds.features.team_form import add_pregame_form_features
-
-df = add_pregame_form_features(load_team_game_panel([2023, 2024]))
-print(audit_frame(df))
-```
-
-Also run:
-
-```bash
 python skills/predictive-modeling/scripts/leakage_smoke.py
 python skills/feature-rules/scripts/legality_report.py --seasons 2023-2024
 ```
+
+### Python API
+
+```python
+from sports_ds.audit.leakage import audit_pregame_form_features
+from sports_ds.data.nfl import load_team_game_panel
+from sports_ds.data.nba import load_nba_team_game_panel
+
+print(audit_pregame_form_features(load_team_game_panel([2023, 2024])))
+print(audit_pregame_form_features(load_nba_team_game_panel([2023, 2024])))
+```
+
+Checks include:
+
+- first team game has NA pre-game form
+- `pre_win_pct` matches shift(1).expanding().mean() on the same timeline sort
+- opponent features match opponent rows
+- banned outcome columns not treated as features
+
+Code: `src/sports_ds/audit/leakage.py`
 
 ---
 
@@ -166,26 +179,24 @@ Printable copy: `references/audit_checklist.md`
 
 ---
 
-## Worked Example (NFL pre-game win model)
+## Worked Examples
 
-**Legal**
-- `is_home`
-- shifted prior win % differential
-- shifted rolling point-diff differential
-
-**Illegal**
-- current `points_for`
-- current `won`
-- final 2024 team EPA used in week 1 2024
-
-Package path with legal form features:
-
-`src/sports_ds/features/team_form.py` (`shift(1)` before expanding/rolling)
-
+### NFL stock form pipeline
 ```bash
-python skills/leakage-audit/scripts/audit_pregame_features.py --seasons 2023-2024
-# expect verdict CLEAN for the stock pipeline features
+sports-ds leakage-audit --sport nfl --seasons 2023-2024
+# expect CLEAN for stock shifted form features
 ```
+
+### NBA / MLB
+```bash
+sports-ds leakage-audit --sport nba --seasons 2023-2024
+sports-ds leakage-audit --sport mlb --seasons 2023-2024
+```
+
+Illegal examples:
+- current `points_for` / `won`
+- final season EPA on week 1
+- rolling means without shift
 
 ---
 
@@ -193,6 +204,7 @@ python skills/leakage-audit/scripts/audit_pregame_features.py --seasons 2023-202
 
 ```text
 Leakage audit
+Sport:
 Target:
 Grain:
 Decision time T:\nFeature count:
@@ -223,6 +235,7 @@ python skills/leakage-audit/scripts/write_audit_stub.py --out data/leakage_audit
 3. Do not “fix” leakage by dropping the ugly test season.
 4. Document every exception (e.g. live in-game T).
 5. `NOT CLEAN` blocks shipping claims until repaired.
+6. Timeline sort used in audit must match feature builder sort.
 
 ---
 
@@ -231,6 +244,18 @@ python skills/leakage-audit/scripts/write_audit_stub.py --out data/leakage_audit
 - Adversarial stance: try to break the pipeline.
 - Prefer false FAIL over false CLEAN.
 - Pair with `validation-design` — clean features + bad splits still leak.
+
+---
+
+## Output Contract
+
+Done means:
+
+- [ ] T and target locked
+- [ ] Automated checks run when possible
+- [ ] Manual checklist completed or gaps named
+- [ ] Verdict issued
+- [ ] Required fixes listed if NOT CLEAN
 
 ---
 
@@ -250,8 +275,9 @@ python skills/leakage-audit/scripts/write_audit_stub.py --out data/leakage_audit
 | `write_audit_stub.py` | blank audit report markdown |
 
 ### package code
+- `src/sports_ds/audit/leakage.py`
 - `src/sports_ds/features/team_form.py`
-- `src/sports_ds/pipelines/nfl_win_model.py`
+- `src/sports_ds/cli.py` (`leakage-audit`)
 
 ---
 
@@ -269,6 +295,9 @@ python skills/leakage-audit/scripts/write_audit_stub.py --out data/leakage_audit
 ## Quick Command Card
 
 ```bash
+sports-ds leakage-audit --sport nfl --seasons 2023-2024
+sports-ds leakage-audit --sport nba --seasons 2023-2024
+sports-ds leakage-audit --sport mlb --seasons 2023-2024
 python skills/leakage-audit/scripts/audit_pregame_features.py --seasons 2023-2024
 python skills/predictive-modeling/scripts/leakage_smoke.py
 python skills/feature-rules/scripts/legality_report.py --seasons 2023-2024

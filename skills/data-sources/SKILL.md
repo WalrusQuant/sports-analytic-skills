@@ -6,21 +6,24 @@ description: >
   acquisition code or when an agent is unsure which ecosystem to use — even if
   the user only asks "where do I get data for X." Hands off to nflreadpy,
   sportsdataverse-py, pybaseball, and sports_ds multi-sport CLI paths with a
-  written source plan.
-version: "0.5.0"
+  written source plan, sanity checks, and snapshot rules.
+version: "0.6.0"
 license: MIT
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # Data Sources
 
 ## Overview
 
-Data-plane skill for **source selection**. Picks an ecosystem and loader path
-for the question, then hands off to package skills / `sports_ds` CLI.
+Data-plane skill for **source selection**.
 
-Source choice does **not** create predictive value by itself.
+Pick the least fragile public ecosystem for the grain and question, then hand off
+to package skills / `sports_ds` CLI. Source choice does **not** create predictive
+value by itself.
+
+This skill is a decision manual, not a scraper kit.
 
 ---
 
@@ -32,12 +35,26 @@ Use when:
 - Starting a new sport/league analysis
 - Comparing nflverse vs SportsDataverse vs specialist packages
 - Before implementing scrapers
+- Choosing between schedule panels vs pbp vs Statcast depth
 
 Do **not** use when:
 
-- Environment not set up → `environment-setup`
-- Source already chosen and loading failed → package skill / debug
-- Validation/leakage questions with data already loaded
+| Need | Go instead |
+|---|---|
+| Environment not set up | `environment-setup` |
+| Source already chosen and loading failed | package skill / debug |
+| Validation/leakage with data already loaded | `validation-design` / `leakage-audit` |
+| Feature legality | `feature-rules` |
+
+---
+
+## Installation
+
+```bash
+pip install -e .
+# multi-sport loaders:
+pip install -e ".[multi]"
+```
 
 ---
 
@@ -46,6 +63,7 @@ Do **not** use when:
 - Sport/league
 - Grain needed (game, team-game, player-game, pbp, pitch, possession)
 - Historical depth needed
+- Fields required at decision time T (if predictive)
 - Language preference (Python default here)
 
 ---
@@ -54,14 +72,16 @@ Do **not** use when:
 
 | Need | Prefer first | sports_ds path | Fallback |
 |---|---|---|---|
-| NFL schedules / team-game panel | nflverse via `nflreadpy` | `sports-ds nfl-eda` / `nfl-win-pipeline` | SDV NFL module |
-| NBA team-game | SDV `load_nba_schedule` | `sports-ds nba-eda` / `nba-win-pipeline` | — |
-| MLB team-game | SDV MLB Stats API schedule | `sports-ds mlb-eda` / `mlb-win-pipeline` | pybaseball for Statcast depth |
-| NHL team-game | SDV `load_nhl_schedule` | `sports-ds nhl-eda` / `nhl-win-pipeline` | skip corrupt season dumps |
+| NFL schedules / team-game panel | nflverse via `nflreadpy` | `nfl-eda`, `nfl-win-pipeline`, `nfl-margin-pipeline`, `nfl-elo` | SDV NFL module |
+| NBA team-game | SDV `load_nba_schedule` | `nba-eda`, `nba-win-pipeline`, `nba-margin-pipeline`, `nba-elo` | — |
+| MLB team-game | SDV MLB Stats API schedule | `mlb-eda`, `mlb-win-pipeline`, `mlb-margin-pipeline`, `mlb-elo` | — |
 | MLB pitch / Statcast | `pybaseball` | skill scripts | SDV person stats |
-| CFB / NCAAB / WNBA | SDV league module | (not first-class CLI yet) | — |
+| NHL team-game | SDV `load_nhl_schedule` | `nhl-eda` (historical dumps often corrupt) | alternate source later |
+| CFB / NCAAB / WNBA | SDV league module | not first-class CLI yet | — |
+| Soccer events | SDV soccer / open event data | not first-class CLI yet | ToS-careful sources |
 
 Matrix: `references/source_matrix.md`  
+ToS notes: `references/tos_notes.md`  
 Panel contract: `docs/panel-contract.md`  
 Ecosystem notes: `docs/data-ecosystem.md`
 
@@ -69,19 +89,38 @@ Ecosystem notes: `docs/data-ecosystem.md`
 
 ## Workflow
 
-1. Restate the modeling question and grain.
+1. Restate the modeling question and grain in one sentence.
 2. List fields required at prediction time T (not every interesting column).
 3. Pick the least fragile source that provides those fields.
 4. Prefer release/API bulk loaders over live scrapers.
-5. Prefer `sports_ds` panel + CLI when the sport is wired (NFL/NBA/MLB/NHL).
+5. Prefer `sports_ds` panel + CLI when the sport is wired (NFL/NBA/MLB).
 6. Document license/ToS posture.
-7. Sanity-check home win rate and score variance after load.
+7. Load a small window and **sanity-check**:
+   - row counts
+   - seasons present
+   - home win rate not ~0 or ~1
+   - score variance not constant
 8. Snapshot local parquet for reproducible offline analysis.
+9. Hand off to `eda-sports` → `feature-rules` → modeling skills.
 
 ```bash
 python skills/data-sources/scripts/print_source_plan.py
 python skills/data-sources/scripts/print_source_plan.py --out data/source_plan.md
 ```
+
+---
+
+## Sanity Checks After First Load
+
+| Check | Healthy signal | Bad signal |
+|---|---|---|
+| Overall win rate on team-game panel | ~0.5 | 0.0 / 1.0 |
+| Home win rate (`is_home==1`) | ~0.52–0.60 depending on sport | <0.40 or >0.70 unexplained |
+| Unique score pairs | many | 1–2 constant pairs |
+| Duplicate game_id | 0 after dedupe | many |
+| Season labels | match request | missing/shifted years |
+
+Reject corrupt dumps. Do not model them.
 
 ---
 
@@ -93,6 +132,7 @@ python skills/data-sources/scripts/print_source_plan.py --out data/source_plan.m
 4. Always note that source choice does not create edge.
 5. Snapshot data used for any claim you may need to reproduce.
 6. Reject corrupt dumps (constant scores, home-win rate ~0 or ~1).
+7. Prefer bulk season loaders over single-day scoreboard calls for historical panels.
 
 ---
 
@@ -104,6 +144,7 @@ python skills/data-sources/scripts/print_source_plan.py --out data/source_plan.m
 - Using future-enriched vendor stats for pre-event claims
 - Handwritten lines/memory as “data”
 - Treating a single ESPN scoreboard call as a season schedule
+- Modeling before sanity checks
 
 ---
 
@@ -117,35 +158,35 @@ Done means:
 - [ ] Fallback source named (or none)
 - [ ] License/ToS notes
 - [ ] Known coverage gaps / corrupt-season risks listed
+- [ ] First-load sanity checks planned or done
 
 ---
 
 ## Worked Examples
 
-**NFL win model 2018–2024**
-
+### NFL win model 2018–2024
 - Grain: team-game before kickoff
 - Primary: `nflreadpy` via `sports_ds.data.nfl`
-- Commands: `sports-ds nfl-eda`, `sports-ds nfl-win-pipeline`
+- Commands:
+  - `sports-ds nfl-eda --seasons 2018-2024`
+  - `sports-ds nfl-win-pipeline --seasons 2018-2024`
 
-**NBA win model 2023–2024**
-
-- Grain: team-game
-- Primary: SDV `load_nba_schedule` via `sports_ds.data.nba`
-- Commands: `sports-ds nba-eda`, `sports-ds nba-win-pipeline`
+### NBA win/margin/Elo 2023–2024
 - Install: `pip install -e ".[multi]"`
+- Commands:
+  - `sports-ds nba-eda --seasons 2023-2024`
+  - `sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1`
+  - `sports-ds nba-margin-pipeline --seasons 2023-2024 --min-train-seasons 1`
+  - `sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1`
 
-**MLB win model 2023–2024**
+### MLB team-game vs Statcast
+- Team-game outcomes → `sports-ds mlb-*`
+- Pitch-level Statcast → `pybaseball` skill, bounded dates
 
-- Grain: team-game
-- Primary: SDV MLB Stats API schedule via `sports_ds.data.mlb`
-- Commands: `sports-ds mlb-eda`, `sports-ds mlb-win-pipeline`
-
-**NHL win model**
-
-- Prefer known-good end-years (e.g. 2024)
-- SDV 2023 dump has been observed corrupt (constant 2–3 scores) — skipped by loader
-- Commands: `sports-ds nhl-eda --seasons 2024`, `sports-ds nhl-win-pipeline --seasons 2024`
+### Source plan artifact
+```bash
+python skills/data-sources/scripts/print_source_plan.py --out data/source_plan.md
+```
 
 ---
 
@@ -154,6 +195,7 @@ Done means:
 ### references/
 - `source_matrix.md`
 - `tos_notes.md`
+- `sanity_checks.md`
 
 ### scripts/
 - `print_source_plan.py`
@@ -166,6 +208,7 @@ Done means:
 - `nflreadpy` / `sportsdataverse-py` / `pybaseball`
 - `eda-sports`
 - `feature-rules`
+- `sports-modeling-doctrine`
 
 ---
 
@@ -174,7 +217,7 @@ Done means:
 ```bash
 python skills/data-sources/scripts/print_source_plan.py --out data/source_plan.md
 pip install -e ".[multi]"
+sports-ds nfl-eda --seasons 2023-2024
 sports-ds nba-eda --seasons 2023-2024
 sports-ds mlb-eda --seasons 2023-2024
-sports-ds nhl-eda --seasons 2024
 ```

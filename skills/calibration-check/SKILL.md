@@ -6,11 +6,11 @@ description: >
   calibration error, segment calibration, sharpness, or recalibration for
   win/event models — even if the user only asks "how confident is this" or
   "do these percentages make sense." Includes runnable walk-forward calibration
-  reports on sports_ds outputs and a clear verdict scale.
-version: "0.4.0"
+  reports on sports_ds outputs for NFL/NBA/MLB and a clear verdict scale.
+version: "0.6.0"
 license: MIT
 metadata:
-  version: "0.4.0"
+  version: "0.6.0"
 ---
 
 # Calibration Check (Sports)
@@ -36,13 +36,17 @@ Use when:
 - After walk-forward evaluation of a probability model
 - Before writing results that quote probability levels
 - Comparing raw vs recalibrated probabilities
+- NFL/NBA/MLB package probability paths
 
 Do **not** use when:
 
-- Pure ranking tasks with no probabilistic interpretation
-- Hard labels only with no probability outputs
-- Designing splits from scratch → `validation-design`
-- Feature legality review → `leakage-audit`
+| Need | Go instead |
+|---|---|
+| Pure ranking tasks with no probabilistic interpretation | ranking/eval skills |
+| Hard labels only with no probability outputs | classification metrics only |
+| Designing splits from scratch | `validation-design` |
+| Feature legality review | `leakage-audit` |
+| Margin-only models without probs | MAE/RMSE reporting |
 
 ---
 
@@ -50,6 +54,8 @@ Do **not** use when:
 
 ```bash
 pip install -e .
+# multi-sport:
+pip install -e ".[multi]"
 ```
 
 ---
@@ -63,7 +69,9 @@ pip install -e .
 5. **Segment calibration** — by season, home/away, probability tail
 6. **Sharpness** — are probs informative, not all ~0.5?
 
-Definitions: `references/calibration_metrics.md`
+Definitions: `references/calibration_metrics.md`  
+Binning: `references/binning.md`  
+Recalibration: `references/recalibration.md`
 
 ---
 
@@ -76,7 +84,7 @@ Definitions: `references/calibration_metrics.md`
 5. Slice by season and by probability tails.
 6. Issue a verdict (table below).
 7. If recalibrating, only with nested/train-proper methods — never fit isotonic on the final test fold and call it validated.
-8. Write the calibration report.
+8. Write the calibration report into experiment log / results writeup.
 
 ---
 
@@ -89,7 +97,7 @@ Definitions: `references/calibration_metrics.md`
 | `poorly-calibrated` | Probability numbers not trustworthy as probabilities |
 | `invalid-eval` | Leakage/split issues block judgment |
 
-Heuristic defaults used by the script (not laws):
+Heuristic defaults used by package helpers (not laws):
 
 - ECE ≤ 0.03 and adequate n → often `well-calibrated`
 - ECE ≤ 0.07 → `usable-with-caveats`
@@ -98,42 +106,44 @@ Heuristic defaults used by the script (not laws):
 
 ---
 
-## Run on sports_ds NFL pipeline predictions
+## Run on sports_ds outputs
 
-### Preferred script
+### Package CLI (preferred)
+
+```bash
+sports-ds calibrate --sport nfl --seasons 2018-2024
+sports-ds calibrate --sport nba --seasons 2023-2024 --min-train-seasons 1
+sports-ds calibrate --sport mlb --seasons 2023-2024 --min-train-seasons 1
+sports-ds nfl-elo --seasons 2018-2024   # includes calibration block
+sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1
+sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1
+```
+
+### Skill scripts
 
 ```bash
 python skills/calibration-check/scripts/calibration_report.py \
   --seasons 2018-2024 \
   --out data/calibration_report.json
+python skills/calibration-check/scripts/segment_calibration.py --seasons 2018-2024
 ```
 
-Walk-forward logistic probs on sports_ds form features → Brier, log-loss, ECE, bin table, per-season rows, verdict.
-
-### Python API
+### Package metrics API
 
 ```python
-import numpy as np
-import sys
-from pathlib import Path
-sys.path.append(str(Path("skills/calibration-check/scripts").resolve()))
-from calibration_report import (
+from sports_ds.metrics.calibration import (
     calibration_table,
     expected_calibration_error,
-    brier_score,
-    log_loss,
+    verdict_from_ece,
 )
+from sports_ds.metrics.classification import brier_score, log_loss_binary
+import numpy as np
 
 y = np.array([0, 1, 1, 0, 1], dtype=float)
 p = np.array([0.2, 0.7, 0.8, 0.4, 0.6], dtype=float)
 print(calibration_table(y, p, n_bins=5))
-print(expected_calibration_error(y, p), brier_score(y, p), log_loss(y, p))
-```
-
-### Segment script
-
-```bash
-python skills/calibration-check/scripts/segment_calibration.py --seasons 2018-2024
+print(expected_calibration_error(y, p), brier_score(y, p), log_loss_binary(y, p))
+print(verdict_from_ece(expected_calibration_error(y, p), n=len(y)))
 ```
 
 ---
@@ -147,8 +157,6 @@ python skills/calibration-check/scripts/segment_calibration.py --seasons 2018-20
 | Tail focus (0–0.2, 0.8–1.0) | decisions live in extremes |
 
 Always report **bin counts**. Empty bins are not evidence.
-
-See `references/binning.md`.
 
 ---
 
@@ -173,6 +181,7 @@ After recalibration, re-report ECE/Brier on true forward folds.
 3. Never hide segment failures behind a pooled “looks fine.”
 4. If sample per bin is tiny, say so — widen bins or reduce claim strength.
 5. Accuracy is not calibration.
+6. Leakage-invalid evaluations cannot be “well-calibrated.”
 
 ---
 
@@ -183,6 +192,7 @@ After recalibration, re-report ECE/Brier on true forward folds.
 - Holdout isotonic theater
 - Average prob ≈ base rate therefore calibrated (necessary, not sufficient)
 - Ignoring 0.05 and 0.95 tails
+- Quoting NBA/MLB percents without sport-specific calibration
 
 ---
 
@@ -190,7 +200,7 @@ After recalibration, re-report ECE/Brier on true forward folds.
 
 ```text
 Calibration report
-Model:
+Sport/model:
 Eval: walk-forward seasons …
 n:
 Brier:
@@ -200,21 +210,33 @@ Notes by season:
 Tail behavior:
 Verdict: well-calibrated | usable-with-caveats | poorly-calibrated | invalid-eval
 Actions:
+Reproduce:
 ```
+
+---
+
+## Output Contract
+
+Done means:
+
+- [ ] Walk-forward probs used
+- [ ] ECE/Brier/log-loss reported
+- [ ] Bin counts or segment notes present
+- [ ] Verdict issued
+- [ ] Actions stated
 
 ---
 
 ## Worked Example
 
-**Model:** pre-game team win probabilities from logistic form features  
-**Design:** season walk-forward, 10 equal-width bins  
-**Finding:** predictions near 0.70 hit only ~0.60 over several seasons; tails overconfident  
-**Verdict:** `poorly-calibrated` for strong confidence language  
-**Actions:** nested recalibration experiment; until then quote ranks more carefully than exact percents
-
 ```bash
+sports-ds calibrate --sport nfl --seasons 2018-2024
+sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1
 python skills/calibration-check/scripts/calibration_report.py --seasons 2018-2024
 ```
+
+Finding example: predictions near 0.70 hit only ~0.60; tails overconfident →
+`poorly-calibrated` for strong confidence language.
 
 ---
 
@@ -234,8 +256,9 @@ python skills/calibration-check/scripts/calibration_report.py --seasons 2018-202
 | `segment_calibration.py` | home/away and tail slices |
 
 ### package code
-- `src/sports_ds/models/baselines.py`
-- `src/sports_ds/pipelines/nfl_win_model.py`
+- `src/sports_ds/metrics/calibration.py`
+- `src/sports_ds/metrics/classification.py`
+- `src/sports_ds/cli.py` (`calibrate`)
 
 ---
 
@@ -254,6 +277,9 @@ python skills/calibration-check/scripts/calibration_report.py --seasons 2018-202
 ## Quick Command Card
 
 ```bash
+sports-ds calibrate --sport nfl --seasons 2018-2024
+sports-ds calibrate --sport nba --seasons 2023-2024 --min-train-seasons 1
+sports-ds calibrate --sport mlb --seasons 2023-2024 --min-train-seasons 1
 python skills/calibration-check/scripts/calibration_report.py --seasons 2018-2024
 python skills/calibration-check/scripts/segment_calibration.py --seasons 2018-2024
 ```

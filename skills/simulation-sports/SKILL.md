@@ -6,11 +6,12 @@ description: >
   Carlo summaries, and sensitivity checks. Use after a predictive or rating
   model exists and you need distributional outcomes — even if the user only
   says "project the standings" or "simulate the season." Includes a runnable
-  season win simulator from as-of Elo inputs and assumption checklists.
-version: "0.4.0"
+  season win simulator from as-of Elo inputs, package Elo CLI paths for
+  NFL/NBA/MLB, assumption checklists, and reporting templates.
+version: "0.6.0"
 license: MIT
 metadata:
-  version: "0.4.0"
+  version: "0.6.0"
 ---
 
 # Simulation (Sports)
@@ -24,7 +25,10 @@ Turn game-level probabilities or ratings into **distributions**:
 - matchup series outcomes
 - uncertainty around a point forecast
 
-Simulation does **not** create accuracy the base model lacks — it propagates uncertainty.
+Simulation does **not** create accuracy the base model lacks — it propagates
+uncertainty from a base model under stated assumptions.
+
+Stack: `sports_ds` Elo / win probs + Monte Carlo scripts.
 
 ---
 
@@ -40,9 +44,12 @@ Use when:
 
 Do **not** use when:
 
-- No underlying probability/rating model yet → build one first
-- Single-point prediction is enough
-- Discrete-event engineering sims unrelated to sports outcomes
+| Need | Go instead |
+|---|---|
+| No underlying probability/rating model yet | build one first (`ratings-strength-models`, `predictive-modeling`) |
+| Single-point prediction is enough | modeling skills only |
+| Discrete-event engineering sims unrelated to sports outcomes | out of scope |
+| Calibration of the base probs | `calibration-check` first |
 
 ---
 
@@ -50,7 +57,19 @@ Do **not** use when:
 
 ```bash
 pip install -e .
+# multi-sport Elo inputs:
+pip install -e ".[multi]"
 ```
+
+---
+
+## Required Inputs
+
+- Base model: pre-game win probs or as-of rating differentials
+- Schedule / remaining games (one row per game, not doubled panel)
+- n_sims and seed
+- Dependence assumption (independent games vs path-dependent updates)
+- Sport + season window
 
 ---
 
@@ -58,12 +77,14 @@ pip install -e .
 
 1. **Define the object** being simulated (game, series, rest-of-season, full season).
 2. **Choose the base model** (logistic probs, Elo expected score, etc.).
-3. **State dependence assumptions** (independent games? injury freeze? home effects?).
-4. **Fix seeds and n_sims** for reproducibility.
-5. **Run Monte Carlo**.
-6. **Summarize distributions** (mean, median, p05/p95, histogram) — not only means.
-7. **Sensitivity-check** K, home advantage, independence assumptions.
-8. **Report** seeds, n_sims, assumptions, limits.
+3. **Confirm base probs are at least usable** (`calibration-check` if quoting percents).
+4. **State dependence assumptions** (independent games? injury freeze? home effects?).
+5. **Fix seeds and n_sims** for reproducibility.
+6. **Build as-of inputs** (Elo table or probability table).
+7. **Run Monte Carlo on home rows once per game**.
+8. **Summarize distributions** (mean, median, p05/p95, histogram) — not only means.
+9. **Sensitivity-check** K, home advantage, independence assumptions.
+10. **Report** seeds, n_sims, assumptions, limits, repro commands.
 
 ---
 
@@ -72,13 +93,22 @@ pip install -e .
 | Input | Source |
 |---|---|
 | Pre-game win probs | `predictive-modeling`, `statistical-modeling`, `baseline-models` |
-| Elo / rating diffs | `ratings-strength-models` (`elo_asof.py`) |
-| Schedule panel | `sports_ds.data.nfl` / schedules |
+| Elo / rating diffs | `ratings-strength-models`, `sports-ds *-elo` |
+| Schedule panel | `sports_ds.data.*` / schedules |
 
 Convert rating diff to probability if needed:
 
 ```text
-P(home edge already in elo_diff) = 1 / (1 + 10 ** (-elo_diff / 400))
+P = 1 / (1 + 10 ** (-elo_diff / 400))
+```
+
+Package Elo paths:
+
+```bash
+sports-ds nfl-elo --seasons 2018-2024 --json-out data/nfl_elo.json
+sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/nba_elo.json
+sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/mlb_elo.json
+python skills/ratings-strength-models/scripts/elo_asof.py --seasons 2023-2024 --out data/elo_asof.csv
 ```
 
 ---
@@ -138,6 +168,8 @@ See `references/simulation_assumptions.md` and `references/sensitivity.md`.
 3. Do not present simulated means as guarantees.
 4. Respect schedule constraints.
 5. If base probs are miscalibrated, say so.
+6. Never double-count home and away panel rows as two games.
+7. Sensitivity is required before strong distribution claims.
 
 ---
 
@@ -148,6 +180,7 @@ See `references/simulation_assumptions.md` and `references/sensitivity.md`.
 - Showing only expected wins with no spread
 - Using both home and away panel rows as two independent games
 - Silent dependence assumptions
+- Quoting playoff odds from uncalibrated 0.55-ish probs
 
 ---
 
@@ -164,6 +197,33 @@ Sensitivity:
 Limits:
 Reproduce:
 ```
+
+---
+
+## Output Contract
+
+Done means:
+
+- [ ] Base model named and sourced
+- [ ] n_sims + seed reported
+- [ ] Dependence assumption stated
+- [ ] Distribution summaries (not only means)
+- [ ] Sensitivity note present
+- [ ] Repro commands present
+
+---
+
+## Worked Example
+
+```bash
+python skills/ratings-strength-models/scripts/elo_asof.py --seasons 2024 --out data/elo_asof.csv
+python skills/simulation-sports/scripts/season_win_sim.py \
+  --elo-csv data/elo_asof.csv --season 2024 --n-sims 5000 --seed 7 \
+  --out data/season_win_sim_2024.json
+```
+
+Report: “Independent-game Monte Carlo from as-of Elo probs; mean and p05/p95
+win totals by team; not a claim the Elo model is well-calibrated unless checked.”
 
 ---
 
@@ -194,6 +254,7 @@ Reproduce:
 | Predictive probs | `predictive-modeling` |
 | Calibration | `calibration-check` |
 | Reporting | `results-reporting` |
+| Package Elo CLI | `sports-ds nfl-elo` / `nba-elo` / `mlb-elo` |
 
 ---
 
@@ -202,4 +263,6 @@ Reproduce:
 ```bash
 python skills/ratings-strength-models/scripts/elo_asof.py --seasons 2024 --out data/elo_asof.csv
 python skills/simulation-sports/scripts/season_win_sim.py --elo-csv data/elo_asof.csv --season 2024 --n-sims 5000
+sports-ds nfl-elo --seasons 2018-2024
+sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1
 ```
