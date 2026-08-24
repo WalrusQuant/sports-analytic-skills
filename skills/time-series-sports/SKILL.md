@@ -2,13 +2,15 @@
 name: time-series-sports
 description: >
   Time-series and form modeling for sports: rolling performance, expanding
-  windows, EWMA/recency weighting, rest adjustments, regime shifts, and
-  forecasting team or player form before game T. Use when history order and
-  recent form matter. Includes scripts for form feature tables and EWMA previews.
-version: "0.3.0"
+  windows, EWMA/recency weighting, rest adjustments, regime shifts, early-season
+  shrinkage, and forecasting team or player form before game T. Use when history
+  order and recent form matter — even if the user only says "hot streak,"
+  "rolling average," or "recent form." Includes sports_ds form builders and
+  EWMA scripts with strict shift-before-aggregate rules.
+version: "0.4.0"
 license: MIT
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # Time Series & Form (Sports)
@@ -16,25 +18,30 @@ metadata:
 ## Overview
 
 Sports performance is ordered in time. This skill builds **form features** and
-simple trajectory forecasts that are legal at decision time T: rolling means,
-expanding rates, EWMA/decay, rest gaps, and regime flags.
-
-Package implementation already used by the win pipeline:
+simple trajectory forecasts that are legal at decision time T:\n\n- rolling means\n- expanding rates\n- EWMA / decay\n- rest gaps\n- regime flags\n\nPackage implementation used by the win pipeline:
 
 `sports_ds.features.team_form.add_pregame_form_features`
 
+**Non-negotiable:** shift (or as-of) so the current game is never inside the feature.
+
+---
+
 ## When to Use This Skill
+
+Use when:
 
 - Team/player form features for pre-game models
 - Rolling averages, EWMA, half-life decay
 - Forecasting next-game stats from trajectories
 - Handling bye weeks, missing games, season breaks
 - Comparing recency-weighted form vs static season averages
+- User says “hot streak,” “last 5,” or “recent form”
 
-## When Not to Use
+Do **not** use when:
 
 - Pure cross-sectional comparison with no recency component
-- Static season aggregates already sufficient and time-safe
+- Opponent-adjusted strength is the real goal → also use `ratings-strength-models`
+- Static season aggregates already sufficient **and** time-safe
 
 ---
 
@@ -51,9 +58,10 @@ pip install -e .
 1. Define the **entity** and **frequency** (team-game, player-game, week).
 2. Sort by entity + time; handle missing games explicitly.
 3. Choose window/decay rules; tune only inside training folds.
-4. Apply **shift(1)** / as-of so current game is never inside the feature.
+4. Apply **`shift(1)` / as-of** so current game is never inside the feature.
 5. Compare form features against static baselines under walk-forward validation.
-6. Watch early-season small-sample explosions — use min-games thresholds or shrinkage.
+6. Watch early-season small-sample explosions — min-games thresholds or shrinkage.
+7. Document window/span, shift rule, and min history.
 
 ---
 
@@ -67,6 +75,9 @@ pip install -e .
 | Rest days | schedule gaps | diff of game dates |
 | Season phase | week number, month | known pre-game |
 | Regime split | rule changes, coaching eras | flag by date known at T |
+
+Recipes: `references/form_feature_recipes.md`  
+Shrinkage: `references/early_season.md`
 
 ---
 
@@ -86,6 +97,8 @@ Creates shifted fields such as:
 - `roll3_win_pct`, `roll5_diff`
 - opponent mirrors and differentials used by the win model
 
+Code: `src/sports_ds/features/team_form.py`
+
 ---
 
 ## Scripts
@@ -99,10 +112,19 @@ python skills/feature-rules/scripts/feature_preview.py --seasons 2023-2024
 ### EWMA form table
 
 ```bash
-python skills/time-series-sports/scripts/ewma_form.py --seasons 2023-2024 --span 5 --out data/ewma_form.csv
+python skills/time-series-sports/scripts/ewma_form.py \
+  --seasons 2023-2024 \
+  --span 5 \
+  --out data/ewma_form.csv
 ```
 
-Builds team-game EWMA of prior point differential and wins (shifted).
+Builds team-game EWMA of prior wins and point differential (shifted), plus opponent differentials.
+
+### Compare rolling vs EWMA quickly
+
+```bash
+python skills/time-series-sports/scripts/compare_form_windows.py --seasons 2018-2024
+```
 
 ---
 
@@ -113,7 +135,25 @@ Builds team-game EWMA of prior point differential and wins (shifted).
 | Week 1 empty history | NA features + drop or league prior |
 | Tiny n rolling windows | require `pre_games_played >= k` |
 | Noisy short rolls | shrinkage toward league mean / expanding mean |
-| Bye weeks | rest_days feature; don't fill with zeros blindly |
+| Bye weeks | rest_days feature; don’t fill with zeros blindly |
+| Offseason gaps | don’t treat long rest as a normal short-week rest without care |
+
+---
+
+## Validation
+
+Form features are hypotheses. Evaluate them:
+
+```python
+# walk-forward logistic including form diffs vs constant baseline
+# see baseline-models / predictive-modeling
+```
+
+```bash
+python skills/baseline-models/scripts/run_baselines.py --seasons 2018-2024
+```
+
+Tune window/span **inside training folds only**.
 
 ---
 
@@ -123,7 +163,7 @@ Builds team-game EWMA of prior point differential and wins (shifted).
 2. No “season average including current game.”
 3. Early-season priors/shrinkage when n is tiny.
 4. Validate across seasons, not one hot streak.
-5. Opponent strength still matters — raw form is not opponent-adjusted strength (`ratings-strength-models`).
+5. Opponent strength still matters — raw form ≠ opponent-adjusted strength (`ratings-strength-models`).
 
 ---
 
@@ -133,6 +173,7 @@ Builds team-game EWMA of prior point differential and wins (shifted).
 - Ignoring opponent strength in raw form
 - Treating playoffs and regular season as identical without a flag
 - Tuning window length on the final test season only
+- Filling NA form with 0.0 silently
 
 ---
 
@@ -140,10 +181,10 @@ Builds team-game EWMA of prior point differential and wins (shifted).
 
 ```text
 Form model: rolling / EWMA / expanding
-Entity/frequency: …
-Windows/span: …
+Entity/frequency:
+Windows/span:
 Shift rule: shift(1) before aggregate
-Min history: …
+Min history:
 Validation: vs static baseline under walk-forward
 Limits: early season, injuries, opponent strength…
 ```
@@ -152,23 +193,41 @@ Limits: early season, injuries, opponent strength…
 
 ## Bundled Resources
 
-### scripts/
-
-- `ewma_form.py` — shifted EWMA win% and point-diff form table
-
 ### references/
+| File | Contents |
+|---|---|
+| `form_feature_recipes.md` | shift/roll/expand/EWMA recipes |
+| `early_season.md` | small-sample handling |
+| `rest_and_gaps.md` | byes and calendar gaps |
 
-- `form_feature_recipes.md`
+### scripts/
+| File | Contents |
+|---|---|
+| `ewma_form.py` | shifted EWMA form table |
+| `compare_form_windows.py` | walk-forward compare roll vs EWMA features |
 
 ### package code
-
 - `src/sports_ds/features/team_form.py`
 
 ---
 
 ## Related Skills
 
-- Feature legality: `feature-rules`
-- Ratings (opponent-adjusted): `ratings-strength-models`
-- EDA: `eda-sports`
-- Models: `baseline-models`, `predictive-modeling`
+| Need | Skill |
+|---|---|
+| Feature legality | `feature-rules` |
+| Ratings (opponent-adjusted) | `ratings-strength-models` |
+| EDA | `eda-sports` |
+| Models | `baseline-models`, `predictive-modeling` |
+| Leakage | `leakage-audit` |
+
+---
+
+## Quick Command Card
+
+```bash
+python skills/feature-rules/scripts/feature_preview.py --seasons 2023-2024
+python skills/time-series-sports/scripts/ewma_form.py --seasons 2023-2024 --span 5
+python skills/time-series-sports/scripts/compare_form_windows.py --seasons 2018-2024
+python skills/baseline-models/scripts/run_baselines.py --seasons 2018-2024
+```

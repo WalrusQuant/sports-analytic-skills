@@ -2,29 +2,46 @@
 name: ratings-strength-models
 description: >
   Build and evaluate sports strength/rating models — Elo-like sequential
-  ratings, offense/defense splits, least-squares power ratings, and as-of
-  ratings for matchup prediction. Use for team/player strength baselines and
-  as features in win/margin models. Includes a runnable Elo as-of builder.
-version: "0.3.0"
+  ratings, offense/defense splits, least-squares power ratings, hierarchical
+  strength, and strict as-of ratings for matchup prediction. Use for team or
+  player strength baselines and as features in win/margin models — even if the
+  user only says "build Elo" or "power ratings." Includes a runnable Elo as-of
+  builder, walk-forward evaluation patterns, and parameter guidance.
+version: "0.4.0"
 license: MIT
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # Ratings & Strength Models (Sports)
 
 ## Overview
 
-Estimate latent team (or player) strength from past results, then use those
-ratings only as they existed before game T. Ratings are often the strongest
-simple sports baselines.
+Estimate latent team (or player) strength from **past** results, then use those
+ratings only as they existed **before** game T.
+
+Ratings are often the strongest simple sports baselines and strong features for
+logistic/ML models. The non-negotiable rule: **as-of only**.
+
+---
 
 ## When to Use This Skill
+
+Use when:
 
 - Team power ratings / rankings over a season
 - Matchup priors for win or margin models
 - Opponent adjustment
 - Strong baselines before feature-heavy ML
+- User says “Elo,” “power ratings,” or “team strength”
+
+Do **not** use as a substitute for:
+
+| Need | Go to |
+|---|---|
+| Raw form windows only | `time-series-sports` / `feature-rules` |
+| Full ML horse race | `predictive-modeling` |
+| Validation design | `validation-design` |
 
 ---
 
@@ -45,6 +62,7 @@ pip install -e .
 5. Predict matchups from rating differentials (+ home).
 6. Evaluate with season walk-forward (`validation-design`).
 7. Compare to constant / home baselines (`baseline-models`).
+8. Report params, as-of rule, metrics, limits.
 
 ---
 
@@ -60,6 +78,8 @@ pip install -e .
 
 Start with Elo-like or margin power ratings before exotic variants.
 
+Details: `references/rating_families.md`
+
 ---
 
 ## Elo (implemented script)
@@ -67,12 +87,20 @@ Start with Elo-like or margin power ratings before exotic variants.
 Classic Elo update after each game, with home advantage and optional margin multiplier.
 
 ```bash
-python skills/ratings-strength-models/scripts/elo_asof.py --seasons 2018-2024 --out data/elo_asof.csv
+python skills/ratings-strength-models/scripts/elo_asof.py \
+  --seasons 2018-2024 \
+  --k 20 \
+  --home-adv 65 \
+  --out data/elo_asof.csv
 ```
 
-Outputs one row per team-game with `elo_pre`, `opp_elo_pre`, `elo_diff` known before the game.
+Outputs one row per team-game with:
 
-Python pattern:
+- `elo_pre` — team rating before the game
+- `opp_elo_pre` — opponent rating before the game
+- `elo_diff` — matchup differential including home advantage on the home side
+
+### Python API
 
 ```python
 import sys
@@ -83,22 +111,29 @@ from elo_asof import build_elo_asof_table
 from sports_ds.data.nfl import load_team_game_panel
 
 panel = load_team_game_panel(list(range(2018, 2025)))
-elo = build_elo_asof_table(panel, k=20.0, home_adv=65.0)
+elo = build_elo_asof_table(panel, k=20.0, home_adv=65.0, init=1500.0, use_margin=True)
 print(elo.head())
 ```
 
-### Using Elo as a model feature
+### Using Elo as a model feature (walk-forward)
 
 ```python
-import pandas as pd
-from sports_ds.models.baselines import fit_logistic_baseline
+from sports_ds.models.baselines import baseline_home_rate, fit_logistic_baseline
 from sports_ds.validation.splits import season_walk_forward_masks
 
 df = elo.dropna(subset=["elo_diff"]).copy()
 df["is_home"] = df["is_home"].astype(float)
-for season, tr, te in season_walk_forward_masks(df):
+
+for season, tr, te in season_walk_forward_masks(df, min_train_seasons=2):
+    c = baseline_home_rate(df, tr, te)
     _, res, _ = fit_logistic_baseline(df, ["is_home", "elo_diff"], tr, te)
-    print(season, res.log_loss, res.accuracy)
+    print(season, c.log_loss, res.log_loss, res.accuracy)
+```
+
+Or:
+
+```bash
+python skills/ratings-strength-models/scripts/eval_elo_baseline.py --seasons 2018-2024
 ```
 
 ---
@@ -106,39 +141,57 @@ for season, tr, te in season_walk_forward_masks(df):
 ## Design Choices
 
 ### K factor
-
 - Higher K: reacts faster, noisier
 - Lower K: stabler, slower to adapt
 - NFL starting point: K ≈ 20 on 1500-scale Elo
 
 ### Home advantage
-
-- Add home_adv to home team pre-game Elo when computing expected score
-- Estimate later from data; start with a fixed value
+- Add `home_adv` to home team pre-game Elo when computing expected score
+- Start fixed (e.g. 65 Elo points); estimate later from data if needed
 
 ### Margin
-
 - Optional multiplier on K using point differential
 - Diminishing returns (log/sqrt) to avoid blowout domination
 
 ### Mean reversion / season regression
+- Regress ratings toward mean between seasons for multi-year series
+- Important for long panels and roster turnover
 
-- Regress ratings to mean between seasons for multi-year series
-- Important for long panels
+### Initialization
+- Common: all teams 1500
+- Report init explicitly
+
+See `references/parameters.md`.
+
+---
+
+## Other Families (patterns)
+
+### Least-squares power ratings (season-to-date)
+Each week, solve team strengths from margins-to-date; store as-of ratings before each game. Recompute weekly — never use end-of-season solution for early weeks.
+
+### Offense/defense split
+Each team has attack and defense parameters; predict score lines, not only winners. Still as-of only.
+
+### Hierarchical player strength
+Partial pooling when player n is uneven (`statistical-modeling` mixed models / Bayesian refs).
 
 ---
 
 ## Evaluation
 
-Primary:
-
+**Primary**
 - walk-forward log-loss / Brier for win probability from rating diff
 - MAE for predicted margin if modeling spreads
 
-Always compare to:
-
+**Always compare to**
 - constant baseline
 - home-only model
+- form logistic baseline when available
+
+**Success**
+- beats constant on most folds
+- preferably competitive with form logistic
 
 ---
 
@@ -147,7 +200,18 @@ Always compare to:
 1. **As-of only** — never use post-game rating to predict that game.
 2. Update order must follow real chronology.
 3. Do not fit K on the final test season repeatedly without nested validation.
-4. Report initialization and scale (e.g., mean 1500).
+4. Report initialization and scale (e.g. mean 1500).
+5. Do not treat ratings as causal player quality without more structure.
+
+---
+
+## Anti-Patterns
+
+- Final rating applied backward to early games
+- Huge K chasing noise
+- Ignoring home advantage
+- Mixing playoffs and regular season without a flag
+- Claiming ranking quality without forward prediction metrics
 
 ---
 
@@ -159,33 +223,51 @@ Signal: win (margin multiplier: …)
 Params: K=…, home_adv=…, init=1500
 As-of rule: pre-game rating before update
 Validation: season walk-forward
-Metrics vs constant / home: …
+Metrics vs constant / home / form logistic: …
 Limits: no roster continuity, no injuries, …
+Reproduce: python skills/ratings-strength-models/scripts/elo_asof.py ...
 ```
 
 ---
 
 ## Bundled Resources
 
-### scripts/
-
-- `elo_asof.py` — build pre-game Elo table from sports_ds NFL panel
-
 ### references/
+| File | Contents |
+|---|---|
+| `rating_families.md` | family overview |
+| `parameters.md` | K, home_adv, margin, regression |
+| `evaluation.md` | how to score ratings |
 
-- `rating_families.md`
+### scripts/
+| File | Contents |
+|---|---|
+| `elo_asof.py` | build pre-game Elo table |
+| `eval_elo_baseline.py` | walk-forward logistic on elo_diff |
 
 ### package handoff
-
-- features: merge `elo_diff` into model frames
 - validation: `sports_ds.validation.season_walk_forward_masks`
 - baselines: `sports_ds.models.baselines`
 
 ---
 
-## Related skills
+## Related Skills
 
-- Baselines: `baseline-models`
-- Features: `feature-rules`
-- Predictive ML: `predictive-modeling`
-- Validation: `validation-design`
+| Need | Skill |
+|---|---|
+| Baselines | `baseline-models` |
+| Features | `feature-rules` |
+| Form windows | `time-series-sports` |
+| Predictive ML | `predictive-modeling` |
+| Validation | `validation-design` |
+| Simulation from ratings | `simulation-sports` |
+
+---
+
+## Quick Command Card
+
+```bash
+python skills/ratings-strength-models/scripts/elo_asof.py --seasons 2018-2024 --out data/elo_asof.csv
+python skills/ratings-strength-models/scripts/eval_elo_baseline.py --seasons 2018-2024
+python skills/simulation-sports/scripts/season_win_sim.py --elo-csv data/elo_asof.csv --season 2024
+```
