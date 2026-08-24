@@ -1,0 +1,22 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "sports-analytic-skills",
+  "version": "0.0.1",
+  "description": "Agent Skills for sports betting and sports analytics judgment: doctrine, leakage control, validation, CLV, and honest evaluation.",
+  "author": {
+    "name": "Adam Wickwire",
+    "url": "https://adamwickwire.com"
+  },
+  "homepage": "https://github.com/WalrusQuant/sports-analytic-skills",
+  "repository": "https://github.com/WalrusQuant/sports-analytic-skills",
+  "license": "MIT",
+  "keywords": [
+    "agent-skills",
+    "sports-analytics",
+    "sports-betting",
+    "backtesting",
+    "clv",
+    "validation",
+    "data-science"
+  ]
+}

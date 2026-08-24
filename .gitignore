@@ -1,0 +1,42 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.env
+.env.*
+
+# Node
+node_modules/
+
+# Local agent / IDE
+.claude/
+.cursor/
+.codex/
+.agents/
+.idea/
+.vscode/
+
+# Data dumps / notebooks checkpoints (keep examples intentional)
+*.parquet
+*.feather
+*.h5
+*.sqlite
+*.db
+.ipynb_checkpoints/
+
+# Secrets
+*.pem
+*.key
+credentials*
+secrets*
