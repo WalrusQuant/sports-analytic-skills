@@ -1,39 +1,47 @@
 ---
 name: statistical-modeling
 description: >
-  Statistical modeling for sports data science — GLMs for wins/scores/counts,
-  hierarchical team/player effects, assumption checks, effect sizes, and
-  complete reporting. Use when comparing groups, modeling margins/points/goals,
-  building interpretable probability models, checking residuals, or writing up
-  sports analysis results. Covers logistic/linear/Poisson models, mixed effects,
-  regularization, and diagnostics with statsmodels/sklearn/pingouin patterns.
-version: "0.3.0"
+  Guided statistical modeling for sports data — test and model selection for
+  wins/margins/scores/counts, assumption checking, effect sizes, hierarchical
+  team/player effects, walk-forward-aware inference, and complete reporting.
+  Use whenever analyzing sports outcomes, comparing groups (home/away, eras,
+  positions), fitting logistic/linear/Poisson models, checking residuals, or
+  writing up sports analysis results. Covers GLMs, mixed effects, regularization,
+  calibration, and diagnostics with statsmodels/scipy/pingouin/sklearn patterns
+  plus sports_ds loaders. For pure ML horse races see predictive-modeling; for
+  leakage audits see leakage-audit.
+version: "0.4.0"
 license: MIT
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # Statistical Modeling for Sports
 
 ## Overview
 
-Build defensible statistical models on sports data: the right family for the
-outcome, verified assumptions, honest uncertainty, and a write-up that survives
-review. Prefer interpretable structure before black-box ML.
+Conduct statistical analyses on sports data the way a careful analyst would:
+right model family for the outcome, verified assumptions, honest effect sizes
+and uncertainty, time-safe features when predicting, and a write-up that
+survives review.
 
-This skill operates with the `sports_ds` package when available, and plain
-scientific Python otherwise.
+This is the sports-domain counterpart to a full scientific statistical-analysis
+skill: complete workflows, runnable scripts, and deep references — specialized
+for games, teams, players, and seasons.
+
+Stack: `sports_ds` + `pandas` / `numpy` / `scipy` / `statsmodels` / `scikit-learn`
+(+ optional `pingouin`, `seaborn`).
 
 ## When to Use This Skill
 
 Use this skill when:
 
 - Modeling win/loss, margins, points, goals, runs, or other sports outcomes
-- Building logistic or linear baselines with covariates (home, rest, ratings)
-- Fitting Poisson/NegBin count models for scoring
-- Adding team/player hierarchical structure
-- Checking residual diagnostics and calibration of probability models
-- Reporting coefficients, effect sizes, and model fit honestly
+- Comparing groups (home vs away, pre/post rule change, position groups)
+- Fitting logistic, linear, Poisson, or NegBin models on sports panels
+- Adding hierarchical team/player effects (partial pooling)
+- Checking residual diagnostics and probability calibration
+- Reporting coefficients, odds ratios, effect sizes, and model fit
 - Choosing between classical stats models and jumping to ML
 
 Do **not** use this skill as a substitute for:
@@ -42,6 +50,7 @@ Do **not** use this skill as a substitute for:
 - pure EDA → `eda-sports`
 - walk-forward ML horse races → `predictive-modeling`
 - leakage review of feature pipelines → `leakage-audit`
+- rating systems as the primary object → `ratings-strength-models`
 
 ---
 
@@ -61,6 +70,12 @@ Core stack already pulled by `sports_ds`:
 
 - `pandas`, `numpy`, `scipy`, `scikit-learn`, `statsmodels`, `matplotlib`
 
+**Compatibility notes:**
+
+- Prefer `statsmodels>=0.14` with recent SciPy
+- Pingouin 0.6+ column names: `p_val`, `cohen_d`, `CI95` (not hyphenated 0.5.x names)
+- For Bayesian hierarchical work, optional: `pymc`, `arviz` (see references/bayesian_statistics.md)
+
 ---
 
 ## Analysis Workflow
@@ -69,7 +84,7 @@ Every sound sports statistical analysis follows this arc. Do not skip.
 
 1. **Frame the question before fitting.**
    - Outcome (win, margin, goals, player stat)
-   - Predictors known at decision time T
+   - Predictors known at decision time T (if predictive)
    - Unit of analysis (game, team-game, player-game, possession)
    - Estimand: description, prediction, or causal claim (most sports work is predictive/descriptive)
 
@@ -79,7 +94,7 @@ Every sound sports statistical analysis follows this arc. Do not skip.
    - score distributions, zero inflation, outliers
    - home/away balance
 
-3. **Choose the model family** (see selection guide below).
+3. **Choose the model family** using the selection guide below (and `references/test_selection_guide.md` + `references/sports_glm_guide.md`).
 
 4. **Enforce time safety for predictive work.**
    - Features must be knowable at T
@@ -89,19 +104,23 @@ Every sound sports statistical analysis follows this arc. Do not skip.
    - home indicator + one strength feature beats a kitchen sink
 
 6. **Check assumptions / diagnostics.**
+   - Use `scripts/assumption_checks.py` and `scripts/glm_diagnostics.py`
    - residual plots, overdispersion, leverage, calibration for probabilities
 
 7. **Compare to baselines.**
-   - constant rate, home-only, simple rating differential
+   - constant rate, home-only, simple rating differential (`baseline-models`)
 
 8. **Report completely.**
    - family, formula, n, metrics, coefficients with uncertainty, limits
+   - templates in `references/reporting_standards.md` + sports templates below
+
+If the user only needs one step (e.g. “is home advantage real in this sample?”), jump to that section — but still state design assumptions.
 
 ---
 
 ## Model Selection Guide (Sports)
 
-### Binary outcomes (win/loss, over/under hit)
+### Binary outcomes (win/loss, threshold events)
 
 | Situation | Model |
 |---|---|
@@ -135,6 +154,16 @@ Every sound sports statistical analysis follows this arc. Do not skip.
 - Team strength as random intercepts
 - Pitcher/batter, goalie, QB effects with partial pooling
 - Prefer partial pooling over dummy-every-player with tiny n
+
+### Group comparisons (not full predictive models)
+
+| Design | Start here |
+|---|---|
+| Two independent groups, continuous | Welch t-test / Mann-Whitney |
+| Paired (same team pre/post) | Paired t / Wilcoxon |
+| 3+ groups | ANOVA / Kruskal-Wallis |
+| Association of two continuous | Pearson / Spearman |
+| See full tree | `references/test_selection_guide.md` |
 
 ---
 
@@ -172,8 +201,8 @@ model_df = model_df[model_df["pre_games_played"] >= 3]
 ```python
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
+import numpy as np
 
-# Example on a single train window (for coefficients/diagnostics)
 train = model_df[model_df["season"] < 2024].copy()
 fit = smf.glm(
     formula="won ~ is_home + feature_win_pct_diff + feature_diff_diff",
@@ -181,9 +210,40 @@ fit = smf.glm(
     family=sm.families.Binomial(),
 ).fit(cov_type="HC3")
 print(fit.summary())
+
+# Odds ratios with 95% CI
+ors = np.exp(fit.params)
+ci = np.exp(fit.conf_int())
+print(ors)
+print(ci)
 ```
 
-### 4. Walk-forward evaluation (predictive honesty)
+### 4. Margin model (Gaussian)
+
+```python
+# home-row margins avoid double-counting games
+home = train[train["is_home"] == 1]
+m_fit = smf.ols(
+    "point_diff ~ feature_win_pct_diff + feature_diff_diff",
+    data=home,
+).fit(cov_type="HC3")
+print(m_fit.summary())
+```
+
+### 5. Poisson scoring model (points/goals pattern)
+
+```python
+# example: points_for as count-ish outcome with exposure not required for full games
+poi = smf.glm(
+    "points_for ~ is_home + feature_win_pct_diff",
+    data=train,
+    family=sm.families.Poisson(),
+).fit()
+print(poi.summary())
+# if Pearson chi2 / df >> 1, switch to NegativeBinomial
+```
+
+### 6. Walk-forward evaluation (predictive honesty)
 
 ```python
 from sports_ds.models.baselines import baseline_home_rate, fit_logistic_baseline
@@ -209,21 +269,61 @@ sports-ds nfl-win-pipeline --seasons 2018-2024
 
 ## Assumption Checks & Diagnostics
 
-Use bundled helpers:
+**Always check assumptions before interpreting**, and report the checks.
+
+### General assumption toolkit (bundled)
+
+Use the full scientific assumption module (normality, variance homogeneity,
+linearity, outliers, regression diagnostics):
 
 ```bash
-# from repo root, with venv active
+# from repo root, with venv active — import path:
+# skills/statistical-modeling/scripts
+```
+
+```python
+import sys
+from pathlib import Path
+sys.path.append(str(Path("skills/statistical-modeling/scripts").resolve()))
+
+from assumption_checks import (
+    comprehensive_assumption_check,
+    check_normality,
+    check_homogeneity_of_variance,
+    check_regression_diagnostics,
+    detect_outliers,
+)
+
+# Example: margin distribution overall
+home = model_df[model_df.is_home == 1]
+print(check_normality(home["point_diff"], name="point_diff", plot=False))
+
+# Grouped: point_diff by season (illustrative)
+print(check_homogeneity_of_variance(home, "point_diff", "season", plot=False))
+```
+
+### Sports GLM diagnostics script
+
+```bash
 python skills/statistical-modeling/scripts/glm_diagnostics.py \
   --seasons 2018-2023 \
   --out data/glm_diagnostics.json
 ```
 
-### What to check
+```python
+from glm_diagnostics import logistic_diagnostics_report, build_model_frame
+df = build_model_frame(list(range(2018, 2024)))
+report = logistic_diagnostics_report(df)
+print(report["odds_ratios"])
+print(report["calibration_bins"])
+```
+
+### What to check by family
 
 **Logistic / classification**
 
 - separation / extreme coefficients
-- probability calibration (see `calibration-check`)
+- probability calibration (`calibration-check`)
 - influential games (high leverage matchups)
 - stability across seasons
 
@@ -232,6 +332,7 @@ python skills/statistical-modeling/scripts/glm_diagnostics.py \
 - residual vs fitted curvature
 - QQ plot of residuals
 - residual variance by season or predicted mean
+- use `check_regression_diagnostics` on OLS fits
 
 **Poisson scoring models**
 
@@ -243,18 +344,7 @@ python skills/statistical-modeling/scripts/glm_diagnostics.py \
 - leakage: any feature using same-game outcomes?
 - temporal drift: does 2019 model die in 2024?
 
-### Script API
-
-```python
-import sys
-from pathlib import Path
-sys.path.append(str(Path("skills/statistical-modeling/scripts").resolve()))
-from glm_diagnostics import logistic_diagnostics_report
-
-report = logistic_diagnostics_report(train_df, formula="won ~ is_home + feature_win_pct_diff")
-print(report["summary_text"])
-print(report["odds_ratios"])
-```
+See `references/assumptions_and_diagnostics.md` and `references/diagnostics_checklist.md`.
 
 ---
 
@@ -268,12 +358,7 @@ p-values are usually the wrong headline for predictive sports work. Prefer:
 | Binary decisions | accuracy only as secondary; care about base rates |
 | Margins | MAE, RMSE, residual SD |
 | Counts | MAE, Poisson deviance |
-| Ranking teams | Spearman/Kendall vs final standings (careful with leakage) |
-
-For explanatory group comparisons off the main predictive track (e.g., before/after rule change):
-
-- report effect sizes (Cohen's d, risk difference, odds ratios) with CIs
-- do not p-hack season slices
+| Group differences (explanatory) | Cohen's d, risk difference, odds ratios + CIs |
 
 Odds ratio from logistic coefficient:
 
@@ -281,7 +366,17 @@ Odds ratio from logistic coefficient:
 import numpy as np
 or_home = np.exp(fit.params["is_home"])
 ci = np.exp(fit.conf_int().loc["is_home"])
-print(or_home, ci)
+print(or_home, ci.tolist())
+```
+
+For classical effect size tables, power analysis, and CI methods, use
+`references/effect_sizes_and_power.md` and pingouin:
+
+```python
+import pingouin as pg
+# home vs away margins on home-row frame already encodes home perspective;
+# example two-sample on a continuous player metric:
+# pg.ttest(group_a, group_b, correction='auto')  # returns cohen_d, CI95, etc.
 ```
 
 ---
@@ -292,22 +387,46 @@ When player or team n is uneven, complete-pooling (ignore groups) and
 no-pooling (dummy each group) both fail. Partial pooling is the default
 serious approach.
 
-Conceptual statsmodels/linearmodels style (team random intercept for margins):
-
 ```python
-# Mixed LM example for continuous margin; requires sufficient group size
 import statsmodels.formula.api as smf
+# Mixed LM example for continuous margin; requires sufficient group size
 md = smf.mixedlm("point_diff ~ is_home", data=train, groups=train["team"])
 mdf = md.fit()
 print(mdf.summary())
 ```
 
-For full Bayesian hierarchical rating models, prefer a dedicated Bayesian workflow;
-keep priors explicit and report posterior predictive checks.
+For full Bayesian hierarchical rating models, keep priors explicit and report
+posterior predictive checks — see `references/bayesian_statistics.md`.
 
 ---
 
-## Reporting Template (Sports Statistical Model)
+## Group Comparison Examples (Sports)
+
+### Home advantage on margins (home rows)
+
+```python
+import pingouin as pg
+home = panel[panel.is_home == 1]
+# one-sample: is mean home margin > 0?
+print(home["point_diff"].describe())
+print(pg.ttest(home["point_diff"], 0))
+```
+
+### Correlation: pre-game form vs margin
+
+```python
+feat = add_pregame_form_features(panel).dropna(subset=["feature_diff_diff", "point_diff"])
+print(pg.corr(feat["feature_diff_diff"], feat["point_diff"], method="pearson"))
+print(pg.corr(feat["feature_diff_diff"], feat["point_diff"], method="spearman"))
+```
+
+Always state that observational sports associations are not automatically causal.
+
+---
+
+## Reporting Templates (Sports)
+
+### Predictive logistic win model
 
 ```text
 Question: Pre-game P(team win) on NFL team-game panel, seasons S0–S1.
@@ -323,6 +442,19 @@ Diagnostics: …; calibration: …
 Limits: no opponent-adjusted EPA; roster/injury not modeled; team renames handled by raw abbreviations.
 ```
 
+### Explanatory home-advantage estimate
+
+```text
+Question: Mean home margin in NFL seasons …
+Design: home rows only (one row per game).
+Analysis: one-sample t on point_diff vs 0; effect size Cohen's d; 95% CI.
+Assumptions: normality checked via Shapiro-Wilk + Q-Q; large n → CLT noted.
+Result: M=…, SD=…, t(df)=…, p=…, d=…, 95% CI ….
+Limits: era/rule confounds; not a causal estimate of venue alone.
+```
+
+APA-style general templates: `references/reporting_standards.md`.
+
 ---
 
 ## Integrity Rules
@@ -333,6 +465,8 @@ Limits: no opponent-adjusted EPA; roster/injury not modeled; team renames handle
 4. **Never use same-game score components as predictors for pre-game models.**
 5. **Separate exploratory coefficient fishing from confirmatory walk-forward evaluation.**
 6. **Report failures and non-improvements.**
+7. **Distinguish confirmatory from exploratory analyses** (see statistical integrity notes in references).
+8. **Make it reproducible** — seasons, formula, package versions, seeds.
 
 ---
 
@@ -340,22 +474,33 @@ Limits: no opponent-adjusted EPA; roster/injury not modeled; team renames handle
 
 ### references/
 
-- `sports_glm_guide.md` — family choice, formulas, sports gotchas
-- `diagnostics_checklist.md` — residual/calibration/leakage checks
+| File | Contents |
+|---|---|
+| `sports_glm_guide.md` | Sports outcome → GLM family map and formulas |
+| `diagnostics_checklist.md` | Sports-specific diagnostic checklist |
+| `test_selection_guide.md` | Full test selection tree (group comparisons, etc.) |
+| `assumptions_and_diagnostics.md` | Deep assumption checking guidance |
+| `effect_sizes_and_power.md` | Effect sizes, CIs, power analysis |
+| `bayesian_statistics.md` | Priors, hierarchical Bayes, diagnostics |
+| `reporting_standards.md` | Complete reporting standards and templates |
 
 ### scripts/
 
-- `glm_diagnostics.py` — fit logistic GLM on sports_ds features + export diagnostics JSON
+| File | Contents |
+|---|---|
+| `assumption_checks.py` | Full assumption toolkit: normality, Levene, linearity, outliers, OLS diagnostics |
+| `glm_diagnostics.py` | Fit logistic GLM on sports_ds features; export OR, calibration JSON |
 
 ### package code
 
 - `src/sports_ds/models/baselines.py`
 - `src/sports_ds/pipelines/nfl_win_model.py`
 - `src/sports_ds/validation/splits.py`
+- `src/sports_ds/features/team_form.py`
 
 ---
 
-## Handoffs
+## Related Skills
 
 | Need | Go to |
 |---|---|
@@ -365,6 +510,8 @@ Limits: no opponent-adjusted EPA; roster/injury not modeled; team renames handle
 | Ratings instead of covariates | `ratings-strength-models` |
 | Probability reliability | `calibration-check` |
 | Write-up | `results-reporting` / `model-card` |
+| Baselines ladder | `baseline-models` |
+| Validation design | `validation-design` |
 
 ---
 
@@ -375,4 +522,5 @@ pip install -e .
 sports-ds nfl-eda --seasons 2018-2024
 sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win_pipeline.json
 python skills/statistical-modeling/scripts/glm_diagnostics.py --seasons 2018-2023
+python skills/calibration-check/scripts/calibration_report.py --seasons 2018-2024
 ```
