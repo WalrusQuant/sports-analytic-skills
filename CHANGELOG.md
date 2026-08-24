@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0
+
+### Multi-sport package paths
+- Shared team-game panel helpers (`sports_ds.data.panel`)
+- Generic team-win walk-forward engine (`sports_ds.pipelines.team_win`)
+- NBA / MLB / NHL loaders + `*-eda` / `*-win-pipeline` CLI commands
+- NHL corrupt-score dump detection (skips unusable seasons like constant 2-3 scores)
+- Docs/skills updated for multi-sport package paths
+
 ## 0.7.0
 
 ### Package

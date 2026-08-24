@@ -12,9 +12,9 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_nfl = sub.add_parser("nfl-win-pipeline", help="Run NFL team-win walk-forward pipeline")
-    p_nfl.add_argument("--seasons", default="2018-2024", help="e.g. 2018-2024 or 2020,2021,2022")
+    p_nfl.add_argument("--seasons", default="2018-2024")
     p_nfl.add_argument("--min-train-seasons", type=int, default=2)
-    p_nfl.add_argument("--json-out", default="", help="optional path to write full JSON result")
+    p_nfl.add_argument("--json-out", default="")
 
     p_margin = sub.add_parser("nfl-margin-pipeline", help="Run NFL team-margin walk-forward pipeline")
     p_margin.add_argument("--seasons", default="2018-2024")
@@ -41,13 +41,14 @@ def main(argv: list[str] | None = None) -> int:
     p_eda = sub.add_parser("nfl-eda", help="Load NFL team-game panel and print EDA summary")
     p_eda.add_argument("--seasons", default="2023-2024")
 
-    p_nba_eda = sub.add_parser("nba-eda", help="Load NBA team-game panel and print EDA summary")
-    p_nba_eda.add_argument("--seasons", default="2023-2024")
-
-    p_nba = sub.add_parser("nba-win-pipeline", help="Run NBA team-win walk-forward pipeline")
-    p_nba.add_argument("--seasons", default="2023-2024")
-    p_nba.add_argument("--min-train-seasons", type=int, default=1)
-    p_nba.add_argument("--json-out", default="")
+    # multi-sport
+    for sport in ("nba", "mlb", "nhl"):
+        p = sub.add_parser(f"{sport}-eda", help=f"Load {sport.upper()} team-game panel EDA")
+        p.add_argument("--seasons", default="2023-2024")
+        p2 = sub.add_parser(f"{sport}-win-pipeline", help=f"Run {sport.upper()} team-win walk-forward pipeline")
+        p2.add_argument("--seasons", default="2023-2024")
+        p2.add_argument("--min-train-seasons", type=int, default=1)
+        p2.add_argument("--json-out", default="")
 
     args = parser.parse_args(argv)
 
@@ -84,74 +85,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "calibrate":
-        from sports_ds.data.nfl import load_team_game_panel
-        from sports_ds.features.team_form import add_pregame_form_features
-        from sports_ds.metrics.calibration import (
-            calibration_table,
-            expected_calibration_error,
-            verdict_from_ece,
-        )
-        from sports_ds.metrics.classification import brier_score, log_loss_binary
-        from sports_ds.models.baselines import fit_logistic_baseline
-        from sports_ds.pipelines.nfl_win_model import FEATURE_COLS
-        from sports_ds.validation.splits import season_walk_forward_masks
-        import numpy as np
-
-        seasons = _parse_seasons(args.seasons)
-        df = add_pregame_form_features(load_team_game_panel(seasons))
-        df = df.dropna(subset=FEATURE_COLS + ["won"])
-        df = df[(df.pre_games_played >= 3) & (df.opp_pre_games_played >= 3)].copy()
-        ys, ps, per_season = [], [], []
-        for season, tr, te in season_walk_forward_masks(df, min_train_seasons=args.min_train_seasons):
-            _, res, pred = fit_logistic_baseline(df, FEATURE_COLS, tr, te)
-            test = df.loc[te].dropna(subset=FEATURE_COLS + ["won"])
-            y = test["won"].to_numpy(dtype=float)
-            p = np.asarray(pred, dtype=float)
-            ys.append(y)
-            ps.append(p)
-            per_season.append(
-                {
-                    "season": int(season),
-                    "n": int(len(test)),
-                    "brier": brier_score(y, p),
-                    "log_loss": log_loss_binary(y, p),
-                    "ece": expected_calibration_error(y, p, n_bins=args.bins),
-                }
-            )
-        if not ys:
-            print("no folds")
-            return 1
-        y_all = np.concatenate(ys)
-        p_all = np.concatenate(ps)
-        ece = expected_calibration_error(y_all, p_all, n_bins=args.bins)
-        result = {
-            "seasons": seasons,
-            "n": int(len(y_all)),
-            "brier": brier_score(y_all, p_all),
-            "log_loss": log_loss_binary(y_all, p_all),
-            "ece": ece,
-            "verdict": verdict_from_ece(ece, int(len(y_all))),
-            "bins": calibration_table(y_all, p_all, n_bins=args.bins),
-            "per_season": per_season,
-        }
-        print(
-            "calibration n={n} brier={brier:.4f} log_loss={log_loss:.4f} "
-            "ece={ece:.4f} verdict={verdict}".format(**result)
-        )
-        for row in per_season:
-            print(
-                "  season {season}: n={n} ece={ece:.4f} brier={brier:.4f}".format(**row)
-            )
-        _maybe_json(args.json_out, result)
-        return 0
+        return _cmd_calibrate(args)
 
     if args.cmd == "leakage-audit":
         from sports_ds.audit.leakage import audit_pregame_form_features
         from sports_ds.data.nfl import load_team_game_panel
 
         seasons = _parse_seasons(args.seasons)
-        panel = load_team_game_panel(seasons)
-        result = audit_pregame_form_features(panel)
+        result = audit_pregame_form_features(load_team_game_panel(seasons))
         print(f"leakage audit: {result['status']}")
         for c in result.get("checks", []):
             print(f"  {c.get('name')}: {'PASS' if c.get('pass') else 'FAIL'}")
@@ -166,29 +107,126 @@ def main(argv: list[str] | None = None) -> int:
         from sports_ds.eda.summary import format_summary, summarize_team_game_panel
 
         seasons = _parse_seasons(args.seasons)
-        panel = load_team_game_panel(seasons)
-        print(format_summary(summarize_team_game_panel(panel)))
+        print(format_summary(summarize_team_game_panel(load_team_game_panel(seasons))))
         return 0
 
-    if args.cmd == "nba-eda":
-        from sports_ds.data.nba import load_nba_team_game_panel
+    if args.cmd in {"nba-eda", "mlb-eda", "nhl-eda"}:
+        sport = args.cmd.split("-")[0]
+        panel = _load_panel(sport, _parse_seasons(args.seasons))
         from sports_ds.eda.summary import format_summary, summarize_team_game_panel
 
-        seasons = _parse_seasons(args.seasons)
-        panel = load_nba_team_game_panel(seasons)
         print(format_summary(summarize_team_game_panel(panel)))
         return 0
 
-    if args.cmd == "nba-win-pipeline":
-        from sports_ds.pipelines.nba_win_model import format_nba_win_report, run_nba_win_pipeline
-
-        seasons = _parse_seasons(args.seasons)
-        result = run_nba_win_pipeline(seasons=seasons, min_train_seasons=args.min_train_seasons)
-        print(format_nba_win_report(result))
-        _maybe_json(args.json_out, result)
+    if args.cmd in {"nba-win-pipeline", "mlb-win-pipeline", "nhl-win-pipeline"}:
+        sport = args.cmd.split("-")[0]
+        result = _run_sport_win(sport, _parse_seasons(args.seasons), args.min_train_seasons)
+        print(result["report"])
+        payload = {k: v for k, v in result.items() if k != "report"}
+        _maybe_json(args.json_out, payload)
         return 0
 
     return 1
+
+
+def _load_panel(sport: str, seasons: list[int]):
+    if sport == "nba":
+        from sports_ds.data.nba import load_nba_team_game_panel
+
+        return load_nba_team_game_panel(seasons)
+    if sport == "mlb":
+        from sports_ds.data.mlb import load_mlb_team_game_panel
+
+        return load_mlb_team_game_panel(seasons)
+    if sport == "nhl":
+        from sports_ds.data.nhl import load_nhl_team_game_panel
+
+        return load_nhl_team_game_panel(seasons)
+    raise ValueError(sport)
+
+
+def _run_sport_win(sport: str, seasons: list[int], min_train_seasons: int) -> dict:
+    if sport == "nba":
+        from sports_ds.pipelines.nba_win_model import format_nba_win_report, run_nba_win_pipeline
+
+        result = run_nba_win_pipeline(seasons=seasons, min_train_seasons=min_train_seasons)
+        result["report"] = format_nba_win_report(result)
+        return result
+    if sport == "mlb":
+        from sports_ds.pipelines.mlb_win_model import format_mlb_win_report, run_mlb_win_pipeline
+
+        result = run_mlb_win_pipeline(seasons=seasons, min_train_seasons=min_train_seasons)
+        result["report"] = format_mlb_win_report(result)
+        return result
+    if sport == "nhl":
+        from sports_ds.pipelines.nhl_win_model import format_nhl_win_report, run_nhl_win_pipeline
+
+        result = run_nhl_win_pipeline(seasons=seasons, min_train_seasons=min_train_seasons)
+        result["report"] = format_nhl_win_report(result)
+        return result
+    raise ValueError(sport)
+
+
+def _cmd_calibrate(args) -> int:
+    import numpy as np
+
+    from sports_ds.data.nfl import load_team_game_panel
+    from sports_ds.features.team_form import add_pregame_form_features
+    from sports_ds.metrics.calibration import (
+        calibration_table,
+        expected_calibration_error,
+        verdict_from_ece,
+    )
+    from sports_ds.metrics.classification import brier_score, log_loss_binary
+    from sports_ds.models.baselines import fit_logistic_baseline
+    from sports_ds.pipelines.nfl_win_model import FEATURE_COLS
+    from sports_ds.validation.splits import season_walk_forward_masks
+
+    seasons = _parse_seasons(args.seasons)
+    df = add_pregame_form_features(load_team_game_panel(seasons))
+    df = df.dropna(subset=FEATURE_COLS + ["won"])
+    df = df[(df.pre_games_played >= 3) & (df.opp_pre_games_played >= 3)].copy()
+    ys, ps, per_season = [], [], []
+    for season, tr, te in season_walk_forward_masks(df, min_train_seasons=args.min_train_seasons):
+        _, _res, pred = fit_logistic_baseline(df, FEATURE_COLS, tr, te)
+        test = df.loc[te].dropna(subset=FEATURE_COLS + ["won"])
+        y = test["won"].to_numpy(dtype=float)
+        p = np.asarray(pred, dtype=float)
+        ys.append(y)
+        ps.append(p)
+        per_season.append(
+            {
+                "season": int(season),
+                "n": int(len(test)),
+                "brier": brier_score(y, p),
+                "log_loss": log_loss_binary(y, p),
+                "ece": expected_calibration_error(y, p, n_bins=args.bins),
+            }
+        )
+    if not ys:
+        print("no folds")
+        return 1
+    y_all = np.concatenate(ys)
+    p_all = np.concatenate(ps)
+    ece = expected_calibration_error(y_all, p_all, n_bins=args.bins)
+    result = {
+        "seasons": seasons,
+        "n": int(len(y_all)),
+        "brier": brier_score(y_all, p_all),
+        "log_loss": log_loss_binary(y_all, p_all),
+        "ece": ece,
+        "verdict": verdict_from_ece(ece, int(len(y_all))),
+        "bins": calibration_table(y_all, p_all, n_bins=args.bins),
+        "per_season": per_season,
+    }
+    print(
+        "calibration n={n} brier={brier:.4f} log_loss={log_loss:.4f} "
+        "ece={ece:.4f} verdict={verdict}".format(**result)
+    )
+    for row in per_season:
+        print("  season {season}: n={n} ece={ece:.4f} brier={brier:.4f}".format(**row))
+    _maybe_json(args.json_out, result)
+    return 0
 
 
 def _maybe_json(path: str, result: dict, drop_keys: tuple[str, ...] = ()) -> None:

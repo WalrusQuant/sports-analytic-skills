@@ -68,6 +68,10 @@ doctrine → load → EDA → time-safe features / ratings → baselines
 | `sports-ds leakage-audit` | pre-game form time-safety audit |
 | `sports-ds nba-eda` | NBA team-game panel EDA (needs `[multi]`) |
 | `sports-ds nba-win-pipeline` | NBA win walk-forward (needs `[multi]`) |
+| `sports-ds mlb-eda` | MLB team-game panel EDA (needs `[multi]`) |
+| `sports-ds mlb-win-pipeline` | MLB win walk-forward (needs `[multi]`) |
+| `sports-ds nhl-eda` | NHL team-game panel EDA (needs `[multi]`) |
+| `sports-ds nhl-win-pipeline` | NHL win walk-forward (needs `[multi]`) |
 
 ## Design rules
 
