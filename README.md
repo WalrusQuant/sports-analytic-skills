@@ -1,9 +1,9 @@
 # Sports Analytic Skills
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.0.1-blue.svg)](plugin.json)
-[![Skills](https://img.shields.io/badge/Skills-10_drafted-brightgreen.svg)](#planned-skill-map)
-[![Status](https://img.shields.io/badge/Status-core_drafts-orange.svg)](#project-status)
+[![Version](https://img.shields.io/badge/Version-0.3.0-blue.svg)](plugin.json)
+[![Skills](https://img.shields.io/badge/Skills-15_drafted-brightgreen.svg)](#available-skills)
+[![Status](https://img.shields.io/badge/Status-core_%2B_comms_drafts-orange.svg)](#project-status)
 [![Standard](https://img.shields.io/badge/Standard-Agent_Skills-blueviolet.svg)](https://agentskills.io/)
 [![Plugins](https://img.shields.io/badge/Standard-Agent_Plugins-0A7A72.svg)](https://agent-plugins.org/)
 [![Works with](https://img.shields.io/badge/Target-Cursor_|_Claude_Code_|_Codex_|_OpenClaw-blue.svg)](#getting-started-planned)
@@ -28,7 +28,7 @@ The goal is not another prompt dump. The goal is a **documented, installable met
 |---|---|
 | Architecture | Locked (v0) |
 | Public docs shape | Solid v0 |
-| Skills drafted | **10** core drafts (foundation + modeling spine + critique/ops) |
+| Skills drafted | **15** drafts (foundation + modeling + critique/ops + market + comms) |
 | Published GitHub repo | Yes — https://github.com/WalrusQuant/sports-analytic-skills |
 | Installable package | Not yet (skills exist as files; no polished release) |
 | Installed on this OpenClaw instance | **No** (intentional) |
@@ -46,7 +46,8 @@ This repository is being built as a **real global project**, not a private one-o
 - [Design principles](#design-principles)
 - [Architecture overview](#architecture-overview)
 - [What's included (repo)](#whats-included-repo)
-- [Planned skill map](#planned-skill-map)
+- [Available skills](#available-skills)
+- [Suggested install subsets](#suggested-install-subsets)
 - [Repository layout](#repository-layout)
 - [Getting started (planned)](#getting-started-planned)
 - [How a skill is structured](#how-a-skill-is-structured)
@@ -193,7 +194,7 @@ The repository is structured like a real public pack:
 | [docs/](./docs/) | Roadmap, taxonomy, authoring, getting started |
 | [templates/skill/](./templates/skill/) | Canonical `SKILL.md` template |
 | [references/](./references/) | Prior art and external standards |
-| `skills/` | 10 drafted skill folders under `skills/` |
+| `skills/` | 15 drafted skill folders under `skills/` |
 
 Each future skill is expected to include:
 
@@ -207,51 +208,103 @@ Each future skill is expected to include:
 
 ---
 
-## Planned skill map
+## Available skills
 
-Nothing below is shipped yet. This is the architecture map, not a fake feature list.
+**Status key:** `draft` = written and in repo; not yet hardened to “ready.”  
+All skills below are sport-agnostic unless later moved into a sport module.
 
-### Foundation (L1) — drafted
+### Catalog summary
 
-| Skill ID | Status | Job |
-|---|---|---|
-| [`doctrine`](./skills/doctrine/SKILL.md) | draft | Edge vs noise, evidence hierarchy, ship / paper-only / kill |
-| [`ethics`](./skills/ethics/SKILL.md) | draft | Honesty bounds, refusals, anti-snake-oil, not-advice posture |
-| [`risk`](./skills/risk/SKILL.md) | draft | Uncertainty, calibration language, stake discipline framing |
+| Domain | Count | Skills |
+|---|---:|---|
+| Foundation | 3 | doctrine, ethics, risk |
+| Modeling | 3 | baseline-models, feature-rules, model-card |
+| Validation | 3 | leakage-audit, validation-design, backtest-critique |
+| Ops | 1 | experiment-log |
+| Markets | 3 | market-data-hygiene, clv-evaluation, calibration-check |
+| Comms | 2 | edge-writeup, anti-slop-analytics |
+| **Total drafted** | **15** | |
 
-### Modeling spine — drafted
+### Foundation (L1)
 
-| Skill ID | Status | Job |
-|---|---|---|
-| [`baseline-models`](./skills/baseline-models/SKILL.md) | draft | Strong baselines before complexity |
-| [`feature-rules`](./skills/feature-rules/SKILL.md) | draft | Time-safe, leakage-aware feature design |
-| [`leakage-audit`](./skills/leakage-audit/SKILL.md) | draft | Look-ahead and target leakage review |
-| [`validation-design`](./skills/validation-design/SKILL.md) | draft | Walk-forward, splits, regime awareness |
-| [`backtest-critique`](./skills/backtest-critique/SKILL.md) | draft | Tear apart a claimed edge |
-| [`model-card`](./skills/model-card/SKILL.md) | draft | What a model is allowed to claim |
-| [`experiment-log`](./skills/experiment-log/SKILL.md) | draft | Reproducible run records |
+| Skill | Status | When to use | Path |
+|---|---|---|---|
+| **doctrine** | draft | Start work, judge edge vs noise, ship/paper/kill | [`skills/doctrine`](./skills/doctrine/SKILL.md) |
+| **ethics** | draft | Claims, public wording, refuse locks/guarantees | [`skills/ethics`](./skills/ethics/SKILL.md) |
+| **risk** | draft | Uncertainty, calibration posture, stake discipline language | [`skills/risk`](./skills/risk/SKILL.md) |
 
-### Market layer — planned next
+### Modeling spine
 
-| Skill ID | Job |
+| Skill | Status | When to use | Path |
+|---|---|---|---|
+| **baseline-models** | draft | Define/beat simple baselines before complexity | [`skills/baseline-models`](./skills/baseline-models/SKILL.md) |
+| **feature-rules** | draft | Build time-safe features at prediction timestamp T | [`skills/feature-rules`](./skills/feature-rules/SKILL.md) |
+| **model-card** | draft | Freeze what a model may claim | [`skills/model-card`](./skills/model-card/SKILL.md) |
+
+### Validation & critique
+
+| Skill | Status | When to use | Path |
+|---|---|---|---|
+| **leakage-audit** | draft | Adversarial look-ahead/target leakage review | [`skills/leakage-audit`](./skills/leakage-audit/SKILL.md) |
+| **validation-design** | draft | Walk-forward, embargoes, metric charter | [`skills/validation-design`](./skills/validation-design/SKILL.md) |
+| **backtest-critique** | draft | Tear apart a claimed backtest/result | [`skills/backtest-critique`](./skills/backtest-critique/SKILL.md) |
+
+### Ops
+
+| Skill | Status | When to use | Path |
+|---|---|---|---|
+| **experiment-log** | draft | Reproducible run records and keep/discard decisions | [`skills/experiment-log`](./skills/experiment-log/SKILL.md) |
+
+### Market layer
+
+| Skill | Status | When to use | Path |
+|---|---|---|---|
+| **market-data-hygiene** | draft | Clean odds panels, open/close, vig, missingness | [`skills/market-data-hygiene`](./skills/market-data-hygiene/SKILL.md) |
+| **clv-evaluation** | draft | Market-relative / closing-line evaluation | [`skills/clv-evaluation`](./skills/clv-evaluation/SKILL.md) |
+| **calibration-check** | draft | Do probabilities mean what they say? | [`skills/calibration-check`](./skills/calibration-check/SKILL.md) |
+
+### Comms
+
+| Skill | Status | When to use | Path |
+|---|---|---|---|
+| **edge-writeup** | draft | Honest public/shared writeup of results | [`skills/edge-writeup`](./skills/edge-writeup/SKILL.md) |
+| **anti-slop-analytics** | draft | Kill chartjunk, fake certainty, vanity dashboards | [`skills/anti-slop-analytics`](./skills/anti-slop-analytics/SKILL.md) |
+
+### Typical end-to-end path
+
+```text
+doctrine
+  → baseline-models + feature-rules
+  → validation-design
+  → leakage-audit
+  → experiment-log
+  → calibration-check (if probs)
+  → market-data-hygiene → clv-evaluation (if odds)
+  → backtest-critique / model-card
+  → ethics + risk
+  → edge-writeup + anti-slop-analytics
+```
+
+### Not drafted yet
+
+- Sport modules (equal-class later): NFL, MLB, NBA, NHL, soccer, golf, others
+- Optional harness (plan → run → critique)
+
+See also [docs/taxonomy.md](./docs/taxonomy.md) and [docs/roadmap.md](./docs/roadmap.md).
+
+## Suggested install subsets
+
+When hosts support selective install, prefer subsets over “all forever”:
+
+| Subset | Skills |
 |---|---|
-| `market-data-hygiene` | Lines, open/close, vig, missingness |
-| `clv-evaluation` | Closing-line / market-relative evaluation |
-| `calibration-check` | Probability quality vs outcomes |
+| Foundation only | doctrine, ethics, risk |
+| Modeling core | foundation + baseline-models, feature-rules, leakage-audit, validation-design, experiment-log |
+| Full offline core | modeling core + backtest-critique, model-card, calibration-check |
+| Market-capable core | full offline core + market-data-hygiene, clv-evaluation |
+| Publish pack | market-capable core + edge-writeup, anti-slop-analytics |
 
-### Later
-
-- comms: `edge-writeup`, `anti-slop-analytics`
-- sport modules only after core is stable, equal-class candidates:
-  - NFL / college football
-  - MLB / baseball
-  - NBA / college basketball
-  - NHL / hockey
-  - soccer
-  - golf
-  - others as earned
-
-See [docs/taxonomy.md](./docs/taxonomy.md) and [docs/roadmap.md](./docs/roadmap.md).
+Runtime install into personal agents is still optional and deliberate.
 
 ---
 
@@ -275,7 +328,7 @@ sports-analytic-skills/
 │       └── SKILL.md
 ├── references/
 │   └── prior-art.md
-└── skills/                    # empty until real drafts land
+└── skills/                    # 15 drafted skills
     └── <skill-name>/
         ├── SKILL.md
         ├── scripts/           # optional
@@ -288,9 +341,9 @@ sports-analytic-skills/
 
 ## Getting started (planned)
 
-Repo is public. Skill install is still **planned** until skills are drafted. **Do not treat skill-install commands as useful yet.**
+Repo is public and skills are drafted as files. Host install flows still vary; treat commands below as supported-pattern targets, not a polished product release.
 
-### Intended options (after skills exist)
+### Intended options
 
 ```bash
 # standards-based installer (supported hosts)
@@ -410,14 +463,15 @@ You are solely responsible for how you use it. See [LICENSE](./LICENSE).
 
 High level:
 
-1. Architecture + documentation standard — **in progress**
-2. Foundation triad drafts (`doctrine`, `ethics`, `risk`)
-3. Modeling spine drafts
-4. Market layer drafts
-5. Dogfood on synthetic/public data
-6. Public GitHub when several skills are non-embarrassing
-7. Sport modules after core is stable
-8. Optional harness later
+1. Architecture + documentation standard — **done (v0)**
+2. Foundation triad drafts — **done**
+3. Modeling spine + critique/ops — **done**
+4. Market layer drafts — **done**
+5. Comms drafts + deep README catalog — **done**
+6. Dogfood on synthetic/public data — next
+7. Harden drafts to ready — next
+8. Sport modules after core is stable — later
+9. Optional harness — later
 
 Living detail: [docs/roadmap.md](./docs/roadmap.md)
 
@@ -453,9 +507,9 @@ No. Modeling and evaluation first. Market tools are an evaluation layer. No auto
 
 None. Core is sport-agnostic. Modules for NFL, MLB, NBA, NHL, soccer, golf, and others come later as equals.
 
-### Why write a giant README before skills exist?
+### Why keep the README this deep?
 
-Because the public artifact is a library, not a vibe. If the docs are weak, the project is weak — even if a couple of markdown skills exist.
+Because the public artifact is a library, not a vibe. Docs quality is part of the product — same lesson as K-Dense.
 
 ### Will this be installed into OpenClaw automatically?
 

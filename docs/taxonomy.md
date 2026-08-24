@@ -1,6 +1,6 @@
 # Skill taxonomy
 
-See also [ARCHITECTURE.md](../ARCHITECTURE.md) §5.
+See also [ARCHITECTURE.md](../ARCHITECTURE.md) §5 and README [Available skills](../README.md#available-skills).
 
 ## Locked framing (2026-08-24)
 
@@ -12,15 +12,15 @@ See also [ARCHITECTURE.md](../ARCHITECTURE.md) §5.
 
 ## Domains
 
-| Domain | Purpose |
-|---|---|
-| `core` | Doctrine, ethics, risk framing |
-| `modeling` | Baselines, features, model cards |
-| `validation` | Splits, walk-forward, leakage, critique |
-| `markets` | Odds hygiene, vig, CLV, market eval |
-| `ops` | Experiment logging, reproducibility |
-| `sport` | Per-sport modules later: NFL, MLB, NBA, NHL, soccer, golf, etc. |
-| `comms` | Honest writeups, anti-slop presentation |
+| Domain | Purpose | Drafted |
+|---|---|---:|
+| `core` | Doctrine, ethics, risk framing | 3 |
+| `modeling` | Baselines, features, model cards | 3 |
+| `validation` | Splits, walk-forward, leakage, critique | 3 |
+| `markets` | Odds hygiene, vig, CLV, market eval | 3 |
+| `ops` | Experiment logging, reproducibility | 1 |
+| `comms` | Honest writeups, anti-slop presentation | 2 |
+| `sport` | Per-sport modules later | 0 |
 
 ## Skill IDs
 
@@ -29,7 +29,7 @@ See also [ARCHITECTURE.md](../ARCHITECTURE.md) §5.
 - `ethics` — draft
 - `risk` — draft
 
-### modeling (spine) — drafted
+### modeling — drafted
 - `baseline-models` — draft
 - `feature-rules` — draft
 - `model-card` — draft
@@ -42,19 +42,18 @@ See also [ARCHITECTURE.md](../ARCHITECTURE.md) §5.
 ### ops — drafted
 - `experiment-log` — draft
 
-### markets (layered in) — planned
-- `market-data-hygiene`
-- `clv-evaluation`
-- `calibration-check`
+### markets — drafted
+- `market-data-hygiene` — draft
+- `clv-evaluation` — draft
+- `calibration-check` — draft
 
-### comms (later)
-- `edge-writeup`
-- `anti-slop-analytics`
+### comms — drafted
+- `edge-writeup` — draft
+- `anti-slop-analytics` — draft
 
 ### sport (later only, multi-sport)
 - none until core earns expansion
 - equal-class candidates: NFL, MLB, NBA, NHL, soccer, golf, others
 - no default “first sport”
 
-**Drafted count:** 10  
-Market layer and later domains remain planned until written.
+**Drafted count:** 15
