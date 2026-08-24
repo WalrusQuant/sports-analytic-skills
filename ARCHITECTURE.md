@@ -35,15 +35,15 @@ skills/<skill-id>/
 
 ```text
 src/sports_ds/
-  data/          # nfl, nba loaders + team-game panels
+  data/          # nfl/nba/mlb loaders, team-game + NFL player panels
   eda/
-  features/      # time-safe pre-game form
+  features/      # time-safe team form (rich EWMA/rest) + player form
   ratings/       # as-of Elo
   metrics/       # log-loss, brier, calibration/ECE
   audit/         # leakage audits
-  models/        # baselines, classifiers, margin regressors
+  models/        # baselines, classifiers, regressors, ensembles
   validation/    # season walk-forward masks
-  pipelines/     # nfl win/margin/elo, nba win
+  pipelines/     # team win/margin/elo, rich win ladder, NFL player
   cli.py
 ```
 
@@ -62,8 +62,11 @@ doctrine → load → EDA → time-safe features / ratings → baselines
 |---|---|
 | `sports-ds nfl-eda` | NFL team-game panel EDA |
 | `sports-ds nfl-win-pipeline` | form features + win walk-forward |
+| `sports-ds nfl-win-rich` | rich features + logistic/GBM/Elo ensemble |
 | `sports-ds nfl-margin-pipeline` | form features + margin walk-forward |
 | `sports-ds nfl-elo` | as-of Elo + logistic walk-forward |
+| `sports-ds nfl-player-eda` | NFL skill-position player panel EDA |
+| `sports-ds nfl-player-pipeline` | player form + fantasy/volume walk-forward |
 | `sports-ds calibrate` | win-logistic calibration/ECE |
 | `sports-ds leakage-audit` | pre-game form time-safety audit |
 | `sports-ds nba-eda` | NBA team-game panel EDA (needs `[multi]`) |
