@@ -1,15 +1,15 @@
 # Sports Analytic Skills
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.3.0-blue.svg)](plugin.json)
-[![Skills](https://img.shields.io/badge/Skills-15_drafted-brightgreen.svg)](#available-skills)
-[![Status](https://img.shields.io/badge/Status-core_%2B_comms_drafts-orange.svg)](#project-status)
+[![Version](https://img.shields.io/badge/Version-0.4.0-blue.svg)](plugin.json)
+[![Skills](https://img.shields.io/badge/Skills-20_drafted-brightgreen.svg)](#available-skills)
+[![Status](https://img.shields.io/badge/Status-judgment_%2B_data_plane-orange.svg)](#project-status)
 [![Standard](https://img.shields.io/badge/Standard-Agent_Skills-blueviolet.svg)](https://agentskills.io/)
 [![Plugins](https://img.shields.io/badge/Standard-Agent_Plugins-0A7A72.svg)](https://agent-plugins.org/)
-[![Works with](https://img.shields.io/badge/Target-Cursor_|_Claude_Code_|_Codex_|_OpenClaw-blue.svg)](#getting-started-planned)
+[![Works with](https://img.shields.io/badge/Target-Cursor_|_Claude_Code_|_Codex_|_OpenClaw-blue.svg)](#getting-started)
 
-> Multi-sport data science judgment for AI agents.  
-> Portable `SKILL.md` packages that teach an agent how a sharp analyst models sports — and how to refuse bad work.
+> Multi-sport data science skills for AI agents.  
+> Judgment for honest modeling **and** a data plane for real loaders (nflverse, SportsDataverse, pybaseball).
 
 **Sports Analytic Skills** is an open, free Agent Skills library for **sports modeling and sports analytics across sports**. It follows the open standards for portable agent skills:
 
@@ -24,9 +24,9 @@ The goal is not another prompt dump. The goal is a **documented, installable met
 
 | Item | State |
 |---|---|
-| Version | 0.3.0 |
-| Architecture | v0 locked |
-| Skills drafted | **15** (foundation, modeling, validation, ops, markets, comms) |
+| Version | 0.4.0 |
+| Architecture | v0 locked (judgment + data plane) |
+| Skills drafted | **20** (judgment workflows + data/package plane) |
 | Skills marked ready | 0 (all still `draft`) |
 | Repository | https://github.com/WalrusQuant/sports-analytic-skills |
 | Release maturity | early public draft — usable as methodology files, not a polished product release |
@@ -46,7 +46,7 @@ Documentation quality is treated as part of the product. Counts and status label
 - [Available skills](#available-skills)
 - [Suggested install subsets](#suggested-install-subsets)
 - [Repository layout](#repository-layout)
-- [Getting started (planned)](#getting-started-planned)
+- [Getting started](#getting-started)
 - [How a skill is structured](#how-a-skill-is-structured)
 - [Documentation standard](#documentation-standard)
 - [Security and trust](#security-and-trust)
@@ -214,7 +214,8 @@ All skills below are sport-agnostic unless later moved into a sport module.
 | Ops | 1 | experiment-log |
 | Markets | 3 | market-data-hygiene, clv-evaluation, calibration-check |
 | Comms | 2 | edge-writeup, anti-slop-analytics |
-| **Total drafted** | **15** | |
+| Data plane | 5 | environment-setup, data-sources, nflreadpy, sportsdataverse-py, pybaseball |
+| **Total drafted** | **20** | |
 
 ### Foundation (L1)
 
@@ -261,13 +262,29 @@ All skills below are sport-agnostic unless later moved into a sport module.
 | **edge-writeup** | draft | Honest public/shared writeup of results | [`skills/edge-writeup`](./skills/edge-writeup/SKILL.md) |
 | **anti-slop-analytics** | draft | Kill chartjunk, fake certainty, vanity dashboards | [`skills/anti-slop-analytics`](./skills/anti-slop-analytics/SKILL.md) |
 
+### Data plane (packages + sources)
+
+| Skill | Status | When to use | Path |
+|---|---|---|---|
+| **environment-setup** | draft | Install Python stack + loader deps | [`skills/environment-setup`](./skills/environment-setup/SKILL.md) |
+| **data-sources** | draft | Choose nflverse / SDV / pybaseball / odds path | [`skills/data-sources`](./skills/data-sources/SKILL.md) |
+| **nflreadpy** | draft | Load NFL nflverse releases in Python | [`skills/nflreadpy`](./skills/nflreadpy/SKILL.md) |
+| **sportsdataverse-py** | draft | Multi-sport SportsDataverse Python loaders | [`skills/sportsdataverse-py`](./skills/sportsdataverse-py/SKILL.md) |
+| **pybaseball** | draft | MLB Statcast/season table pulls | [`skills/pybaseball`](./skills/pybaseball/SKILL.md) |
+
+Supporting docs:
+
+- [docs/data-ecosystem.md](./docs/data-ecosystem.md)
+- [docs/environment.md](./docs/environment.md)
+- [requirements/python-data.txt](./requirements/python-data.txt)
+
 ### Typical end-to-end path
 
 ```text
-doctrine
+environment-setup → data-sources → nflreadpy|sportsdataverse-py|pybaseball
+  → doctrine
   → baseline-models + feature-rules
-  → validation-design
-  → leakage-audit
+  → validation-design → leakage-audit
   → experiment-log
   → calibration-check (if probs)
   → market-data-hygiene → clv-evaluation (if odds)
@@ -278,6 +295,7 @@ doctrine
 
 ### Not drafted yet
 
+- Deeper package skills (statsbombpy, odds API, R-side nflreadr/hoopR/cfbfastR)
 - Sport modules (equal-class later): NFL, MLB, NBA, NHL, soccer, golf, others
 - Optional harness (plan → run → critique)
 
@@ -294,6 +312,8 @@ When hosts support selective install, prefer subsets over “all forever”:
 | Full offline core | modeling core + backtest-critique, model-card, calibration-check |
 | Market-capable core | full offline core + market-data-hygiene, clv-evaluation |
 | Publish pack | market-capable core + edge-writeup, anti-slop-analytics |
+| NFL data plane | environment-setup, data-sources, nflreadpy |
+| Multi-sport data plane | environment-setup, data-sources, sportsdataverse-py, pybaseball |
 
 Install only the subset you need. Review skills before enabling them on a host.
 
@@ -308,18 +328,22 @@ sports-analytic-skills/
 ├── CONTRIBUTING.md
 ├── LICENSE
 ├── plugin.json
+├── requirements/
+│   └── python-data.txt
 ├── docs/
 │   ├── roadmap.md
 │   ├── taxonomy.md
 │   ├── getting-started.md
 │   ├── skill-authoring.md
-│   └── documentation-standard.md
+│   ├── documentation-standard.md
+│   ├── data-ecosystem.md
+│   └── environment.md
 ├── templates/
 │   └── skill/
 │       └── SKILL.md
 ├── references/
 │   └── prior-art.md
-└── skills/                    # 15 drafted skills
+└── skills/                    # 20 drafted skills (some include scripts/)
     └── <skill-name>/
         ├── SKILL.md
         ├── scripts/           # optional
@@ -330,11 +354,11 @@ sports-analytic-skills/
 
 ---
 
-## Getting started (planned)
+## Getting started
 
-Repo is public and skills are drafted as files. Host install flows still vary; treat commands below as supported-pattern targets, not a polished product release.
+Repo is public and skills are drafted as files. Host install flows still vary by client; treat commands below as supported-pattern targets, not a polished product release.
 
-### Intended options
+### Install options
 
 ```bash
 # standards-based installer (supported hosts)

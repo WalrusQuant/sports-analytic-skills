@@ -25,6 +25,8 @@ Read first:
 
 - `README.md`
 - `ARCHITECTURE.md`
+- `docs/data-ecosystem.md`
+- `docs/environment.md`
 - `docs/skill-authoring.md`
 - skills under `skills/`
 
@@ -68,17 +70,32 @@ ln -s "$(pwd)" ~/.cursor/plugins/local/sports-analytic-skills
 
 Reload the client and confirm skills appear.
 
-## Recommended install shape
+## Python data dependencies (optional)
 
-Do **not** install everything by default once the library grows.
+Judgment skills can be read with no sports packages installed.
 
-Suggested topical subsets:
+To use the data plane:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements/python-data.txt
+python skills/nflreadpy/scripts/smoke_load.py
+```
+
+Details: [environment.md](./environment.md), [data-ecosystem.md](./data-ecosystem.md).
+
+## Recommended skill subsets
+
+Do **not** enable every skill by default.
 
 1. Foundation only: `doctrine`, `ethics`, `risk`
 2. Modeling core: foundation + baselines/features/leakage/validation/experiment-log
 3. Full offline core: modeling core + critique/model-card/calibration
 4. Market-capable core: full offline core + market hygiene/CLV
 5. Publish pack: market-capable core + writeup/anti-slop
+6. NFL data plane: environment-setup, data-sources, nflreadpy
+7. Multi-sport data plane: environment-setup, data-sources, sportsdataverse-py, pybaseball
 
 ## Using a skill
 

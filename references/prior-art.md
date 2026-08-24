@@ -19,9 +19,16 @@ Related work and standards. Kept here so the main README can stay focused on thi
 - Walk-forward and purged validation practices in time-ordered ML
 - Closing-line value as a market-relative evaluation concept
 
+## Data ecosystems this repo teaches (not reimplements)
+
+- [nflverse](https://github.com/nflverse) / [nflreadpy](https://github.com/nflverse/nflreadpy)
+- [SportsDataverse](https://www.sportsdataverse.org/packages) / [sportsdataverse-py](https://py.sportsdataverse.org)
+- [pybaseball](https://github.com/jldbc/pybaseball)
+
 ## How this project differs
 
-- Multi-sport modeling methodology as the center of gravity
+- Judgment layer + data-plane layer
+- Multi-sport modeling methodology as the analytic center of gravity
 - Smaller core first; inventory grows only when skills earn a slot
 - Market tools are an evaluation layer, not the whole identity
 - No tip service, autobet packaging, or product-funnel positioning

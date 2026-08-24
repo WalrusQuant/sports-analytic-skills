@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "sports-analytic-skills",
-  "version": "0.3.0",
-  "description": "Multi-sport data science Agent Skills: doctrine, modeling, leakage/validation, CLV, calibration, and honest communication.",
+  "version": "0.4.0",
+  "description": "Multi-sport data science Agent Skills: judgment workflows plus data-plane loaders for nflverse, SportsDataverse, and pybaseball.",
   "author": {
     "name": "Adam Wickwire",
     "url": "https://adamwickwire.com"

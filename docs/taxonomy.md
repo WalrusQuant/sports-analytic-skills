@@ -1,59 +1,59 @@
 # Skill taxonomy
 
-See also [ARCHITECTURE.md](../ARCHITECTURE.md) §5 and README [Available skills](../README.md#available-skills).
+See also [ARCHITECTURE.md](../ARCHITECTURE.md) and README [Available skills](../README.md#available-skills).
 
-## Locked framing (2026-08-24)
+## Locked framing
 
 - Name: `sports-analytic-skills`
-- L1 = `doctrine` + `ethics` + `risk` (split)
-- Core pack is multi-sport and sport-agnostic (NFL/MLB/NBA/NHL/soccer/golf/etc. all in scope later)
-- No single sport is the focus of the core
-- Modeling is the engine; market dynamics layer in at eval/data joints
+- L1 = `doctrine` + `ethics` + `risk`
+- Core judgment pack is multi-sport / sport-agnostic
+- Modeling is the analytic engine; markets layer in at eval/data joints
+- Data plane teaches real public loaders (nflverse, SportsDataverse, pybaseball)
 
 ## Domains
 
 | Domain | Purpose | Drafted |
 |---|---|---:|
-| `core` | Doctrine, ethics, risk framing | 3 |
+| `core` | Doctrine, ethics, risk | 3 |
 | `modeling` | Baselines, features, model cards | 3 |
 | `validation` | Splits, walk-forward, leakage, critique | 3 |
-| `markets` | Odds hygiene, vig, CLV, market eval | 3 |
-| `ops` | Experiment logging, reproducibility | 1 |
-| `comms` | Honest writeups, anti-slop presentation | 2 |
+| `markets` | Odds hygiene, vig, CLV, calibration | 3 |
+| `ops` | Experiment logging | 1 |
+| `comms` | Honest writeups, anti-slop | 2 |
+| `data` | Environment, sources, package loaders | 5 |
 | `sport` | Per-sport modules later | 0 |
 
 ## Skill IDs
 
-### core (L1) — drafted
-- `doctrine` — draft
-- `ethics` — draft
-- `risk` — draft
+### core — drafted
+- doctrine, ethics, risk
 
 ### modeling — drafted
-- `baseline-models` — draft
-- `feature-rules` — draft
-- `model-card` — draft
+- baseline-models, feature-rules, model-card
 
 ### validation — drafted
-- `leakage-audit` — draft
-- `validation-design` — draft
-- `backtest-critique` — draft
+- leakage-audit, validation-design, backtest-critique
 
 ### ops — drafted
-- `experiment-log` — draft
+- experiment-log
 
 ### markets — drafted
-- `market-data-hygiene` — draft
-- `clv-evaluation` — draft
-- `calibration-check` — draft
+- market-data-hygiene, clv-evaluation, calibration-check
 
 ### comms — drafted
-- `edge-writeup` — draft
-- `anti-slop-analytics` — draft
+- edge-writeup, anti-slop-analytics
 
-### sport (later only, multi-sport)
-- none until core earns expansion
-- equal-class candidates: NFL, MLB, NBA, NHL, soccer, golf, others
-- no default “first sport”
+### data plane — drafted
+- environment-setup
+- data-sources
+- nflreadpy
+- sportsdataverse-py
+- pybaseball
 
-**Drafted count:** 15
+### later
+- statsbombpy / soccer depth
+- odds API package skill
+- R-side mirrors (nflreadr, hoopR, cfbfastR) if needed
+- sport modules (NFL/MLB/NBA/NHL/soccer/golf/etc.)
+
+**Drafted count:** 20

@@ -46,21 +46,25 @@ Three layers. Only layer 1 is required for v0.
 ┌─────────────────────────────────────────────────────────┐
 │  L3  Harness (optional, later)                          │
 │      plan → execute → critique → kill/ship              │
-│      multi-agent or single-agent loop                   │
 ├─────────────────────────────────────────────────────────┤
-│  L2  Workflow skills                                    │
-│      data hygiene, features, backtest, CLV, bankroll…   │
+│  L2a Judgment workflows                                 │
+│      features, validation, leakage, baselines, claims   │
 ├─────────────────────────────────────────────────────────┤
-│  L1  Doctrine + contracts                               │
-│      what edge is, forbidden moves, ship/kill gates     │
+│  L2b Data plane                                         │
+│      environment, source choice, package loaders, scripts│
+├─────────────────────────────────────────────────────────┤
+│  L1  Foundation triad                                   │
+│      doctrine | ethics | risk                           │
 └─────────────────────────────────────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Host runtime (any Agent Skills-compatible agent)       │
-│  + user data/tools/APIs (not owned by this repo)        │
+│  Host runtime + Python/R env + public sports data APIs  │
 └─────────────────────────────────────────────────────────┘
 ```
+
+L1/L2a can be read without installing sports packages.  
+L2b is what makes the library operational like mature scientific skill packs: concrete loaders, deps, and scripts.
 
 ### L1 — Foundation triad (split on purpose)
 

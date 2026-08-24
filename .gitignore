@@ -28,6 +28,7 @@ node_modules/
 .vscode/
 
 # Data dumps / notebooks checkpoints (keep examples intentional)
+data/
 *.parquet
 *.feather
 *.h5

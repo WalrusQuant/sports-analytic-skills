@@ -2,41 +2,33 @@
 
 Living list. Not a commitment contract.
 
-## Locked (2026-08-24)
-
-- [x] Name: `sports-analytic-skills`
-- [x] L1 split: doctrine + ethics + risk
-- [x] Core stays multi-sport / sport-agnostic (no single-sport focus)
-- [x] Modeling-first engine; markets layered in
-
 ## Done
 
-- [x] Create project scaffold
-- [x] Architecture draft + decisions locked
-- [x] Raise docs to public-library depth
-- [x] Init git + public GitHub remote: https://github.com/WalrusQuant/sports-analytic-skills
-- [x] Draft L1 triad: `doctrine`, `ethics`, `risk`
-- [x] Draft modeling spine: `baseline-models`, `feature-rules`, `leakage-audit`, `validation-design`
-- [x] Draft critique/ops: `backtest-critique`, `model-card`, `experiment-log`
-- [x] Draft market layer: `market-data-hygiene`, `clv-evaluation`, `calibration-check`
-- [x] Draft comms: `edge-writeup`, `anti-slop-analytics`
-- [x] Deep README skills catalog + install subsets
+- [x] Project scaffold + public GitHub repo
+- [x] Architecture + stranger-facing docs pass
+- [x] Judgment core (foundation, modeling, validation, ops, markets, comms)
+- [x] Data plane v0:
+  - docs: data-ecosystem, environment
+  - requirements/python-data.txt
+  - skills: environment-setup, data-sources, nflreadpy, sportsdataverse-py, pybaseball
+  - smoke/load scripts under package skills
 
 ## Next
 
-- [ ] Dogfood on synthetic/public data
-- [ ] Harden drafts toward “ready” quality bar
-- [ ] Optional examples/fixtures under `assets/` or `examples/`
+- [ ] Optional: install data deps in a venv and run smoke scripts for real
+- [ ] Expand package skills with more worked load recipes
+- [ ] statsbombpy / odds API skills if needed
+- [ ] Dogfood one end-to-end NFL paper-style workflow
+- [ ] Harden drafts toward ready
 
 ## Later
 
-- [ ] Sport modules only after core is stable (NFL/MLB/NBA/NHL/soccer/golf/etc.; no favorite)
-- [ ] Optional harness (plan → run → critique)
-- [ ] Install docs polish for major Agent Skills hosts
+- [ ] Sport modules after core is stable
+- [ ] Optional harness
+- [ ] R-side package mirrors if Python-first proves insufficient
 
 ## Never (default)
 
 - [ ] Tip service
-- [ ] Paid product packaging
-- [ ] Auto-bet integrations as core skills
-- [ ] Dumping 100 empty skill stubs
+- [ ] Autobet core
+- [ ] Dumping empty stubs
