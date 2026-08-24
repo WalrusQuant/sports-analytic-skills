@@ -1,6 +1,8 @@
 ---
 name: baseline-models
 description: Design and evaluate simple sports prediction baselines before accepting more complex models. Use for constant-rate, home-advantage, logistic, Elo-style, or market-reference comparisons.
+metadata:
+  version: "0.12.0"
 ---
 
 # Baseline Models

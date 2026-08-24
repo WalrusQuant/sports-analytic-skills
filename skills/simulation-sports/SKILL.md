@@ -6,7 +6,7 @@ description: >
   win totals, matchup distributions, and scenario analysis.
 license: MIT
 metadata:
-  version: "0.7.0"
+  version: "0.12.0"
 ---
 
 # Sports Simulation

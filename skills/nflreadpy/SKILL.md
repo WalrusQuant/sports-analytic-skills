@@ -6,7 +6,7 @@ description: >
   bounded snapshots, and preparing user-owned analysis artifacts.
 license: MIT
 metadata:
-  version: "0.7.0"
+  version: "0.12.0"
 ---
 
 # nflreadpy / nflverse Loader

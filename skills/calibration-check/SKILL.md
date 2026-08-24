@@ -1,6 +1,8 @@
 ---
 name: calibration-check
 description: Evaluate whether sports-model probabilities match observed frequencies. Use for Brier score, log loss, reliability bins, ECE, segment checks, and recalibration decisions.
+metadata:
+  version: "0.12.0"
 ---
 
 # Calibration Check

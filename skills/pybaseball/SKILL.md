@@ -6,7 +6,7 @@ description: >
   schema checks, and user-owned baseball data artifacts.
 license: MIT
 metadata:
-  version: "0.7.0"
+  version: "0.12.0"
 ---
 
 # pybaseball

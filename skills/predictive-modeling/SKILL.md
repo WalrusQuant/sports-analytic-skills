@@ -1,6 +1,8 @@
 ---
 name: predictive-modeling
 description: Build and evaluate predictive sports models from user-provided modeling data. Use for binary outcome models, feature/model selection, chronological backtests, probability scoring, and comparison to baselines.
+metadata:
+  version: "0.12.0"
 ---
 
 # Predictive Modeling

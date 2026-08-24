@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.12.0 — 2026-08-24
+
+### Standalone skill pack
+
+- Made all generic analytics and modeling skills usable without `sports_ds`,
+  repository-relative paths, or an end-to-end pipeline.
+- Added `sports-ds-bridge` as the explicit optional path from toolkit loaders,
+  core APIs, CLI commands, and pipelines to portable user-owned artifacts.
+- Added validated fold-metric, held-out-prediction, calibration, Elo,
+  simulation, visualization, and reporting handoffs.
+- Added isolated helper, boundary, negative-case, and cross-skill smoke tests.
+
+### Toolkit and release engineering
+
+- Eliminated pandas DataFrame-fragmentation warnings in player-form feature
+  construction while preserving exact output behavior.
+- Added offline CI across Python 3.10–3.13 and scheduled/manual live-data CI.
+- Unified the repository, plugin, and toolkit release version at `0.12.0`.
+
 ## 0.11.1
 
 ### MLB player path to parity

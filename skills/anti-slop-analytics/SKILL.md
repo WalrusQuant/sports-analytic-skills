@@ -6,7 +6,7 @@ description: >
   reproducibility. Use when asked to clean up or audit analytical presentation.
 license: MIT
 metadata:
-  version: "0.7.0"
+  version: "0.12.0"
 ---
 
 # Anti-Slop Analytics

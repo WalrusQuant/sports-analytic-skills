@@ -6,7 +6,7 @@ description: >
   Use for rankings, opponent adjustment, and strong prediction baselines.
 license: MIT
 metadata:
-  version: "0.7.0"
+  version: "0.12.0"
 ---
 
 # Ratings and Strength Models

@@ -6,7 +6,7 @@ description: >
   walk-forward metric comparisons. Use for exploration and communication.
 license: MIT
 metadata:
-  version: "0.7.0"
+  version: "0.12.0"
 ---
 
 # Sports Visualization

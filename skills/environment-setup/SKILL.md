@@ -5,7 +5,7 @@ description: >
   machine setup, onboarding, dependency diagnosis, or reproducibility checks.
 license: MIT
 metadata:
-  version: "0.7.0"
+  version: "0.12.0"
 ---
 
 # Environment Setup

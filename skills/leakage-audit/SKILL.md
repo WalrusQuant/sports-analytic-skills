@@ -1,6 +1,8 @@
 ---
 name: leakage-audit
 description: Audit sports modeling tables and workflows for target, temporal, join, preprocessing, and split leakage. Use before trusting backtests or reported predictive performance.
+metadata:
+  version: "0.12.0"
 ---
 
 # Leakage Audit

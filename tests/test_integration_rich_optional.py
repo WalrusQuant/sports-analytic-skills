@@ -7,6 +7,7 @@ import os
 import pytest
 
 RUN = os.environ.get("SPORTS_DS_LIVE_TESTS", "").strip() in {"1", "true", "yes"}
+pytestmark = pytest.mark.live
 
 
 @pytest.mark.skipif(not RUN, reason="set SPORTS_DS_LIVE_TESTS=1 for live nflverse pulls")

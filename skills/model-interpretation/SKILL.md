@@ -6,7 +6,7 @@ description: >
   time-aware evaluation when explaining what drives a model and where it fails.
 license: MIT
 metadata:
-  version: "0.7.0"
+  version: "0.12.0"
 ---
 
 # Model Interpretation for Sports

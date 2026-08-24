@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "sports-analytic-skills",
-  "version": "0.6.0",
+  "version": "0.12.0",
   "description": "Standalone agent skills for rigorous sports analytics and modeling, with an optional sports_ds data-toolkit bridge.",
   "author": {
     "name": "Adam Wickwire",

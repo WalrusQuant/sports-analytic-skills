@@ -6,7 +6,7 @@ description: >
   time-aware inference; GLM diagnostics; and complete reporting.
 license: MIT
 metadata:
-  version: "0.5.0"
+  version: "0.12.0"
 ---
 
 # Statistical Modeling for Sports

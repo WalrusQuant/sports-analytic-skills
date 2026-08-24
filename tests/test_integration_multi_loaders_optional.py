@@ -5,13 +5,20 @@ Skip cleanly when sportsdataverse is not installed or network/data fails.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 
-pytest.importorskip("sportsdataverse")
+RUN = os.environ.get("SPORTS_DS_LIVE_TESTS", "").strip() in {"1", "true", "yes"}
+pytestmark = [
+    pytest.mark.live,
+    pytest.mark.skipif(not RUN, reason="set SPORTS_DS_LIVE_TESTS=1 for live pulls"),
+]
 
 
 def test_optional_nba_panel_and_win_pipeline():
+    pytest.importorskip("sportsdataverse")
     from sports_ds.data.nba import load_nba_team_game_panel
     from sports_ds.pipelines.nba_win_model import run_nba_win_pipeline
     from sports_ds.audit.leakage import audit_pregame_form_features
@@ -32,6 +39,7 @@ def test_optional_nba_panel_and_win_pipeline():
 
 
 def test_optional_mlb_panel_and_margin_pipeline():
+    pytest.importorskip("sportsdataverse")
     from sports_ds.data.mlb import load_mlb_team_game_panel
     from sports_ds.pipelines.mlb_margin_model import run_mlb_margin_pipeline
     from sports_ds.pipelines.mlb_elo_baseline import run_mlb_elo_baseline

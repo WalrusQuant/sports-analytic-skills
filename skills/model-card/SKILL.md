@@ -6,7 +6,7 @@ description: >
   maintenance, and kill conditions. Use when freezing or sharing a model.
 license: MIT
 metadata:
-  version: "0.7.0"
+  version: "0.12.0"
 ---
 
 # Sports Model Card

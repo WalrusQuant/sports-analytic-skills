@@ -6,7 +6,7 @@ description: >
   trials, model comparisons, and reproducible research history.
 license: MIT
 metadata:
-  version: "0.7.0"
+  version: "0.12.0"
 ---
 
 # Experiment Log

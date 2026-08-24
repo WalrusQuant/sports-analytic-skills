@@ -1,6 +1,8 @@
 ---
 name: time-series-sports
 description: Engineer and compare time-safe sports form features. Use for rolling windows, EWMA, rest, schedule gaps, early-season handling, and chronological evaluation.
+metadata:
+  version: "0.12.0"
 ---
 
 # Time-Series Sports Features

@@ -5,6 +5,8 @@ description: >
   analytics skills. Use when the user explicitly mentions sports_ds, wants its
   NFL/NBA/MLB public-data loaders or CLI, needs toolkit setup/troubleshooting,
   or wants to convert toolkit output into a skill's documented input artifact.
+metadata:
+  version: "0.12.0"
 ---
 
 # Sports DS Bridge

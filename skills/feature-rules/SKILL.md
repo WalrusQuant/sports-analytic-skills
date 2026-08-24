@@ -1,6 +1,8 @@
 ---
 name: feature-rules
 description: Define, review, and document point-in-time legal sports-model features. Use when creating rolling form, rest, matchup, rating, roster, injury, or contextual predictors.
+metadata:
+  version: "0.12.0"
 ---
 
 # Feature Rules

@@ -6,7 +6,7 @@ description: >
   and leakage red flags. Use before feature engineering or model fitting.
 license: MIT
 metadata:
-  version: "0.5.0"
+  version: "0.12.0"
 ---
 
 # EDA for Sports Data

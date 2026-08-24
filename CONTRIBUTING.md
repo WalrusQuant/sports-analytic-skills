@@ -63,6 +63,18 @@ If you add scripts:
 - add or update standalone behavioral tests
 - document how to run them in `SKILL.md`
 
+Run deterministic tests with:
+
+```bash
+pytest -q -m "not live"
+```
+
+Run provider integrations separately when changing a data-source boundary:
+
+```bash
+SPORTS_DS_LIVE_TESTS=1 pytest -q -rs -m live
+```
+
 ## Review checklist
 
 - [ ] Does this help an agent run a real sports analysis path?

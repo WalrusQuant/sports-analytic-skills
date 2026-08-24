@@ -6,7 +6,7 @@ description: >
   user needs schedules, box scores, rosters, or event data.
 license: MIT
 metadata:
-  version: "0.7.0"
+  version: "0.12.0"
 ---
 
 # SportsDataverse Python

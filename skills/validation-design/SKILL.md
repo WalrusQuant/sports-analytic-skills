@@ -1,6 +1,8 @@
 ---
 name: validation-design
 description: Design chronological sports-model validation and a written evaluation charter. Use for walk-forward splits, grouped time folds, metric locking, tuning boundaries, and go/no-go rules.
+metadata:
+  version: "0.12.0"
 ---
 
 # Validation Design

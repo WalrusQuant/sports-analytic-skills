@@ -1,5 +1,8 @@
 # Sports Analytic Skills
 
+[![CI](https://github.com/WalrusQuant/sports-analytic-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/WalrusQuant/sports-analytic-skills/actions/workflows/ci.yml)
+[![skills.sh](https://skills.sh/b/WalrusQuant/sports-analytic-skills)](https://skills.sh/WalrusQuant/sports-analytic-skills)
+
 Standalone agent skills for sports analytics and modeling.
 
 Install the skills, point your agent at your data, and use focused guidance for
@@ -15,6 +18,19 @@ that toolkit to the portable artifacts consumed by the standalone skills.
 
 ```bash
 npx skills add WalrusQuant/sports-analytic-skills
+```
+
+The default command lets you select skills interactively. Install one skill
+non-interactively:
+
+```bash
+npx skills add WalrusQuant/sports-analytic-skills --skill eda-sports -y
+```
+
+Install every skill for every detected agent:
+
+```bash
+npx skills add WalrusQuant/sports-analytic-skills --all
 ```
 
 That is enough to use the skills. You do not need to clone this repository,
@@ -103,8 +119,15 @@ pip install -e .
 Optional multi-sport loaders:
 
 ```bash
+# macOS only: XGBoost, pulled by sportsdataverse, needs OpenMP
+brew install libomp
+
 pip install -e ".[multi]"
 ```
+
+The Homebrew command is unnecessary for skill-only use and normally
+unnecessary on Linux. It is only a native runtime prerequisite for the optional
+multi-sport toolkit path on macOS.
 
 Discover the current toolkit surface with:
 
@@ -209,8 +232,18 @@ Repository contributors can install the optional toolkit and test dependencies:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-pytest -q
+pytest -q -m "not live"
 ```
+
+Live data integrations are a separate gate because they call third-party
+services:
+
+```bash
+SPORTS_DS_LIVE_TESTS=1 pytest -q -rs -m live
+```
+
+GitHub Actions runs the offline suite on Python 3.10 through 3.13. A separate
+scheduled and manually triggered workflow exercises the live integrations.
 
 Read [docs/skill-authoring.md](./docs/skill-authoring.md) before changing a skill.
 

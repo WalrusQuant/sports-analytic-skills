@@ -6,7 +6,7 @@ description: >
   algorithms. Use at the start of any sports modeling project.
 license: MIT
 metadata:
-  version: "0.7.0"
+  version: "0.12.0"
 ---
 
 # Sports Modeling Doctrine

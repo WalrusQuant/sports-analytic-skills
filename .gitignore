@@ -30,6 +30,7 @@ node_modules/
 .agents/
 .idea/
 .vscode/
+/tasks/
 
 # Data dumps / notebooks checkpoints (keep examples intentional)
 /data/

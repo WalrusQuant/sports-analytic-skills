@@ -8,6 +8,18 @@ npx skills add WalrusQuant/sports-analytic-skills
 
 No repository clone or `sports_ds` installation is required.
 
+Choose a single skill without an interactive prompt:
+
+```bash
+npx skills add WalrusQuant/sports-analytic-skills --skill eda-sports -y
+```
+
+Install the complete pack for every detected agent:
+
+```bash
+npx skills add WalrusQuant/sports-analytic-skills --all
+```
+
 ## Start from the task
 
 Give the agent the question, the decision time for predictive work, and the path
@@ -63,5 +75,11 @@ cd sports-analytic-skills
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-pytest -q
+pytest -q -m "not live"
+```
+
+Run live provider integrations separately:
+
+```bash
+SPORTS_DS_LIVE_TESTS=1 pytest -q -rs -m live
 ```

@@ -2,11 +2,12 @@
 
 ## Current priority
 
-1. Make every generic skill independently usable after a skill-only install.
-2. Standardize and validate portable input/output artifacts.
-3. Add behavioral tests for skill helpers and routing boundaries.
+1. Gather cross-agent feedback on skill discovery and standalone use.
+2. Expand worked examples that start from public sports data.
+3. Version portable input/output artifacts as their contracts evolve.
 4. Keep public loader skills current across supported sports.
-5. Maintain `sports_ds` as an optional toolkit behind `sports-ds-bridge`.
+5. Benchmark and maintain `sports_ds` as an optional toolkit behind
+   `sports-ds-bridge`.
 
 ## Skill quality bar
 
