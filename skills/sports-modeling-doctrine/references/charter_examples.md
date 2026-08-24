@@ -1,7 +1,6 @@
 # Charter Examples
 
 ## NFL pre-game win probability
-
 ```text
 Question: Pre-game P(team wins)
 Grain: team-game
@@ -13,7 +12,6 @@ Validation: season walk-forward
 ```
 
 ## NBA margin
-
 ```text
 Question: Expected pre-game margin
 Grain: team-game
@@ -25,7 +23,6 @@ Validation: season walk-forward
 ```
 
 ## MLB starter strikeouts
-
 ```text
 Question: Predict starter K in next start
 Grain: player-game

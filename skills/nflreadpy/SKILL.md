@@ -1,30 +1,40 @@
 ---
 name: nflreadpy
 description: >
-  Load NFL data through sports_ds (nflverse via nflreadpy): schedules, team-game
-  panels, and lower-level PBP/roster/stat pulls. Use for any NFL acquisition
-  step before EDA or modeling. Includes load helpers and smoke scripts.
-version: "0.3.0"
+  Load NFL data through sports_ds and nflverse/nflreadpy: schedules, team-game
+  panels, PBP, rosters, player stats, and smoke/snapshot scripts. Use for any
+  NFL acquisition step before EDA or modeling — even if the user only says
+  "get NFL data" or "load schedules." Prefer sports_ds wrappers for modeling
+  panels; use raw nflreadpy for lower-level releases.
+version: "0.4.0"
 license: MIT
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # nflreadpy / nflverse Loader
 
 ## Overview
 
-NFL data plane for this repo. Prefer the `sports_ds` wrappers for modeling panels; use raw `nflreadpy` when you need PBP, rosters, or other nflverse releases directly.
+NFL data plane for this repo.
+
+- Prefer **`sports_ds` wrappers** for modeling panels
+- Use **raw `nflreadpy`** when you need PBP, rosters, or other nflverse releases directly
 
 Upstream ecosystem: nflverse data releases + `nflreadpy`.
 
+---
+
 ## When to Use This Skill
+
+Use when:
 
 - NFL schedules / scores / team-game panels
 - nflverse PBP, rosters, player stats, injuries, snaps
 - Building inputs for EDA and win/margin models
+- User says “get NFL data” or “load schedules”
 
-## When Not to Use
+Do **not** use when:
 
 - Non-NFL leagues → `sportsdataverse-py` / `pybaseball`
 - Environment missing → `environment-setup`
@@ -35,8 +45,10 @@ Upstream ecosystem: nflverse data releases + `nflreadpy`.
 
 ```bash
 pip install -e .
-# nflreadpy comes in with sports_ds dependencies
+# nflreadpy comes with sports_ds dependencies
 ```
+
+First download needs network; later runs use cache.
 
 ---
 
@@ -59,6 +71,19 @@ sports-ds nfl-win-pipeline --seasons 2018-2024
 
 Code: `src/sports_ds/data/nfl.py`
 
+### Team-game panel contract
+
+| Column | Meaning |
+|---|---|
+| `game_id` | contest id |
+| `season`, `week`, `gameday` | time |
+| `team`, `opponent` | abbreviations |
+| `is_home` | 1 home / 0 away |
+| `points_for`, `points_against` | final scores |
+| `won`, `point_diff` | derived labels |
+
+Only completed games with non-null scores are kept.
+
 ---
 
 ## Direct nflreadpy (lower level)
@@ -74,6 +99,8 @@ stats = nfl.load_player_stats([2023, 2024])
 
 Always check column names on the version you installed — nflverse schemas evolve.
 
+Common pulls: `references/nflverse_releases.md`
+
 ---
 
 ## Scripts
@@ -81,9 +108,10 @@ Always check column names on the version you installed — nflverse schemas evol
 ```bash
 python skills/nflreadpy/scripts/smoke_load.py
 python skills/nflreadpy/scripts/load_game_panel.py --seasons 2023-2024
+python skills/nflreadpy/scripts/describe_panel.py --seasons 2023-2024
 ```
 
-`load_game_panel.py` writes a parquet/csv snapshot of the team-game panel for offline work.
+`load_game_panel.py` writes a snapshot of the team-game panel for offline work.
 
 ---
 
@@ -104,6 +132,18 @@ python skills/nflreadpy/scripts/load_game_panel.py --seasons 2023-2024
 2. Snapshot data when an analysis must be reproducible offline.
 3. Do not treat in-progress season weeks as complete without noting it.
 4. Join keys: `game_id`, team abbreviations — validate renames/relocations.
+5. State grain before modeling.
+
+---
+
+## Troubleshooting
+
+| Symptom | Check |
+|---|---|
+| empty panel | season still in progress / all scores null |
+| weird team count | abbreviation churn |
+| slow first run | network download + cache warm |
+| schema KeyError | nflreadpy/nflverse column rename — inspect `df.columns` |
 
 ---
 
@@ -116,9 +156,38 @@ python skills/nflreadpy/scripts/load_game_panel.py --seasons 2023-2024
 
 ---
 
+## Bundled Resources
+
+### references/
+| File | Contents |
+|---|---|
+| `nflverse_releases.md` | common release types |
+| `panel_contract.md` | team-game column contract |
+
+### scripts/
+| File | Contents |
+|---|---|
+| `smoke_load.py` | import/load smoke |
+| `load_game_panel.py` | snapshot panel |
+| `describe_panel.py` | quick panel describe |
+
+---
+
 ## Related Skills
 
 - Environment: `environment-setup`
 - Source choice: `data-sources`
 - EDA: `eda-sports`
 - Multi-sport: `sportsdataverse-py`
+- MLB: `pybaseball`
+
+---
+
+## Quick Command Card
+
+```bash
+pip install -e .
+python skills/nflreadpy/scripts/smoke_load.py
+sports-ds nfl-eda --seasons 2024
+python skills/nflreadpy/scripts/describe_panel.py --seasons 2023-2024
+```

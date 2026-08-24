@@ -1,15 +1,16 @@
 ---
 name: sports-modeling-doctrine
 description: >
-  Core doctrine for sports data science: define the analysis/prediction
-  question, baselines, time-safe evaluation, metrics, and when a sports model
-  is good enough. Use at the start of modeling or analysis work before choosing
-  algorithms. Sports-specific standards for agents building predictive or
-  explanatory models on games, teams, and players.
-version: "0.3.0"
+  Core doctrine for sports data science: define the analysis or prediction
+  question, grain, decision time T, baselines, primary metrics, time-safe
+  evaluation, and when a sports model is good enough. Use at the start of
+  modeling or analysis work before choosing algorithms — even if the user only
+  says "help me model this" or "where do I start." Includes charter templates
+  and agent operating rules for the whole skill pack.
+version: "0.4.0"
 license: MIT
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # Sports Modeling Doctrine
@@ -23,14 +24,31 @@ Before code, lock the scientific contract of the sports analysis:
 - what baseline counts as “something”
 - how success is measured out of time
 
-This skill is the front door for sports modeling work.
+This skill is the **front door** for sports modeling work in this pack.
+
+---
 
 ## When to Use This Skill
+
+Use when:
 
 - Starting any sports modeling or analysis project
 - Choosing what “good” means
 - Preventing notebook chaos before feature soup
 - Reviewing whether a claimed model result is even evaluable
+- User says “where do I start?” or “help me model this”
+
+Do **not** skip this and jump to algorithms.
+
+---
+
+## Installation
+
+No special deps beyond the pack. For runnable pipelines:
+
+```bash
+pip install -e .
+```
 
 ---
 
@@ -44,6 +62,7 @@ This skill is the front door for sports modeling work.
 6. **Name primary metric** before fitting.
 7. **Name validation design** (default: season walk-forward).
 8. **Only then** load data and model (`eda-sports` → `feature-rules` → models).
+9. **Write the charter** (template below).
 
 ---
 
@@ -57,6 +76,8 @@ This skill is the front door for sports modeling work.
 | Simulate | season win distribution | calibrated inputs + uncertainty |
 
 Do not mix “explain coefficients” claims with “predictive superiority” claims without running both evaluations.
+
+Examples: `references/charter_examples.md`
 
 ---
 
@@ -77,31 +98,36 @@ Do not mix “explain coefficients” claims with “predictive superiority” c
 |---|---|
 | Win probability | log-loss (Brier secondary) |
 | Margin | MAE |
-| Counts (goals/runs) | MAE / Poisson deviance |
+| Counts | MAE / Poisson deviance |
 | Ranking | future-result correlation on holdout |
 
-Accuracy alone is not enough.
+Accuracy alone is not enough.  
+See `references/good_enough.md`.
 
 ---
 
 ## Project Charter Template
 
 ```text
-Question: …
-Sport/league: …
-Grain: …
+Question:
+Sport/league:
+Grain:
 Predictive?: yes/no
-Decision time T: …
-Target: …
-Base rate / null: …
-Baselines: …
-Primary metric: …
+Decision time T:\nTarget:
+Base rate / null:
+Baselines:
+Primary metric:
 Validation: season walk-forward (min_train_seasons=…)
-Data sources: …
-Out of scope: …
+Data sources:
+Out of scope:
 ```
 
-Save this in the experiment log before fitting.
+```bash
+python skills/sports-modeling-doctrine/scripts/print_charter_template.py
+python skills/sports-modeling-doctrine/scripts/print_charter_template.py --out data/charter.md
+```
+
+Save the charter in the experiment log before fitting.
 
 ---
 
@@ -114,6 +140,9 @@ When acting as an agent on this repo:
 3. Run EDA before modeling.
 4. Run leakage checks when metrics look strong.
 5. Hand off to specialized skills rather than one mega-prompt.
+6. Keep the simplest model that wins.
+
+Pipeline map: `references/skill_path.md`
 
 ---
 
@@ -136,25 +165,50 @@ sports-ds nfl-win-pipeline --seasons 2018-2024
 
 ---
 
-## Bundled Resources
+## Integrity Rules
 
-### references/
-
-- `charter_examples.md`
-
-### scripts/
-
-- `print_charter_template.py` — emit a blank charter file
+1. No algorithm before charter fields are named.
+2. No “good model” claim without baseline + walk-forward.
+3. No silent scope expansion mid-project.
+4. Non-results get written down.
 
 ---
 
-## Related skills
+## Bundled Resources
 
-- EDA: `eda-sports`
-- Features: `feature-rules`
-- Baselines: `baseline-models`
-- Stats: `statistical-modeling`
-- ML: `predictive-modeling`
-- Ratings: `ratings-strength-models`
-- Validation: `validation-design`
-- Leakage: `leakage-audit`
+### references/
+| File | Contents |
+|---|---|
+| `charter_examples.md` | example charters |
+| `good_enough.md` | success/failure rules |
+| `skill_path.md` | default skill sequence |
+
+### scripts/
+| File | Contents |
+|---|---|
+| `print_charter_template.py` | emit blank charter |
+
+---
+
+## Related Skills
+
+| Next | Skill |
+|---|---|
+| EDA | `eda-sports` |
+| Features | `feature-rules` |
+| Baselines | `baseline-models` |
+| Stats | `statistical-modeling` |
+| ML | `predictive-modeling` |
+| Ratings | `ratings-strength-models` |
+| Validation | `validation-design` |
+| Leakage | `leakage-audit` |
+
+---
+
+## Quick Command Card
+
+```bash
+python skills/sports-modeling-doctrine/scripts/print_charter_template.py --out data/charter.md
+sports-ds nfl-eda --seasons 2024
+sports-ds nfl-win-pipeline --seasons 2018-2024
+```

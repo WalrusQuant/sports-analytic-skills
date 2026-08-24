@@ -3,31 +3,43 @@ name: results-reporting
 description: >
   Report sports modeling and analysis results clearly: question, data, methods,
   validation, baselines, metrics, interpretation, limits, figures, and repro
-  pointers. Use for README sections, notebook summaries, research notes, and
-  agent final answers after a sports model run. Includes a report builder script
-  from sports_ds pipeline JSON.
-version: "0.3.0"
+  pointers. Use for notebook summaries, research notes, README result sections,
+  and agent final answers after a sports model run — even if the user only says
+  "write up the results." Includes a report builder from sports_ds pipeline JSON.
+version: "0.4.0"
 license: MIT
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # Results Reporting (Sports)
 
 ## Overview
 
-Turn a finished sports analysis into a writeup a stranger can trust: question,
-methods, baselines, numbers, limits, repro. No hype. No missing baseline.
+Turn a finished sports analysis into a writeup a stranger can trust:
+
+- question
+- methods
+- baselines
+- numbers
+- limits
+- repro
+
+No hype. No missing baseline.
+
+---
 
 ## When to Use This Skill
+
+Use when:
 
 - Finished experiment needs a writeup
 - Sharing model performance with humans
 - Closing an analysis thread cleanly
-- Drafting README / notebook result sections
+- Drafting notebook result sections
 - Agent needs a final answer format after `sports-ds` runs
 
-## When Not to Use
+Do **not** use when:
 
 - No metrics/baselines yet — run models first
 - Need durable model contract docs → also use `model-card`
@@ -58,6 +70,9 @@ Every sports results writeup includes:
 
 Skip hype. Lead with question and metric.
 
+Checklist: `references/writeup_checklist.md`  
+Templates: `references/templates.md`
+
 ---
 
 ## Workflow
@@ -80,8 +95,6 @@ python skills/results-reporting/scripts/render_pipeline_report.py \
   --json data/nfl_win_pipeline.json \
   --out data/nfl_win_report.md
 ```
-
-The script writes a markdown skeleton with question/methods/metrics sections filled from the JSON.
 
 ---
 
@@ -145,7 +158,6 @@ Primary metric: …
 |---|---:|---|
 | constant | … | |
 | logistic | … | |
-| … | … | |
 
 Per-season: …
 
@@ -179,23 +191,37 @@ Reproduce: sports-ds nfl-win-pipeline --seasons 2018-2024
 
 ## Bundled Resources
 
-### scripts/
-
-- `render_pipeline_report.py` — markdown report from pipeline JSON
-
 ### references/
+| File | Contents |
+|---|---|
+| `writeup_checklist.md` | completeness checklist |
+| `templates.md` | short/long templates |
 
-- `writeup_checklist.md`
+### scripts/
+| File | Contents |
+|---|---|
+| `render_pipeline_report.py` | markdown report from pipeline JSON |
 
 ### related
-
 - `model-card`, `experiment-log`, `anti-slop-analytics`, `calibration-check`
 
 ---
 
 ## Related Skills
 
-- Model card: `model-card`
-- Experiment log: `experiment-log`
-- Figures: `sports-visualization`, `anti-slop-analytics`
-- Calibration: `calibration-check`
+| Need | Skill |
+|---|---|
+| Model card | `model-card` |
+| Experiment log | `experiment-log` |
+| Figures | `sports-visualization`, `anti-slop-analytics` |
+| Calibration | `calibration-check` |
+| Interpretation | `model-interpretation` |
+
+---
+
+## Quick Command Card
+
+```bash
+sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win_pipeline.json
+python skills/results-reporting/scripts/render_pipeline_report.py --json data/nfl_win_pipeline.json
+```

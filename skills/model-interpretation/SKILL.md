@@ -1,34 +1,42 @@
 ---
 name: model-interpretation
 description: >
-  Interpret sports models: coefficient tables, feature effects, partial
-  dependence style views, error slices by season/team/home, largest misses,
-  and ablation checks under leakage-safe features. Use after fitting a sports
-  model to explain behavior and failure modes. Includes a slice-error script
-  on sports_ds walk-forward predictions.
-version: "0.3.0"
+  Interpret sports models after fit: coefficient tables, odds ratios, feature
+  effects, error slices by season/home/tails, largest misses, ablation checks,
+  and limits under leakage-safe features. Use after fitting a sports model to
+  explain behavior and failure modes — even if the user only asks "what is the
+  model using" or "where does it fail." Includes walk-forward slice scripts.
+version: "0.4.0"
 license: MIT
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # Model Interpretation (Sports)
 
 ## Overview
 
-Explain what a sports model is doing and where it fails — globally (drivers),
-locally (example games), and by segment (season, home/away, strength buckets).
+Explain what a sports model is doing and where it fails:
 
-Interpretation is not causality. It is structured description tied to validated performance.
+- **global** drivers (coefs / importances)
+- **local** example games
+- **segments** (season, home/away, probability tails)
+
+Interpretation is **not causality**. It is structured description tied to validated performance.
+
+---
 
 ## When to Use This Skill
+
+Use when:
 
 - After baseline / ML / statistical model fit
 - Need driver explanations for a report
 - Debugging segment failures (home dogs, early season, blowouts)
 - Checking whether “important” features are just leakage
+- User asks “what is it using?” or “where does it fail?”
 
-## When Not to Use
+Do **not** use when:
 
 - Model not trained yet
 - Features known leaked — fix with `leakage-audit` / `feature-rules` first
@@ -38,8 +46,7 @@ Interpretation is not causality. It is structured description tied to validated 
 ## Installation
 
 ```bash
-pip install -e .
-```
+pip install -e .\n```
 
 ---
 
@@ -52,7 +59,9 @@ pip install -e .
 | Partial dependence / ALE-style | nonlinear effects | correlated features |
 | Residual / error slices | finding broken segments | need enough n |
 | Largest misses case study | intuition checks | anecdote risk |
-| Ablation | feature group value | expensive; do walk-forward |
+| Ablation | feature group value | do walk-forward |
+
+Details: `references/interpretation_methods.md`
 
 ---
 
@@ -60,10 +69,11 @@ pip install -e .
 
 1. Confirm features are time-safe.
 2. **Global picture:** top drivers (coefs or importances).
-3. **Local picture:** example games/players with large errors.
+3. **Local picture:** example games with large errors.
 4. **Slice errors** by season, home/away, predicted-prob buckets.
 5. Separate correlation from actionable explanation.
 6. Document limits.
+7. Hand off to `results-reporting`.
 
 ---
 
@@ -79,10 +89,16 @@ python skills/model-interpretation/scripts/slice_errors.py \
 
 Reports log-loss/accuracy by season and home/away for the sports_ds logistic baseline.
 
-### Coefficient view
+### Coefficient / OR view
 
 ```bash
 python skills/statistical-modeling/scripts/glm_diagnostics.py --seasons 2018-2023
+```
+
+### Largest misses
+
+```bash
+python skills/model-interpretation/scripts/largest_misses.py --seasons 2018-2024 --top 20
 ```
 
 ---
@@ -95,7 +111,8 @@ python skills/statistical-modeling/scripts/glm_diagnostics.py --seasons 2018-202
 - [ ] Predicted probability tails (0–0.2, 0.8–1.0)
 - [ ] Large favorite / large dog buckets if rating/prob available
 
-Mark slices with tiny n as unstable.
+Mark slices with tiny n as unstable.  
+See `references/slice_guide.md`.
 
 ---
 
@@ -114,7 +131,8 @@ Mark slices with tiny n as unstable.
 - SHAP theater on a contaminated pipeline
 - One importance bar chart as the whole story
 - Ignoring systematic miss segments
-- Causal language (“this feature causes wins”) from observational sports data
+- Causal language from observational sports data
+- Explaining in-sample fit as generalization
 
 ---
 
@@ -122,11 +140,11 @@ Mark slices with tiny n as unstable.
 
 ```text
 Interpretation
-Model: …
-Global drivers: …
-Key slices: …
-Largest misses: …
-Ablation (if any): …
+Model:
+Global drivers:
+Key slices:
+Largest misses:
+Ablation (if any):
 Limits: correlational; time-safe features only; …
 ```
 
@@ -134,16 +152,19 @@ Limits: correlational; time-safe features only; …
 
 ## Bundled Resources
 
-### scripts/
-
-- `slice_errors.py` — walk-forward error slices for logistic sports_ds model
-
 ### references/
+| File | Contents |
+|---|---|
+| `interpretation_methods.md` | methods overview |
+| `slice_guide.md` | segment checklist |
 
-- `interpretation_methods.md`
+### scripts/
+| File | Contents |
+|---|---|
+| `slice_errors.py` | walk-forward error slices |
+| `largest_misses.py` | biggest probability misses |
 
 ### related package
-
 - `src/sports_ds/models/baselines.py`
 - `skills/statistical-modeling/scripts/glm_diagnostics.py`
 
@@ -151,8 +172,20 @@ Limits: correlational; time-safe features only; …
 
 ## Related Skills
 
-- Reporting: `results-reporting`
-- Features: `feature-rules`
-- Leakage: `leakage-audit`
-- EDA: `eda-sports`
-- Calibration: `calibration-check`
+| Need | Skill |
+|---|---|
+| Reporting | `results-reporting` |
+| Features | `feature-rules` |
+| Leakage | `leakage-audit` |
+| EDA | `eda-sports` |
+| Calibration | `calibration-check` |
+
+---
+
+## Quick Command Card
+
+```bash
+python skills/model-interpretation/scripts/slice_errors.py --seasons 2018-2024
+python skills/model-interpretation/scripts/largest_misses.py --seasons 2018-2024
+python skills/statistical-modeling/scripts/glm_diagnostics.py --seasons 2018-2023
+```
