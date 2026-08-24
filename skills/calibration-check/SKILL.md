@@ -2,127 +2,214 @@
 name: calibration-check
 description: >
   Measure whether sports-model probabilities mean what they say. Use when
-  evaluating probability quality, reliability curves, or probabilistic
-  prediction models.
-version: "0.1.0"
+  evaluating probability quality, reliability curves, Brier score, expected
+  calibration error, or probabilistic prediction models for wins/covers/events.
+  Includes a runnable calibration report script on sports_ds pipeline outputs.
+version: "0.3.0"
 license: MIT
+metadata:
+  version: "0.3.0"
 ---
 
-# Calibration Check
+# Calibration Check (Sports)
 
-Market/modeling joint skill for probability reliability. A model can rank
-well and still be miscalibrated. This skill checks whether 30% means ~30%.
+## Overview
 
-## When to use
+A model can rank teams well and still be miscalibrated. If the model says 30%,
+about 30% of those cases should hit. This skill measures probability reliability
+for sports models and produces a verdict an agent can act on.
 
-- Model outputs probabilities
-- User asks how confident / how sure
-- Before `risk` stake-discipline language stronger than research-only
-- Supporting `paper` or `market-relative` probabilistic claims
-- Comparing recalibration methods
+## When to Use This Skill
 
-## When not to use
+- Model outputs win/event probabilities
+- User asks how confident / how reliable the probs are
+- After walk-forward evaluation of a probability model
+- Before writing results that quote probability levels
+- Comparing raw vs recalibrated probabilities
+
+## When Not to Use
 
 - Pure ranking tasks with no probabilistic interpretation
-- Hard labels only with no prob outputs
-- Ethics refusals for locks → `ethics`
-- Designing splits → `validation-design`
+- Hard labels only with no probability outputs
+- Designing splits from scratch → `validation-design`
+- Feature legality review → `leakage-audit`
 
-## Required inputs
+---
 
-Minimum:
+## Installation
 
-- Predicted probabilities on a time-safe evaluation set
-- Binary (or properly binned) outcomes
-- Validation fold IDs / timestamps
+```bash
+pip install -e .
+```
 
-Optional:
+---
 
-- Market-implied probabilities for comparison
-- Desired probability bins
-- Segment keys (season, home/away, sport if multi-sport panel)
+## What to Measure
 
-## What to measure
+1. **Reliability / calibration curve** (bin predicted prob vs observed rate)
+2. **Expected Calibration Error (ECE)**
+3. **Brier score** (and reliability/resolution decomposition when useful)
+4. **Log-loss** (discrimination + calibration together; not a substitute for ECE)
+5. **Segment calibration** (by season, home/away, probability tail)
+6. **Sharpness** (are probs informative, not all ~0.5?)
 
-1. **Reliability / calibration curve**
-2. **Expected Calibration Error (ECE) or similar**
-3. **Brier score decomposition** (reliability vs resolution) when useful
-4. **Segment calibration** (not only pooled)
-5. **Sharpness** (are probs informative, not all 0.5?)
+Discrimination metrics (AUC, accuracy) do **not** replace calibration.
 
-Discrimination metrics (AUC/log-loss) can be reported, but they do not replace calibration.
+---
 
-## Procedure
+## Workflow
 
-1. Confirm evaluation predictions are from forward/time-safe folds.
-2. Clip/validate probability range in (0,1) with no NaNs.
-3. Choose binning strategy (fixed bins or quantile bins); pre-declare it.
-4. Compute calibration curve + summary error.
-5. Compute Brier and, if possible, reliability/resolution components.
-6. Slice by season/regime; look for fragile calibration.
-7. Optional: compare to market-implied calibration if odds exist.
-8. Decide whether recalibration is allowed:
-   - only using training/forward-proper methods
-   - never fit isotonic on final holdout and call it validated without nested design
-9. Issue calibration verdict:
+1. Confirm predictions come from time-safe / walk-forward folds.
+2. Validate probabilities in (0, 1) with no NaNs.
+3. Pre-declare binning (fixed-width or quantile).
+4. Compute curve, ECE, Brier, log-loss.
+5. Slice by season and by probability tails.
+6. Issue a verdict (table below).
+7. If recalibrating, only with nested/train-proper methods — never fit isotonic on the final test fold and call it validated.
+
+---
+
+## Verdict Scale
 
 | Verdict | Meaning |
 |---|---|
-| `well-calibrated` | Reliability acceptable for claim level |
+| `well-calibrated` | Reliability acceptable for quoting probabilities |
 | `usable-with-caveats` | Some miscalibration; disclose and/or recalibrate properly |
-| `poorly-calibrated` | Prob numbers not trustworthy as probabilities |
+| `poorly-calibrated` | Probability numbers not trustworthy as probabilities |
 | `invalid-eval` | Leakage/split issues block judgment |
 
-10. Hand posture to `risk` and claim impact to `doctrine`.
+---
 
-## Hard constraints
+## Run on sports_ds NFL pipeline predictions
 
-- Never evaluate calibration on training rows used to fit the same model without nested scheme disclosure
-- Never present raw scores as probabilities without calibration evidence
-- Never fix calibration by peeking at final test labels
-- Never hide segment failures behind a pooled “looks fine”
-- If sample per bin is tiny, say so and widen bins or reduce claim strength
+### Preferred script
 
-## Anti-patterns
+```bash
+# runs walk-forward logistic probs and writes calibration JSON
+python skills/calibration-check/scripts/calibration_report.py \
+  --seasons 2018-2024 \
+  --out data/calibration_report.json
+```
 
-- **Accuracy cosplay:** “56% correct, so calibrated”
-- **One reliability plot, no sample sizes**
-- **Holdout isotonic theater**
-- **Average prob ≈ base rate therefore calibrated** (necessary, not sufficient)
-- **Ignoring 0.05 and 0.95 tails where decisions often live**
+### Python API pattern
 
-## Output contract
+```python
+import numpy as np
+import sys
+from pathlib import Path
+sys.path.append(str(Path("skills/calibration-check/scripts").resolve()))
+from calibration_report import calibration_table, expected_calibration_error, brier_score
 
-Done means:
+y = np.array([0, 1, 1, 0, 1], dtype=float)
+p = np.array([0.2, 0.7, 0.8, 0.4, 0.6], dtype=float)
+print(calibration_table(y, p, n_bins=5))
+print(expected_calibration_error(y, p), brier_score(y, p))
+```
 
-- [ ] Eval set time-safety confirmed
-- [ ] Calibration method/binning stated
-- [ ] Summary calibration metric reported
-- [ ] Curve/table with bin counts
-- [ ] Segment notes
-- [ ] Verdict issued
-- [ ] Implications for claim level and stake language
+### From pipeline folds
 
-## Handoffs
+```python
+from sports_ds.pipelines.nfl_win_model import run_nfl_win_pipeline
+# pipeline already walk-forward scores models; use calibration_report.py for full path
+```
 
-- `risk` — posture after calibration verdict
-- `doctrine` — claim level impact
-- `clv-evaluation` — if market probs available
-- `validation-design` — if eval design is insufficient
-- `model-card` — document calibration status
-- **Stop** on `invalid-eval` until redesign
+---
 
-## Worked example
+## Binning Guidance
 
-**Model:** pre-event home win probabilities.  
-**Walk-forward bins:** 10 equal-width bins.  
-**Finding:** predictions around 0.70 win only ~0.60 over 3 seasons; tails overconfident.  
+| Strategy | Use when |
+|---|---|
+| Equal-width (10 bins 0–1) | default sports win probs |
+| Quantile bins | probs clump in a narrow range |
+| Tail focus (0–0.2, 0.8–1.0) | decision thresholds live in extremes |
+
+Always report **bin counts**. Empty bins are not evidence.
+
+---
+
+## Recalibration Rules
+
+Allowed:
+
+- Platt scaling / isotonic fit **inside training folds only**, applied to test fold
+- Nested walk-forward recalibration
+
+Not allowed:
+
+- Fit isotonic on final test labels and report that as validated calibration
+- Hand-edit probabilities after seeing outcomes
+
+---
+
+## Hard Constraints
+
+1. Never evaluate calibration on training rows used to fit the same model without nested disclosure.
+2. Never present raw scores as probabilities without checking calibration.
+3. Never hide segment failures behind a pooled “looks fine.”
+4. If sample per bin is tiny, say so — widen bins or reduce claim strength.
+5. Accuracy is not calibration.
+
+---
+
+## Anti-Patterns
+
+- “56% correct, so calibrated”
+- One reliability plot with no sample sizes
+- Holdout isotonic theater
+- Average prob ≈ base rate therefore calibrated (necessary, not sufficient)
+- Ignoring 0.05 and 0.95 tails
+
+---
+
+## Reporting Template
+
+```text
+Calibration report
+Model: …
+Eval: walk-forward seasons …
+n: …
+Brier: …
+ECE (10 equal-width bins): …
+Log-loss: …
+Notes by season: …
+Tail behavior: …
+Verdict: well-calibrated | usable-with-caveats | poorly-calibrated | invalid-eval
+Actions: …
+```
+
+---
+
+## Worked Example
+
+**Model:** pre-game home/team win probabilities from logistic form features.  
+**Design:** season walk-forward, 10 equal-width bins.  
+**Finding:** predictions near 0.70 hit only ~0.60 over several seasons; tails overconfident.  
 **Verdict:** `poorly-calibrated` for strong confidence language.  
-**Actions:** proper nested recalibration experiment; until then `risk` posture `research-only` / `cautious`; no market-action wording.
+**Actions:** nested recalibration experiment; until then quote ranks more carefully than exact percents.
 
-## References
+---
 
-- `skills/risk`
-- `skills/doctrine`
-- `skills/validation-design`
-- `skills/clv-evaluation`
+## Bundled Resources
+
+### scripts/
+
+- `calibration_report.py` — walk-forward calibration metrics for sports_ds NFL features
+
+### references/
+
+- `calibration_metrics.md` — ECE/Brier definitions and pitfalls
+
+### package code
+
+- `src/sports_ds/pipelines/nfl_win_model.py`
+- `src/sports_ds/models/baselines.py`
+
+---
+
+## Related Skills
+
+- Validation design: `validation-design`
+- Predictive models: `predictive-modeling`
+- Statistical models: `statistical-modeling`
+- Results writeup: `results-reporting`
+- Model card: `model-card`
