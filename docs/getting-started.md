@@ -26,6 +26,10 @@ sports-ds nfl-margin-pipeline --seasons 2018-2024
 sports-ds nfl-elo --seasons 2018-2024
 sports-ds nfl-player-eda --seasons 2023-2024
 sports-ds nfl-player-pipeline --seasons 2022-2024 --target fantasy_points_ppr
+sports-ds nba-player-eda --seasons 2023-2024
+sports-ds nba-player-pipeline --seasons 2023-2024 --target fantasy_points
+sports-ds mlb-player-eda --seasons 2024 --max-games 100
+sports-ds mlb-player-pipeline --seasons 2023-2024 --max-games 0
 sports-ds calibrate --seasons 2018-2024
 sports-ds leakage-audit --seasons 2023-2024
 ```
@@ -35,6 +39,8 @@ sports-ds leakage-audit --seasons 2023-2024
 - `nfl-margin-pipeline` — point-diff walk-forward (constant / ridge / hist GBR)
 - `nfl-elo` — as-of Elo + logistic baseline under walk-forward
 - `nfl-player-eda` / `nfl-player-pipeline` — player-level skill-position form + walk-forward fantasy/volume models
+- `nba-player-eda` / `nba-player-pipeline` — NBA player boxscore form + walk-forward fantasy/points (needs `[multi]`)
+- `mlb-player-eda` / `mlb-player-pipeline` — MLB batter boxscores (cached) + walk-forward fantasy (needs `[multi]`)
 - `calibrate` / `leakage-audit` — trust checks on the form feature path
 - `nba-eda` / `nba-win-pipeline` / `nba-margin-pipeline` / `nba-elo` — NBA path (requires `pip install -e ".[multi]"`)
 - `mlb-eda` / `mlb-win-pipeline` / `mlb-margin-pipeline` / `mlb-elo` — MLB path (requires `[multi]`)

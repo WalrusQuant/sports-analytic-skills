@@ -76,6 +76,8 @@ While an agent can use any Python package on its own, these skills give curated 
    - `sports-ds nfl-margin-pipeline`
    - `sports-ds nfl-elo`
    - `sports-ds nfl-player-eda` / `nfl-player-pipeline` (player-level fantasy/volume models)
+   - `sports-ds nba-player-eda` / `nba-player-pipeline` (requires `[multi]`)
+   - `sports-ds mlb-player-eda` / `mlb-player-pipeline` (requires `[multi]`; boxscores cached under `data/cache/`)
    - `sports-ds calibrate`
    - `sports-ds leakage-audit`
    - `sports-ds nba-eda` / `nba-win-pipeline` / `nba-margin-pipeline` / `nba-elo` (requires `pip install -e ".[multi]"`)

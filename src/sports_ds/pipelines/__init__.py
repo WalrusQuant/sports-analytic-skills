@@ -11,6 +11,8 @@ from sports_ds.pipelines.nfl_margin_model import format_margin_report, run_nfl_m
 from sports_ds.pipelines.nfl_win_model import format_pipeline_report, run_nfl_win_pipeline
 from sports_ds.pipelines.nhl_win_model import format_nhl_win_report, run_nhl_win_pipeline
 from sports_ds.pipelines.nfl_player_model import format_nfl_player_report, run_nfl_player_pipeline
+from sports_ds.pipelines.nba_player_model import format_nba_player_report, run_nba_player_pipeline
+from sports_ds.pipelines.mlb_player_model import format_mlb_player_report, run_mlb_player_pipeline
 from sports_ds.pipelines.team_win_rich import format_team_win_rich_report, run_team_win_rich_pipeline
 
 __all__ = [
@@ -36,6 +38,10 @@ __all__ = [
     "format_nhl_win_report",
     "run_nfl_player_pipeline",
     "format_nfl_player_report",
+    "run_nba_player_pipeline",
+    "format_nba_player_report",
+    "run_mlb_player_pipeline",
+    "format_mlb_player_report",
     "run_team_win_rich_pipeline",
     "format_team_win_rich_report",
 ]

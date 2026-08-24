@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.0
+
+### Player paths (NBA + MLB)
+- NBA player panel via bulk `load_nba_player_boxscore` + `nba-player-eda` / `nba-player-pipeline`
+- MLB batter panel via cached per-game `mlb_boxscore` + `mlb-player-eda` / `mlb-player-pipeline` (`--max-games` for smokes)
+- Shared player form engine + generic `pipelines/player_model.py` (NFL refactored onto it)
+- Sport-specific feature defaults for NBA/MLB fantasy proxies
+- Unit tests for NBA/MLB player form/pipeline; optional live player integration tests
+
 ## 0.10.0
 
 ### Package depth

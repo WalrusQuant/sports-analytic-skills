@@ -67,6 +67,10 @@ doctrine → load → EDA → time-safe features / ratings → baselines
 | `sports-ds nfl-elo` | as-of Elo + logistic walk-forward |
 | `sports-ds nfl-player-eda` | NFL skill-position player panel EDA |
 | `sports-ds nfl-player-pipeline` | player form + fantasy/volume walk-forward |
+| `sports-ds nba-player-eda` | NBA player boxscore panel EDA (needs `[multi]`) |
+| `sports-ds nba-player-pipeline` | NBA player form + fantasy/points walk-forward |
+| `sports-ds mlb-player-eda` | MLB batter boxscore panel EDA (needs `[multi]`) |
+| `sports-ds mlb-player-pipeline` | MLB batter form + fantasy walk-forward (cached boxscores) |
 | `sports-ds calibrate` | win-logistic calibration/ECE |
 | `sports-ds leakage-audit` | pre-game form time-safety audit |
 | `sports-ds nba-eda` | NBA team-game panel EDA (needs `[multi]`) |

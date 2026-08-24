@@ -73,6 +73,45 @@ def main(argv: list[str] | None = None) -> int:
     p_player_eda.add_argument("--seasons", default="2023-2024")
     p_player_eda.add_argument("--positions", default="QB,RB,WR,TE")
 
+    p_nba_player = sub.add_parser(
+        "nba-player-pipeline",
+        help="NBA player-level walk-forward (fantasy/points targets)",
+    )
+    p_nba_player.add_argument("--seasons", default="2023-2024")
+    p_nba_player.add_argument("--min-train-seasons", type=int, default=1)
+    p_nba_player.add_argument("--target", default="fantasy_points")
+    p_nba_player.add_argument("--positions", default="")
+    p_nba_player.add_argument("--min-minutes", type=float, default=5.0)
+    p_nba_player.add_argument("--json-out", default="")
+
+    p_nba_player_eda = sub.add_parser("nba-player-eda", help="NBA player-game panel EDA summary")
+    p_nba_player_eda.add_argument("--seasons", default="2023-2024")
+    p_nba_player_eda.add_argument("--positions", default="")
+    p_nba_player_eda.add_argument("--min-minutes", type=float, default=1.0)
+
+    p_mlb_player = sub.add_parser(
+        "mlb-player-pipeline",
+        help="MLB batter walk-forward via cached boxscores",
+    )
+    p_mlb_player.add_argument("--seasons", default="2023-2024")
+    p_mlb_player.add_argument("--min-train-seasons", type=int, default=1)
+    p_mlb_player.add_argument("--target", default="fantasy_points")
+    p_mlb_player.add_argument("--positions", default="")
+    p_mlb_player.add_argument("--min-pa", type=float, default=1.0)
+    p_mlb_player.add_argument(
+        "--max-games",
+        type=int,
+        default=0,
+        help="Cap schedule games (0=all). Useful for smokes.",
+    )
+    p_mlb_player.add_argument("--json-out", default="")
+
+    p_mlb_player_eda = sub.add_parser("mlb-player-eda", help="MLB player-game panel EDA summary")
+    p_mlb_player_eda.add_argument("--seasons", default="2024")
+    p_mlb_player_eda.add_argument("--positions", default="")
+    p_mlb_player_eda.add_argument("--min-pa", type=float, default=1.0)
+    p_mlb_player_eda.add_argument("--max-games", type=int, default=0)
+
     # multi-sport win/margin/elo/eda (NBA + MLB primary; NHL kept for load/eda only)
     for sport in ("nba", "mlb", "nhl"):
         p = sub.add_parser(f"{sport}-eda", help=f"Load {sport.upper()} team-game panel EDA")
@@ -207,6 +246,81 @@ def main(argv: list[str] | None = None) -> int:
             min_train_seasons=args.min_train_seasons,
         )
         print(format_nfl_player_report(result))
+        _maybe_json(args.json_out, result)
+        return 0
+
+    if args.cmd == "nba-player-eda":
+        from sports_ds.data.nba_players import load_nba_player_game_panel
+
+        seasons = _parse_seasons(args.seasons)
+        positions = {p.strip().upper() for p in args.positions.split(",") if p.strip()} or None
+        panel = load_nba_player_game_panel(
+            seasons, positions=positions, min_minutes=args.min_minutes
+        )
+        print(
+            f"NBA player panel seasons={seasons} positions={sorted(positions) if positions else 'all'}\n"
+            f"rows={len(panel)} players={panel['player_id'].nunique()}\n"
+            f"by_pos:\n{panel['position'].value_counts().to_string()}\n"
+            f"mean_fp={panel['fantasy_points'].mean():.2f} mean_pts={panel['points'].mean():.2f} "
+            f"mean_min={panel['minutes'].mean():.1f}"
+        )
+        return 0
+
+    if args.cmd == "nba-player-pipeline":
+        from sports_ds.pipelines.nba_player_model import (
+            format_nba_player_report,
+            run_nba_player_pipeline,
+        )
+
+        seasons = _parse_seasons(args.seasons)
+        positions = {p.strip().upper() for p in args.positions.split(",") if p.strip()} or None
+        result = run_nba_player_pipeline(
+            seasons,
+            target_col=args.target,
+            positions=positions,
+            min_train_seasons=args.min_train_seasons,
+            min_minutes=args.min_minutes,
+        )
+        print(format_nba_player_report(result))
+        _maybe_json(args.json_out, result)
+        return 0
+
+    if args.cmd == "mlb-player-eda":
+        from sports_ds.data.mlb_players import load_mlb_player_game_panel
+
+        seasons = _parse_seasons(args.seasons)
+        positions = {p.strip().upper() for p in args.positions.split(",") if p.strip()} or None
+        max_games = args.max_games or None
+        panel = load_mlb_player_game_panel(
+            seasons, positions=positions, min_pa=args.min_pa, max_games=max_games
+        )
+        print(
+            f"MLB player panel seasons={seasons} positions={sorted(positions) if positions else 'hitters'}\n"
+            f"rows={len(panel)} players={panel['player_id'].nunique()} max_games={max_games}\n"
+            f"by_pos:\n{panel['position'].value_counts().head(12).to_string()}\n"
+            f"mean_fp={panel['fantasy_points'].mean():.2f} mean_hits={panel['hits'].mean():.2f} "
+            f"mean_pa={panel['plate_appearances'].mean():.2f}"
+        )
+        return 0
+
+    if args.cmd == "mlb-player-pipeline":
+        from sports_ds.pipelines.mlb_player_model import (
+            format_mlb_player_report,
+            run_mlb_player_pipeline,
+        )
+
+        seasons = _parse_seasons(args.seasons)
+        positions = {p.strip().upper() for p in args.positions.split(",") if p.strip()} or None
+        max_games = args.max_games or None
+        result = run_mlb_player_pipeline(
+            seasons,
+            target_col=args.target,
+            positions=positions,
+            min_train_seasons=args.min_train_seasons,
+            min_pa=args.min_pa,
+            max_games=max_games,
+        )
+        print(format_mlb_player_report(result))
         _maybe_json(args.json_out, result)
         return 0
 
