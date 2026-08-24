@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit sports_ds pre-game features for common leakage failures."""
+"""Audit user-provided pre-decision features for common leakage signals."""
 
 from __future__ import annotations
 
@@ -7,88 +7,120 @@ import argparse
 import json
 from pathlib import Path
 
-from sports_ds.audit.leakage import audit_pregame_form_features
-from sports_ds.data.nfl import load_team_game_panel
-from sports_ds.features.team_form import add_pregame_form_features
-from sports_ds.pipelines.nfl_win_model import FEATURE_COLS
+
+DEFAULT_BANNED = "won,win,loss,result,score,points_for,points_against,point_diff,target,label"
 
 
-BANNED = {"won", "points_for", "points_against", "point_diff"}
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", required=True, help="CSV, Parquet, or JSON records file")
+    parser.add_argument("--target", required=True, help="Outcome column")
+    parser.add_argument("--features", required=True, help="Comma-separated feature columns")
+    parser.add_argument("--entity-col", help="Optional team/player/entity column")
+    parser.add_argument("--time-col", help="Optional sortable event-time column")
+    parser.add_argument("--banned", default=DEFAULT_BANNED, help="Comma-separated forbidden exact names")
+    parser.add_argument("--out", help="Optional JSON output path")
+    return parser.parse_args()
 
 
-def _parse_seasons(raw: str) -> list[int]:
-    if "-" in raw and "," not in raw:
-        a, b = raw.split("-", 1)
-        return list(range(int(a), int(b) + 1))
-    return [int(x.strip()) for x in raw.split(",") if x.strip()]
+def load_frame(path: str):
+    try:
+        import pandas as pd
+    except ImportError as exc:
+        raise SystemExit("pandas is required; install it with: python -m pip install pandas") from exc
+    suffix = Path(path).suffix.lower()
+    if suffix == ".csv": return pd.read_csv(path)
+    if suffix in {".parquet", ".pq"}: return pd.read_parquet(path)
+    if suffix in {".json", ".jsonl", ".ndjson"}: return pd.read_json(path, lines=suffix != ".json")
+    raise SystemExit("--input must be CSV, Parquet, JSON, JSONL, or NDJSON")
 
 
-def audit_frame(df) -> dict:
-    findings = []
-
-    overlap = sorted(BANNED.intersection(set(FEATURE_COLS)))
-    findings.append(
-        {
-            "id": "banned_in_feature_list",
-            "status": "FAIL" if overlap else "PASS",
-            "detail": overlap or "no banned outcome cols in FEATURE_COLS",
-        }
-    )
-
-    first = df.sort_values(["team", "season", "week"]).groupby("team", as_index=False).head(1)
-    na_rate = float(first["pre_win_pct"].isna().mean()) if "pre_win_pct" in df.columns else 0.0
-    findings.append(
-        {
-            "id": "first_team_game_pre_features_na",
-            "status": "PASS" if na_rate >= 0.9 else "FAIL",
-            "detail": f"na_rate={na_rate:.3f}",
-        }
-    )
-
-    hist = df[df.get("pre_games_played", 0) >= 1] if "pre_games_played" in df.columns else df
-    same = float((hist["pre_win_pct"] == hist["won"]).mean()) if len(hist) else 1.0
-    findings.append(
-        {
-            "id": "pre_win_pct_not_equal_current_won",
-            "status": "FAIL" if same > 0.2 else "PASS",
-            "detail": f"equal_rate={same:.3f}",
-        }
-    )
-
-    missing_feats = [c for c in FEATURE_COLS if c not in df.columns]
-    findings.append(
-        {
-            "id": "feature_cols_present",
-            "status": "FAIL" if missing_feats else "PASS",
-            "detail": missing_feats or "all FEATURE_COLS present",
-        }
-    )
-
-    failed = [f for f in findings if f["status"] == "FAIL"]
-    return {
-        "n_rows": int(len(df)),
-        "feature_cols": list(FEATURE_COLS),
-        "findings": findings,
-        "verdict": "NOT CLEAN" if failed else "CLEAN",
-        "n_fail": len(failed),
-    }
+def finding(identifier: str, status: str, detail) -> dict:
+    if status not in {"PASS", "FAIL", "REVIEW"}:
+        raise ValueError(f"invalid finding status: {status}")
+    return {"id": identifier, "status": status, "detail": detail}
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--seasons", default="2023-2024")
-    p.add_argument("--out", default="")
-    args = p.parse_args()
+    args = parse_args()
+    features = [c.strip() for c in args.features.split(",") if c.strip()]
+    if not features:
+        raise SystemExit("--features must name at least one column")
+    required = [args.target, *features]
+    if bool(args.entity_col) != bool(args.time_col):
+        raise SystemExit("--entity-col and --time-col must be provided together")
+    if args.entity_col:
+        required.extend([args.entity_col, args.time_col])
+    df = load_frame(args.input)
+    if df.empty:
+        raise SystemExit("input contains no rows to audit")
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise SystemExit(f"missing required columns: {', '.join(missing)}")
+    banned = {c.strip().lower() for c in args.banned.split(",") if c.strip()}
+    overlap = sorted(c for c in features if c.lower() in banned or c == args.target)
+    findings = [finding("forbidden_or_target_feature", "FAIL" if overlap else "PASS", overlap or "none")]
 
-    df = add_pregame_form_features(load_team_game_panel(_parse_seasons(args.seasons)))
-    report = audit_frame(df)
+    exact_matches = []
+    for col in features:
+        comparable = df[[col, args.target]].dropna()
+        if len(comparable) and bool((comparable[col] == comparable[args.target]).all()):
+            exact_matches.append(col)
+    findings.append(
+        finding("feature_identical_to_target", "FAIL" if exact_matches else "PASS", exact_matches or "none")
+    )
+
+    duplicate_rate = float(df.duplicated().mean())
+    findings.append(
+        finding("duplicate_rows", "FAIL" if duplicate_rate > 0.01 else "PASS", f"duplicate_rate={duplicate_rate:.6f}")
+    )
+
+    suspicious_corr = {}
+    numeric = df[[args.target, *features]].select_dtypes(include="number")
+    if args.target in numeric.columns:
+        for col in numeric.columns:
+            if col == args.target:
+                continue
+            corr = numeric[[col, args.target]].corr().iloc[0, 1]
+            if corr == corr and abs(float(corr)) >= 0.995:
+                suspicious_corr[col] = float(corr)
+    findings.append(
+        finding(
+            "near_perfect_target_correlation",
+            "FAIL" if suspicious_corr else "PASS",
+            suspicious_corr or "none",
+        )
+    )
+
+    if args.entity_col:
+        ordered = df.sort_values([args.entity_col, args.time_col])
+        first = ordered.groupby(args.entity_col, as_index=False).head(1)
+        first_null_rates = {c: float(first[c].isna().mean()) for c in features}
+        findings.append(finding("first_event_history_review", "REVIEW", first_null_rates))
+
+    failed = [item for item in findings if item["status"] == "FAIL"]
+    needs_review = [item for item in findings if item["status"] == "REVIEW"]
+    verdict = "NOT CLEAN" if failed else "REVIEW REQUIRED" if needs_review else "CLEAN"
+    report = {
+        "n_rows": int(len(df)),
+        "features": features,
+        "findings": findings,
+        "verdict": verdict,
+        "limitations": (
+            "Automated heuristics cannot prove point-in-time availability; verify joins, "
+            "source timestamps, and feature shifts manually."
+        ),
+    }
     text = json.dumps(report, indent=2)
     print(text)
     if args.out:
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(text, encoding="utf-8")
-    return 0 if report["verdict"] == "CLEAN" else 2
+        out.write_text(text + "\n", encoding="utf-8")
+        print(f"wrote {out}")
+    if failed:
+        return 2
+    return 1 if needs_review else 0
 
 
 if __name__ == "__main__":

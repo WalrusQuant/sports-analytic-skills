@@ -1,25 +1,20 @@
 # Skill authoring guide
 
-How to write skills for this repo.
+Write focused, self-contained agent skills for sports analytics and modeling.
 
-Quality bar: deep scientific-style agent skills, specialized for **sports modeling and analytics**.
+Use [../templates/skill/SKILL.md](../templates/skill/SKILL.md) as the starting
+point.
 
-Template: [../templates/skill/SKILL.md](../templates/skill/SKILL.md)
+## One skill, one job
 
-## One skill = one job
+Good boundaries:
 
-Good:
+- `leakage-audit` audits feature and evaluation leakage;
+- `validation-design` designs honest validation;
+- `statistical-modeling` selects and diagnoses statistical models.
 
-- `leakage-audit` audits leakage
-- `validation-design` designs validation
-- `statistical-modeling` runs sports GLMs and diagnostics
-
-Bad:
-
-- `sports-analytics-everything`
-- skills that only restate the README
-
-If you need two jobs, write two skills and hand off.
+Do not create a universal workflow skill or force every task through the same
+pipeline.
 
 ## Frontmatter
 
@@ -27,48 +22,96 @@ If you need two jobs, write two skills and hand off.
 ---
 name: kebab-case-id
 description: >
-  What it does and when to load it.
-  Include trigger phrases an agent can match.
-  Be specific and long enough for discovery.
-version: "0.x.y"
+  State what the skill does and the requests that should activate it.
 license: MIT
 ---
 ```
 
-## Required depth
+Only use fields supported by the current skill validator. Repository or skill
+release versions belong in package metadata or `metadata`, not an unsupported
+top-level key.
 
-Every skill should include:
+## Self-contained boundary
 
-1. **Overview** — what the agent will produce
-2. **When to use** — concrete triggers
-3. **Installation** — packages / `sports_ds` if needed
-4. **Workflow** — ordered steps
-5. **Sports decision tables** — model/test/metric choices for sports outcomes
-6. **Code** — `sports_ds` APIs, CLI, or loader examples
-7. **Scripts** — `scripts/*.py` agents can run
-8. **References** — `references/*.md` for method detail
-9. **Worked example** — public sports data
-10. **Reporting template** — what a finished answer looks like
-11. **Hard constraints** — non-negotiables (time safety, baselines, etc.)
+A user may install the skill without cloning this repository. Therefore a
+generic skill must not:
 
-## Scripts policy
+- import or instruct the user to install `sports_ds`;
+- invoke the `sports-ds` CLI or its pipelines;
+- assume the current directory contains `skills/`, `src/`, or `pyproject.toml`;
+- depend on a repository-level document;
+- require another skill to complete its core job;
+- assume an artifact came from a particular producer.
 
-Ship scripts when they:
+The sole exception is `sports-ds-bridge`, whose job is explicit optional
+integration with the toolkit.
 
-- encode a reusable sports analysis check
-- run against public data or `sports_ds`
-- are small enough to audit
-- are documented in the skill
+## Entrypoint content
 
-Judgment stays in markdown. Execution helpers live in scripts.
+Keep `SKILL.md` as short as the task permits. Include:
 
-## Naming
+1. discriminating use and non-use boundaries;
+2. required inputs, including grain and minimum fields;
+3. the workflow and non-obvious sports-specific decisions;
+4. hard constraints such as decision-time legality;
+5. an observable output contract;
+6. links to references and helpers only where relevant.
 
-- IDs: `kebab-case`
-- prefer durable methodology names
-- sports-specific where the method is sports-specific
+Move detailed schemas, mode-specific methods, and substantial examples into
+`references/`. Do not duplicate the same guidance across files.
 
-## Modeling-first rule
+## Input and output artifacts
 
-Core skills work on sports outcomes and public sports data.
-They do not require sportsbook/odds workflows to be useful.
+Generic computational helpers consume files owned by the user's project:
+
+- CSV or Parquet for tabular data;
+- JSON for metrics and structured results;
+- Markdown for charters, logs, cards, and reports.
+
+Document and validate required fields. Accept explicit column mappings when
+common naming variants are reasonable. Do not infer validation design or
+decision time from a filename.
+
+## Scripts
+
+Ship a script only when deterministic execution or repeated logic adds value.
+Scripts must:
+
+- use public dependencies only;
+- accept user-owned input paths rather than loading a hidden canonical dataset;
+- validate missing columns with actionable errors;
+- parse `--help` before importing optional heavy packages;
+- resolve sibling resources from `__file__`, never the process CWD;
+- write only to explicit or clearly documented output paths;
+- be tested on synthetic artifacts.
+
+Reference a helper as:
+
+```bash
+python <path-to-this-skill>/scripts/helper.py --help
+```
+
+The agent resolves the actual installed skill path from the loaded `SKILL.md`.
+
+## Public data skills
+
+Source-specific skills may use the public package named by the skill, such as
+`nflreadpy`, `sportsdataverse`, or `pybaseball`. They must disclose network,
+cache, and package requirements and export portable files for downstream skills.
+
+## Optional toolkit bridge
+
+Generic skills may mention `sports-ds-bridge` only as an optional handoff when
+the user asks for the toolkit or needs its supported data adapters. Do not place
+toolkit commands or schemas in generic skills.
+
+## Validation
+
+```bash
+python /path/to/skill-creator/scripts/quick_validate.py skills/<skill>
+python skills/<skill>/scripts/<helper>.py --help
+pytest -q
+```
+
+Also verify behavior on realistic synthetic input. Structural validation does
+not prove that the skill makes good decisions.

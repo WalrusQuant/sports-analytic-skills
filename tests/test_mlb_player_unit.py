@@ -1,3 +1,5 @@
+import warnings
+
 import pandas as pd
 
 from sports_ds.features.player_form import MLB_STAT_COLS, add_pregame_player_form_features
@@ -76,12 +78,30 @@ def _mlb_toy(n_players: int = 12, seasons=(2023, 2024), weeks: int = 40) -> pd.D
 
 def test_mlb_lean_features_and_form():
     panel = _mlb_toy()
-    out = add_pregame_player_form_features(panel, stat_cols=list(MLB_STAT_COLS), windows=[3, 5, 10])
+    original = panel.copy(deep=True)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", pd.errors.PerformanceWarning)
+        out = add_pregame_player_form_features(
+            panel,
+            stat_cols=list(MLB_STAT_COLS),
+            windows=[3, 5, 10],
+        )
+    pd.testing.assert_frame_equal(panel, original)
     assert "ewma5_fantasy_points" in out.columns
     assert "batting_order_slot" in out.columns
     assert "pre_ops" in out.columns
     for c in MLB_LEAN_FEATURE_COLS:
         assert c in out.columns, c
+
+    player = out[out["player_id"] == "b0"].reset_index(drop=True)
+    assert pd.isna(player.loc[0, "pre_fantasy_points"])
+    assert player.loc[1, "pre_fantasy_points"] == player.loc[0, "fantasy_points"]
+    assert player.loc[1, "roll3_fantasy_points"] == player.loc[0, "fantasy_points"]
+    assert player.loc[0, "batting_order_slot"] == 1
+    assert player.loc[1, "rest_days"] >= 0
+
+    original_columns = list(panel.columns)
+    assert list(out.columns[: len(original_columns)]) == original_columns
 
 
 def test_mlb_player_pipeline_beats_constant_on_toy(monkeypatch):

@@ -3,8 +3,15 @@
 
 from __future__ import annotations
 
+import argparse
+
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--season", type=int, default=0, help="Season to probe; 0 uses current")
+    args = parser.parse_args()
+    if args.season and not 1999 <= args.season <= 2100:
+        parser.error("--season must be between 1999 and 2100")
     try:
         import nflreadpy as nfl
     except ImportError as exc:
@@ -12,7 +19,7 @@ def main() -> int:
         print("Install: pip install nflreadpy")
         return 1
 
-    season = nfl.get_current_season()
+    season = args.season or nfl.get_current_season()
     print(f"nflreadpy import ok; current_season={season}")
 
     try:

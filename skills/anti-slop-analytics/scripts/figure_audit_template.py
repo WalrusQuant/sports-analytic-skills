@@ -10,7 +10,7 @@ TEMPLATE = """# Figure audit
 
 ## Context
 - sport/grain:
-- pipeline/command:
+- analysis command or notebook:
 - reviewer:
 - date:
 
@@ -37,6 +37,8 @@ def main() -> int:
     ap.add_argument("--title", default="")
     ap.add_argument("--claim", default="")
     args = ap.parse_args()
+    if args.out.strip() == "":
+        ap.error("--out must not be empty")
     path = Path(args.out)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(

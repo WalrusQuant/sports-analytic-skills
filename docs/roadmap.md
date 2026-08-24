@@ -1,28 +1,27 @@
 # Roadmap
 
-Sequencing for deepening the sports modeling skill library.
+## Current priority
 
-## Core path
+1. Make every generic skill independently usable after a skill-only install.
+2. Standardize and validate portable input/output artifacts.
+3. Add behavioral tests for skill helpers and routing boundaries.
+4. Keep public loader skills current across supported sports.
+5. Maintain `sports_ds` as an optional toolkit behind `sports-ds-bridge`.
 
-1. Deep topic skills with sports-specific scripts (full operator manuals + refs + scripts)
-2. Expand `sports_ds` pipelines (margin, ratings, more sports)
-3. Sport modules only after core skill depth is real
+## Skill quality bar
 
-## Skill depth bar
+- concise, discriminating discovery description;
+- explicit input and output contracts;
+- sports-specific methodology and decision rules;
+- no hidden repository or package dependency;
+- runnable standalone helper only when it materially improves reliability;
+- references loaded progressively;
+- realistic toy-data verification;
+- honest reporting of baselines, uncertainty, sample size, and limitations.
 
-Each skill should match serious scientific agent-skill depth:
+## Optional toolkit roadmap
 
-- long SKILL.md with full workflow
-- install notes
-- decision tables for sports problems
-- runnable `scripts/`
-- `references/` for method detail
-- worked public-data examples
-- reporting template
-
-## Package expansion
-
-- ratings / Elo as-of module
-- margin and scoring models
-- NBA / MLB loader paths wired into package workflows
-- richer diagnostics exports
+- stable exports matching portable skill contracts;
+- reusable core modules with no inward pipeline dependencies;
+- public-data adapter maintenance;
+- reference pipelines that demonstrate, but do not define, the methodology.

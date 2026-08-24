@@ -1,75 +1,72 @@
 #!/usr/bin/env python3
-"""Walk-forward calibration slices: all / home / away / tails."""
+"""Print calibration metrics for all rows and user-selected segments."""
 
 from __future__ import annotations
 
 import argparse
-
-import numpy as np
-
-from sports_ds.data.nfl import load_team_game_panel
-from sports_ds.features.team_form import add_pregame_form_features
-from sports_ds.models.baselines import fit_logistic_baseline
-from sports_ds.pipelines.nfl_win_model import FEATURE_COLS
-from sports_ds.validation.splits import season_walk_forward_masks
-
-import sys
+import importlib.util
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parent))
-from calibration_report import brier_score, expected_calibration_error, log_loss
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", required=True, help="CSV, Parquet, or JSON records file")
+    parser.add_argument("--target", required=True, help="Binary 0/1 outcome column")
+    parser.add_argument("--probability", required=True, help="Predicted probability column")
+    parser.add_argument("--segment-col", help="Optional categorical segment column")
+    parser.add_argument("--filter-col", help="Optional column used to select one evaluation perspective")
+    parser.add_argument("--filter-value", help="String value required in --filter-col")
+    parser.add_argument("--bins", type=int, default=10)
+    return parser.parse_args()
 
 
-def _parse_seasons(raw: str) -> list[int]:
-    if "-" in raw and "," not in raw:
-        a, b = raw.split("-", 1)
-        return list(range(int(a), int(b) + 1))
-    return [int(x.strip()) for x in raw.split(",") if x.strip()]
-
-
-def _metrics(y, p):
-    return {
-        "n": int(len(y)),
-        "brier": brier_score(y, p),
-        "log_loss": log_loss(y, p),
-        "ece": expected_calibration_error(y, p, n_bins=10),
-    }
+def load_report_module():
+    path = Path(__file__).with_name("calibration_report.py")
+    spec = importlib.util.spec_from_file_location("calibration_report_helper", path)
+    if spec is None or spec.loader is None:
+        raise SystemExit("could not load calibration metric helper")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--seasons", default="2018-2024")
-    args = ap.parse_args()
-
-    df = add_pregame_form_features(load_team_game_panel(_parse_seasons(args.seasons)))
-    df = df.dropna(subset=FEATURE_COLS + ["won"])
-    df = df[(df.pre_games_played >= 3) & (df.opp_pre_games_played >= 3)].copy()
-
-    ys, ps, homes = [], [], []
-    for _, tr, te in season_walk_forward_masks(df):
-        _, _, pred = fit_logistic_baseline(df, FEATURE_COLS, tr, te)
-        part = df.loc[te]
-        ys.append(part["won"].to_numpy(dtype=float))
-        ps.append(np.asarray(pred, dtype=float))
-        homes.append(part["is_home"].to_numpy(dtype=float))
-
-    y = np.concatenate(ys)
-    p = np.concatenate(ps)
-    h = np.concatenate(homes)
-
-    rows = {
-        "all": _metrics(y, p),
-        "home": _metrics(y[h == 1], p[h == 1]),
-        "away": _metrics(y[h == 0], p[h == 0]),
-        "tail_low": _metrics(y[p < 0.2], p[p < 0.2]) if (p < 0.2).any() else {"n": 0},
-        "tail_high": _metrics(y[p > 0.8], p[p > 0.8]) if (p > 0.8).any() else {"n": 0},
-    }
+    args = parse_args()
+    if args.bins < 2:
+        raise SystemExit("--bins must be at least 2")
+    if bool(args.filter_col) != bool(args.filter_value):
+        raise SystemExit("--filter-col and --filter-value must be provided together")
+    helper = load_report_module()
+    df = helper.load_frame(args.input)
+    required = [args.target, args.probability]
+    required += [args.segment_col] if args.segment_col else []
+    required += [args.filter_col] if args.filter_col else []
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise SystemExit(f"missing required columns: {', '.join(missing)}")
+    clean = df[required].dropna().copy()
+    if args.filter_col:
+        clean = clean[clean[args.filter_col].astype(str) == args.filter_value].copy()
+    if clean.empty:
+        raise SystemExit("no complete rows to evaluate")
+    if not set(clean[args.target].unique()) <= {0, 1, False, True}:
+        raise SystemExit(f"{args.target!r} must contain only 0/1 values")
+    if not clean[args.probability].between(0, 1).all():
+        raise SystemExit(f"{args.probability!r} must be between 0 and 1")
+    segments = [("all", clean)]
+    if args.segment_col:
+        segments.extend((f"{args.segment_col}={value}", part) for value, part in clean.groupby(args.segment_col, sort=True))
+    segments.extend([
+        ("tail_low", clean[clean[args.probability] < 0.2]),
+        ("tail_high", clean[clean[args.probability] > 0.8]),
+    ])
     print("segment,n,brier,log_loss,ece")
-    for name, m in rows.items():
-        if m.get("n", 0) == 0:
+    for name, part in segments:
+        if part.empty:
             print(f"{name},0,,,")
             continue
-        print(f"{name},{m['n']},{m['brier']:.4f},{m['log_loss']:.4f},{m['ece']:.4f}")
+        result = helper.metrics(part, args.target, args.probability, args.bins)
+        print(f"{name},{result['n']},{result['brier']:.6f},{result['log_loss']:.6f},{result['ece']:.6f}")
     return 0
 
 

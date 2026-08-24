@@ -4,7 +4,9 @@ Thanks for helping improve Sports Analytic Skills.
 
 ## What this project is
 
-A sports modeling **skill pack** for AI agents, plus the `sports_ds` toolkit those skills run. Public docs should help a stranger understand the product and get started.
+A standalone sports modeling **skill pack** for AI agents, plus an optional
+`sports_ds` toolkit connected through `sports-ds-bridge`. Public docs should
+help a stranger use the skills without discovering a hidden package dependency.
 
 ## Skill shape
 
@@ -27,6 +29,8 @@ A skill is in good shape when it has:
 - worked examples on public data
 - hard constraints (time safety, baselines, honest metrics)
 - scripts documented in the skill when shipped
+- explicit input/output contracts
+- no `sports_ds`, CLI, pipeline, or repository-root dependency outside the bridge
 
 ## Scope
 
@@ -53,8 +57,10 @@ Out of scope for this pack:
 If you add scripts:
 
 - keep them small and readable
-- run from repo root with the package installed
-- add or update tests when behavior is package-level
+- accept user-owned artifacts and public dependencies
+- make `--help` work from an unrelated directory
+- validate required columns and formats
+- add or update standalone behavioral tests
 - document how to run them in `SKILL.md`
 
 ## Review checklist
@@ -63,3 +69,4 @@ If you add scripts:
 - [ ] Is time safety respected for predictive work?
 - [ ] Are baselines and validation honest?
 - [ ] Can a stranger follow the docs without chat history?
+- [ ] Does the skill still work when installed without this repository?

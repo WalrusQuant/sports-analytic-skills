@@ -21,4 +21,4 @@
 - [ ] automated audit run
 
 ## Verdict
-- [ ] CLEAN or NOT CLEAN with fixes
+- [ ] CLEAN, REVIEW REQUIRED, or NOT CLEAN with fixes

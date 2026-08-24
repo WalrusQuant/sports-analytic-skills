@@ -1,259 +1,105 @@
 ---
 name: experiment-log
 description: >
-  Record sports-modeling experiments in a reproducible log: hypothesis, data
-  cut, validation charter, metrics, leakage status, decision, and artifacts.
-  Use when running trials, comparing model versions, or preventing notebook
-  amnesia — even if the user only says "log this run." Includes schema,
-  decision rules, package command patterns for NFL/NBA/MLB, and a new-experiment
-  stub script.
-version: "0.6.0"
+  Record sports-modeling experiments with the hypothesis, data cut, validation
+  charter, metrics, leakage status, decision, commands, and artifacts. Use for
+  trials, model comparisons, and reproducible research history.
 license: MIT
 metadata:
-  version: "0.6.0"
+  version: "0.7.0"
 ---
 
 # Experiment Log
 
-## Overview
+## Outcome
 
-Ops skill for reproducible sports-modeling work.
+Create one immutable record per executed experiment. The log must let another
+analyst reconstruct what was tried, compare it to its declared baseline, and
+understand why it was kept, discarded, or queued for follow-up.
 
-**If it is not logged, it did not happen.**
+## Required inputs
 
-Use before/after `sports-ds` pipeline runs so wins and losses both leave a trail.
+- hypothesis and expected direction
+- sport, grain, target, and decision time
+- immutable data snapshot or query description
+- feature-set reference with timing rules
+- baseline and candidate configurations
+- validation charter and primary metric
+- random seeds and environment reference
+- output artifacts and observed failures
 
-This is the trial history. A model card is the frozen contract. A results report
-is the human writeup of one evaluation.
+## Schema
 
----
-
-## When to Use This Skill
-
-Use when:
-
-- Starting a training/evaluation run
-- Comparing model variants (form vs Elo, win vs margin, NFL vs NBA/MLB)
-- After critique/audit decisions
-- Before writing a model card version bump
-- Any time an agent is about to overwrite results in a notebook cell and move on
-
-Do **not** use when:
-
-| Need | Go instead |
-|---|---|
-| Pure discussion with no run | conversation only |
-| Designing the first validation charter | `validation-design` |
-| Durable frozen model contract | `model-card` after keep |
-| One-off human writeup | `results-reporting` |
-
----
-
-## Installation
-
-```bash
-pip install -e .
-# multi-sport experiments:
-pip install -e ".[multi]"
-```
-
----
-
-## Required Inputs
-
-Minimum:
-
-- Experiment ID (or generate one)
-- Hypothesis / change being tested
-- Sport + data window + target + T
-- Validation reference
-- Result summary
-- Decision (`keep` / `discard` / `follow-up`)
-
-Optional:
-
-- Code commit hash / notebook path
-- Config YAML / Elo params
-- Random seeds
-- Links to plots/metrics JSON
-- Exact package commands
-
----
-
-## Log Schema
+Each Markdown or JSON log must include:
 
 ```text
-experiment_id: YYYYMMDD-<slug>-<nn>
-timestamp_utc:
-operator:
-sport:
-hypothesis:
-target:
-prediction_timestamp_rule:
-data_sources:
-data_window:
-feature_set_ref:
-baseline_refs:
-validation_charter_ref:
-model_family:
-config_ref:
-metrics_primary:
-metrics_secondary:
-regime_slice_metrics:
-leakage_audit_status:
-results_summary:
-decision: keep | discard | follow-up
-next_actions:
-artifacts:
-package_commands:
-notes:
+experiment_id
+timestamp_utc
+operator
+hypothesis
+sport
+grain
+target
+prediction_timestamp_rule
+data_sources
+data_snapshot
+data_window
+feature_set_ref
+baseline_refs
+validation_charter_ref
+model_family
+config_ref
+random_seeds
+metrics_primary
+metrics_secondary
+leakage_audit_status
+results_summary
+decision
+next_actions
+artifacts
+commands
+notes
 ```
-
-Full notes: `references/log_schema.md`  
-Decision rules: `references/decision_rules.md`
-
----
 
 ## Workflow
 
-1. **Create ID before the run** (not after seeing results).
-2. **Write hypothesis in falsifiable form**
-   - “NBA Elo logistic beats constant on 2024 walk-forward log-loss.”
-3. **Attach charter + feature set refs** (`sports-ds feature-registry` names OK).
-4. **Run once under locked config** via package CLI when possible.
-5. **Log metrics exactly as specified by charter**
-6. **Decision**
-   - `keep` only if success threshold met
-   - `discard` if failed honestly
-   - `follow-up` if inconclusive with a specific next test
-7. **Link artifacts** (metrics json, plots, commit)
-8. **Update model card only on `keep` version bumps**
+1. Create the log before fitting and freeze the hypothesis and primary metric.
+2. Link immutable data, feature, validation, and configuration artifacts.
+3. Record exact commands or notebook cell identifiers.
+4. Execute the baseline and candidate under the same folds.
+5. Store fold-level results, not only averages.
+6. Record calibration, leakage, and failure checks where applicable.
+7. Decide keep, discard, or follow-up using predeclared rules.
+8. Append results; do not rewrite the original hypothesis after observing them.
+
+## Decision rules
+
+- **Keep:** improves the primary metric across meaningful held-out slices without
+  violating timing, calibration, stability, or complexity constraints.
+- **Discard:** fails the baseline, violates the charter, or adds complexity with
+  no reliable held-out benefit.
+- **Follow-up:** signal is plausible but uncertainty, data coverage, or a failed
+  diagnostic prevents a decision.
+
+## Hard constraints
+
+- Never omit failed runs.
+- Never change the primary metric after seeing results without a new log.
+- Never compare models evaluated on different rows or folds without disclosure.
+- Never overwrite an artifact referenced by a completed log.
+- Never promote a model without a named baseline and timing audit.
+
+## Helper
 
 ```bash
-python skills/experiment-log/scripts/new_experiment.py --slug nba-elo-vs-const
-python skills/experiment-log/scripts/new_experiment.py --slug mlb-margin-ridge --sport mlb --out-dir data/experiments
+python <path-to-experiment-log>/scripts/new_experiment.py --slug home-form-logit --sport nfl
+python <path-to-experiment-log>/scripts/new_experiment.py --slug elo-sensitivity --out-dir data/experiments
 ```
 
----
+The helper creates a timestamped user-owned Markdown artifact and validates the slug.
 
-## Package command patterns to log
+## Resources
 
-```bash
-# NFL
-sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/exp_nfl_win.json
-sports-ds nfl-margin-pipeline --seasons 2018-2024 --json-out data/exp_nfl_margin.json
-sports-ds nfl-elo --seasons 2018-2024 --json-out data/exp_nfl_elo.json
-
-# NBA / MLB (requires [multi])
-sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_nba_win.json
-sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_nba_elo.json
-sports-ds mlb-margin-pipeline --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_mlb_margin.json
-sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_mlb_elo.json
-
-# Trust checks
-sports-ds leakage-audit --sport nba --seasons 2023-2024
-sports-ds calibrate --sport mlb --seasons 2023-2024 --min-train-seasons 1
-```
-
----
-
-## Decision Rules
-
-| Decision | When |
-|---|---|
-| `keep` | success rule met on locked primary metric under walk-forward |
-| `discard` | failed honestly vs baselines / charter |
-| `follow-up` | inconclusive; next test must be one concrete experiment |
-
-Do not keep because the story is nice.  
-Do not discard silently without logging metrics.
-
----
-
-## Hard Constraints
-
-1. Never invent metrics after the fact without labeling them post-hoc.
-2. Never reuse an experiment ID for a different config.
-3. Never log only winners.
-4. Never claim reproducibility without data window + config + charter references.
-5. Post-hoc metrics must be marked `post-hoc` and cannot silently drive the primary decision.
-6. Sport and package command must be recorded for multi-sport work.
-
----
-
-## Anti-Patterns
-
-- Notebook folklore: “we tried this last week, pretty sure it worked”
-- Winner’s log only
-- Config amnesia
-- Moving goalposts inside one ID
-- Unlinked screenshots as evidence
-- Logging NBA results under an NFL command path
-
----
-
-## Output Contract
-
-Done means:
-
-- [ ] Experiment ID assigned
-- [ ] Hypothesis recorded before/at run start
-- [ ] Charter/feature/baseline refs present
-- [ ] Primary metrics logged
-- [ ] Decision recorded with reason
-- [ ] Artifacts linked or explicitly absent
-- [ ] Follow-up (if any) is a single concrete next test
-
----
-
-## Worked Example
-
-```text
-experiment_id: 20260824-nba-elo-01
-sport: nba
-hypothesis: As-of Elo + home logistic beats constant train rate on 2024 walk-forward log-loss.
-target: won
-prediction_timestamp_rule: scheduled_start
-data_window: 2023-2024
-baseline_refs: [constant_train_rate]
-validation_charter_ref: wf_season_min1
-model_family: elo_logistic
-metrics_primary: elo_logistic_log_loss vs constant_log_loss
-leakage_audit_status: CLEAN
-package_commands:
-  - sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_nba_elo.json
-decision: keep | discard | follow-up  # fill after run
-```
-
----
-
-## Bundled Resources
-
-### references/
-- `log_schema.md`
-- `decision_rules.md`
-
-### scripts/
-- `new_experiment.py`
-
----
-
-## Related Skills
-
-- `validation-design`
-- `baseline-models`
-- `leakage-audit`
-- `model-card`
-- `results-reporting`
-- `sports-modeling-doctrine`
-
----
-
-## Quick Command Card
-
-```bash
-python skills/experiment-log/scripts/new_experiment.py --slug nba-form-vs-elo --sport nba
-sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_nba_win.json
-sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_nba_elo.json
-python skills/results-reporting/scripts/render_pipeline_report.py --json data/exp_nba_elo.json
-```
+- `references/log_schema.md` — field definitions
+- `references/decision_rules.md` — promotion logic
+- `scripts/new_experiment.py` — portable log-stub writer

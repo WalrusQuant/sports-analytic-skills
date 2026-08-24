@@ -21,9 +21,10 @@
 - accuracy near 90%+ on noisy sports outcomes without elite features
 - feature importance dominated by something that is secretly an outcome
 
-## Tools
+## Helper invocation
 
 ```bash
-python skills/predictive-modeling/scripts/leakage_smoke.py
-python skills/leakage-audit/scripts/audit_pregame_features.py --seasons 2023-2024
+python /path/to/predictive-modeling/scripts/leakage_smoke.py \
+  --input modeling_table.csv --target won \
+  --features pre_win_rate,rest_diff,rating_diff
 ```

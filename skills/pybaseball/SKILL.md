@@ -1,222 +1,97 @@
 ---
 name: pybaseball
 description: >
-  Load MLB Statcast and season batting/pitching tables with pybaseball, and
-  hand off team-game modeling to sports_ds MLB pipelines when game-level panels
-  are enough. Use for baseball acquisition and pitch-level or season-aggregate
-  pulls — even if the user only says "get Statcast" or "pull MLB batting stats."
-  Includes bounded-pull guidance, legality handoff, smoke scripts, and clear
-  split from sports_ds schedule panels.
-version: "0.6.0"
+  Load MLB Statcast, batting, pitching, standings, and player lookup data
+  directly with pybaseball. Use for bounded pitch-level pulls, season tables,
+  schema checks, and user-owned baseball data artifacts.
 license: MIT
 metadata:
-  version: "0.6.0"
+  version: "0.7.0"
 ---
 
 # pybaseball
 
-## Overview
+## Outcome
 
-Package skill for https://github.com/jldbc/pybaseball
-
-Use for MLB **pitch-level Statcast** and season batting/pitching tables when you
-need baseball depth beyond game-level panels.
-
-For **team-game win/margin/Elo modeling**, prefer the sports_ds MLB path (Stats
-API schedule via sportsdataverse), not pybaseball team logs.
-
----
-
-## When to Use This Skill
-
-Use when:
-
-- MLB pitch-level Statcast analyses
-- Season batting/pitching leaderboards from public baseball sources
-- Python baseball workflows needing FanGraphs/Baseball Reference style tables
-- User says “get Statcast,” “pull batting stats,” “exit velocity,” etc.
-
-Do **not** use when:
-
-| Need | Go instead |
-|---|---|
-| Non-baseball leagues | other loader skills |
-| Simple MLB team-game panel / win/margin/Elo | `sports-ds mlb-*` |
-| Environment missing | `environment-setup` |
-| Source selection undecided | `data-sources` |
-
----
+Create a bounded, documented MLB artifact at pitch, player-season, team-season,
+or schedule grain. Record function, arguments, retrieval time, schema, coverage,
+and all transformations.
 
 ## Installation
 
 ```bash
-pip install -e ".[multi]"
-# or
-pip install pybaseball
+python -m pip install pybaseball pandas pyarrow
 ```
 
----
+## Choose the correct loader
 
-## Split of Responsibility
-
-| Question | Tool |
+| Need | Direct library function |
 |---|---|
-| MLB team-game panel, EDA, win/margin/Elo walk-forward | `sports_ds` / `sports-ds mlb-*` |
-| Statcast pitches, expected stats, barrels | `pybaseball.statcast*` |
-| Season batting/pitching leaderboards | `pybaseball.batting_stats` / `pitching_stats` |
+| Player-season batting | `batting_stats(start, end)` |
+| Player-season pitching | `pitching_stats(start, end)` |
+| Pitch-level Statcast | `statcast(start_dt, end_dt)` |
+| Batter-specific pitches | `statcast_batter(start_dt, end_dt, player_id)` |
+| Pitcher-specific pitches | `statcast_pitcher(start_dt, end_dt, player_id)` |
+| Player identifier | `playerid_lookup(last, first)` |
+| Team record | `schedule_and_record(season, team)` |
 
-```bash
-sports-ds mlb-eda --seasons 2023-2024
-sports-ds mlb-win-pipeline --seasons 2023-2024 --min-train-seasons 1
-sports-ds mlb-margin-pipeline --seasons 2023-2024 --min-train-seasons 1
-sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1
+## Examples
+
+```python
+from pybaseball import batting_stats, statcast
+
+batters = batting_stats(2023, 2024, qual=100)
+pitches = statcast(start_dt="2024-04-01", end_dt="2024-04-07")
 ```
 
----
-
-## Required Inputs
-
-- Date range and/or season
-- Entity (player, team, league-wide)
-- Grain (pitch, game, season)
-- Decision time T if features will be used pre-pitch/pre-game
-
----
+Use short date windows first. Large Statcast pulls can be slow and place
+unnecessary load on public services.
 
 ## Workflow
 
-1. Define grain and date window.
-2. If grain is team-game outcomes → use `sports_ds` MLB loaders first.
-3. If grain is pitch/Statcast → pull the **smallest** pybaseball table that answers the question.
-4. Bound Statcast dates tightly (days/weeks, not whole seasons for exploration).
-5. Cache/snapshot results to parquet immediately.
-6. Document source function + package version + pull timestamp.
-7. Pass through `feature-rules` / `leakage-audit` before pre-pitch/pre-game claims.
-8. Log the experiment (`experiment-log`).
+1. Lock question, grain, seasons or dates, and identifiers.
+2. Select the narrowest direct function.
+3. Probe a small season or date window.
+4. Inspect row count, columns, nulls, duplicates, and units.
+5. Resolve players with stable identifiers rather than display names.
+6. Chunk long date ranges and cache each immutable chunk.
+7. Concatenate only after checking overlap and schema consistency.
+8. Save Parquet plus a manifest with function arguments and retrieval time.
 
----
+## Validation checks
 
-## Example Loads
+- dates fall inside the requested interval
+- player IDs match the intended players
+- pitch identifiers are unique at the chosen grain
+- handedness, units, and event labels are understood
+- season-table qualifiers and minimums are recorded
+- chunks do not overlap or leave gaps
+- missing values are distinguished from zeroes
 
-```python
-from pybaseball import statcast, batting_stats, pitching_stats
+## Hard constraints
 
-# pitch-level (can be large) — bound dates
-# pitches = statcast("2024-04-01", "2024-04-07")
+- Do not request unbounded Statcast history.
+- Do not use player names as join keys when IDs are available.
+- Do not mix season aggregates with pitch rows without explicit aggregation.
+- Do not infer pre-game availability from fields created after the game.
+- Respect provider limits and cache successful pulls.
 
-batting = batting_stats(2024)
-pitching = pitching_stats(2024)
-```
-
-Team-game modeling:
-
-```python
-from sports_ds.data.mlb import load_mlb_team_game_panel
-from sports_ds.pipelines.mlb_win_model import run_mlb_win_pipeline
-
-panel = load_mlb_team_game_panel([2023, 2024])
-run_mlb_win_pipeline([2023, 2024], min_train_seasons=1)
-```
-
-Patterns: `references/pull_patterns.md`  
-Bounds: `references/statcast_bounds.md`
-
----
-
-## Scripts
+## Helper
 
 ```bash
-python skills/pybaseball/scripts/smoke_load.py
+python <path-to-pybaseball>/scripts/smoke_load.py --season 2024
 ```
 
----
+The helper imports pybaseball only after parsing arguments and performs one
+bounded season-table probe.
 
-## Hard Constraints
+## Output contract
 
-1. Statcast pulls can be huge — bound dates.
-2. Scrapers break; log package version and date.
-3. Do not hammer endpoints in tight loops.
-4. Pitch-level fields are not automatically legal pre-pitch features.
-5. Snapshot any dataset used for a claim you may need to reproduce.
-6. Do not force pybaseball `schedule_and_record` for full-league panels when `sports_ds` MLB schedule works.
-7. Never treat season aggregates known only after the season as pre-game features.
+Return artifact path, library function and arguments, retrieval timestamp,
+grain, natural key, rows, columns, filters, qualifier, coverage gaps, and checks.
 
----
+## Resources
 
-## Anti-Patterns
-
-- Pulling full-season Statcast for a tiny question
-- No local cache/snapshot
-- Silent retries that look like hanging agents
-- Mixing FanGraphs/Reference definitions without mapping
-- Reimplementing team-game win pipelines in notebooks instead of `sports-ds mlb-win-pipeline`
-- Using end-of-season leaderboards as pregame inputs
-
----
-
-## Output Contract
-
-Done means:
-
-- [ ] Grain/window stated
-- [ ] Load succeeded or failed clearly
-- [ ] Row counts reported
-- [ ] Snapshot path optional but recommended
-- [ ] Legality handoff done if features will be used pre-event
-- [ ] Handoff to feature/validation skills or sports_ds MLB pipeline
-
----
-
-## Worked Examples
-
-### Quick season batting table
-```python
-from pybaseball import batting_stats
-df = batting_stats(2024)
-df.head()
-```
-
-### Bounded Statcast pull
-```python
-from pybaseball import statcast
-pitches = statcast("2024-06-01", "2024-06-03")
-```
-
-### Team-game model (not pybaseball)
-```bash
-sports-ds mlb-win-pipeline --seasons 2023-2024 --min-train-seasons 1
-```
-
----
-
-## Bundled Resources
-
-### references/
-- `pull_patterns.md`
-- `statcast_bounds.md`
-
-### scripts/
-- `smoke_load.py`
-
----
-
-## Related Skills
-
-- `sportsdataverse-py` for MLB schedule API + multi-sport
-- `environment-setup`
-- `data-sources`
-- `feature-rules` / `leakage-audit`
-- `experiment-log`
-- `predictive-modeling`
-
----
-
-## Quick Command Card
-
-```bash
-pip install -e ".[multi]"
-python skills/pybaseball/scripts/smoke_load.py
-sports-ds mlb-eda --seasons 2023-2024
-sports-ds mlb-win-pipeline --seasons 2023-2024 --min-train-seasons 1
-sports-ds mlb-margin-pipeline --seasons 2023-2024 --min-train-seasons 1
-```
+- `references/pull_patterns.md` — bounded acquisition recipes
+- `references/statcast_bounds.md` — request sizing and caching
+- `scripts/smoke_load.py` — direct public-library probe

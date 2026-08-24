@@ -1,71 +1,67 @@
 # Getting started
 
-## Install
+## Install the skills
+
+```bash
+npx skills add WalrusQuant/sports-analytic-skills
+```
+
+No repository clone or `sports_ds` installation is required.
+
+## Start from the task
+
+Give the agent the question, the decision time for predictive work, and the path
+to your CSV, Parquet, or JSON artifact.
+
+```text
+Use eda-sports on data/team_games.parquet. Confirm the grain, coverage,
+missingness, target balance, and any leakage risks before modeling.
+```
+
+```text
+Use validation-design on data/features.parquet. The prediction is made at
+kickoff; create season walk-forward folds and lock the primary metric.
+```
+
+Each skill documents the fields it requires. If the artifact does not meet the
+contract, the agent should report the missing fields rather than silently infer
+them.
+
+## Run a bundled helper
+
+Resolve the helper path relative to the installed skill's `SKILL.md`, not the
+current working directory:
+
+```bash
+python <path-to-installed-skill>/scripts/<helper>.py --help
+```
+
+Helpers use public dependencies and user-owned artifacts. Install only the
+packages required by the selected helper in the user's project environment.
+
+## Need public data?
+
+Use one of the source skills:
+
+- `nflreadpy`
+- `sportsdataverse-py`
+- `pybaseball`
+- `data-sources`
+
+If the user specifically wants the optional `sports_ds` toolkit, use
+`sports-ds-bridge`. It materializes a portable artifact and hands it back to
+the standalone skill.
+
+## Optional toolkit development
+
+Only users who want the repository's Python toolkit or reference pipelines need
+the checkout:
 
 ```bash
 git clone https://github.com/WalrusQuant/sports-analytic-skills.git
 cd sports-analytic-skills
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e .
-```
-
-Optional multi-sport extras:
-
-```bash
-pip install -e ".[multi]"
-```
-
-## Run package workflows
-
-```bash
-sports-ds nfl-eda --seasons 2023-2024
-sports-ds nfl-win-pipeline --seasons 2018-2024
-sports-ds nfl-win-rich --seasons 2018-2024
-sports-ds nfl-margin-pipeline --seasons 2018-2024
-sports-ds nfl-elo --seasons 2018-2024
-sports-ds nfl-player-eda --seasons 2023-2024
-sports-ds nfl-player-pipeline --seasons 2022-2024 --target fantasy_points_ppr
-sports-ds nba-player-eda --seasons 2023-2024
-sports-ds nba-player-pipeline --seasons 2023-2024 --target fantasy_points
-sports-ds mlb-player-eda --seasons 2024 --max-games 100
-sports-ds mlb-player-pipeline --seasons 2023-2024 --max-games 0
-sports-ds calibrate --seasons 2018-2024
-sports-ds leakage-audit --seasons 2023-2024
-```
-
-- `nfl-win-pipeline` — team win walk-forward (constant / logistic / hist GBM)
-- `nfl-win-rich` — richer features + logistic / hist-GBM / form+Elo ensemble ladder
-- `nfl-margin-pipeline` — point-diff walk-forward (constant / ridge / hist GBR)
-- `nfl-elo` — as-of Elo + logistic baseline under walk-forward
-- `nfl-player-eda` / `nfl-player-pipeline` — player-level skill-position form + walk-forward fantasy/volume models
-- `nba-player-eda` / `nba-player-pipeline` — NBA player boxscore form + walk-forward fantasy/points (needs `[multi]`)
-- `mlb-player-eda` / `mlb-player-pipeline` — MLB batter boxscores (cached) + walk-forward fantasy (needs `[multi]`)
-- `calibrate` / `leakage-audit` — trust checks on the form feature path
-- `nba-eda` / `nba-win-pipeline` / `nba-margin-pipeline` / `nba-elo` — NBA path (requires `pip install -e ".[multi]"`)
-- `mlb-eda` / `mlb-win-pipeline` / `mlb-margin-pipeline` / `mlb-elo` — MLB path (requires `[multi]`)
-- `feature-registry` — print legal feature specs
-- `calibrate --sport` / `leakage-audit --sport` — trust checks on nfl/nba/mlb
-
-## Run skill scripts
-
-```bash
-python skills/eda-sports/scripts/panel_report.py --seasons 2023-2024
-python skills/statistical-modeling/scripts/glm_diagnostics.py --seasons 2018-2023
-python skills/baseline-models/scripts/run_baselines.py --seasons 2018-2024
-python skills/predictive-modeling/scripts/leakage_smoke.py
-```
-
-## Agent install
-
-```bash
-npx skills add WalrusQuant/sports-analytic-skills
-```
-
-Open a skill under `skills/<name>/SKILL.md` and follow its workflow. Scripts live beside each skill.
-
-## Tests
-
-```bash
+pip install -e ".[dev]"
 pytest -q
 ```

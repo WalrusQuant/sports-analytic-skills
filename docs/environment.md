@@ -1,41 +1,28 @@
 # Environment
 
-## Recommended analysis environment
+## Skill users
 
-- Python 3.10+
-- git
-- disk for parquet caches (multi-season NFL data can be hundreds of MB+)
+A skill-only installation has no shared mandatory Python environment. Use the
+user's existing project environment and install only the public dependencies
+disclosed by the selected helper.
+
+Common optional packages include:
+
+- tabular work: `pandas`, `numpy`, `pyarrow`;
+- modeling: `scikit-learn`, `scipy`, `statsmodels`;
+- visualization: `matplotlib`, optionally `seaborn`;
+- public data: `nflreadpy`, `sportsdataverse`, or `pybaseball`.
+
+Bundled helpers must display `--help` before importing optional heavy packages.
+
+## Repository contributors
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e .
-```
-
-Optional multi-sport loaders:
-
-```bash
-pip install -e ".[multi]"
-```
-
-## Core packages
-
-Pulled by `sports_ds` / `pyproject.toml`:
-
-- data: `pandas`, `numpy`, `pyarrow`
-- stats/ML: `scipy`, `scikit-learn`, `statsmodels`
-- NFL: `nflreadpy`
-- viz: `matplotlib`
-
-Optional:
-
-- `sportsdataverse`, `pybaseball`
-- `pingouin`, `seaborn` for richer classical stats / plots
-
-## Verify
-
-```bash
+pip install -e ".[dev]"
 pytest -q
-sports-ds nfl-eda --seasons 2024
-python skills/predictive-modeling/scripts/leakage_smoke.py
 ```
+
+The editable install is for developing the optional `sports_ds` toolkit. It is
+not part of the generic skill user journey.

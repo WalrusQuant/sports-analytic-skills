@@ -2,7 +2,7 @@
 
 Prefer **nflreadpy** for:
 - bulk nflverse PBP/schedules/rosters release loads
-- stable modeling panels via sports_ds
+- stable user-owned modeling tables built from documented source artifacts
 
 Prefer **sportsdataverse** NFL module when:
 - you need SDV-specific ESPN-style endpoints

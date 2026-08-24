@@ -2,9 +2,9 @@
 
 | Symptom | Fix |
 |---|---|
-| command not found: sports-ds | activate venv; `pip install -e .` |
-| ModuleNotFoundError: sports_ds | run from repo root editable install |
-| nflverse download fail | check network; retry; update nflreadpy |
-| empty panel | incomplete season / null scores |
-| skill script import path errors | cwd = repo root; venv on |
-| optional multi-sport missing | `pip install -e ".[multi]"` |
+| command not found | activate the intended environment and verify installation |
+| `ModuleNotFoundError` | install the named public package with `python -m pip` |
+| public-data download fails | check network, provider status, and loader version |
+| empty artifact | verify season coverage, filters, and completion status |
+| helper import error | verify the helper's documented public dependencies |
+| optional loader missing | install only the named loader and rerun its probe |

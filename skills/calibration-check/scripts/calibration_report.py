@@ -1,92 +1,103 @@
 #!/usr/bin/env python3
-"""Walk-forward calibration report using sports_ds metrics helpers."""
+"""Measure probability calibration from observed outcomes and predictions."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 
-import numpy as np
 
-from sports_ds.data.nfl import load_team_game_panel
-from sports_ds.features.team_form import add_pregame_form_features
-from sports_ds.metrics.calibration import (
-    calibration_table,
-    expected_calibration_error,
-    verdict_from_ece,
-)
-from sports_ds.metrics.classification import brier_score, log_loss_binary
-from sports_ds.models.baselines import fit_logistic_baseline
-from sports_ds.pipelines.nfl_win_model import FEATURE_COLS
-from sports_ds.validation.splits import season_walk_forward_masks
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", required=True, help="CSV, Parquet, or JSON records file")
+    parser.add_argument("--target", required=True, help="Binary 0/1 outcome column")
+    parser.add_argument("--probability", required=True, help="Predicted probability column")
+    parser.add_argument("--bins", type=int, default=10)
+    parser.add_argument("--group-col", help="Optional fold or season column for group metrics")
+    parser.add_argument("--filter-col", help="Optional column used to select one evaluation perspective")
+    parser.add_argument("--filter-value", help="String value required in --filter-col")
+    parser.add_argument("--out", help="Optional JSON output path")
+    return parser.parse_args()
 
 
-def _parse_seasons(raw: str) -> list[int]:
-    if "-" in raw and "," not in raw:
-        a, b = raw.split("-", 1)
-        return list(range(int(a), int(b) + 1))
-    return [int(x.strip()) for x in raw.split(",") if x.strip()]
+def load_frame(path: str):
+    try:
+        import pandas as pd
+    except ImportError as exc:
+        raise SystemExit("pandas is required; install it with: python -m pip install pandas") from exc
+    suffix = Path(path).suffix.lower()
+    if suffix == ".csv": return pd.read_csv(path)
+    if suffix in {".parquet", ".pq"}: return pd.read_parquet(path)
+    if suffix in {".json", ".jsonl", ".ndjson"}: return pd.read_json(path, lines=suffix != ".json")
+    raise SystemExit("--input must be CSV, Parquet, JSON, JSONL, or NDJSON")
+
+
+def metrics(rows, target: str, probability: str, bins: int) -> dict:
+    y = [float(v) for v in rows[target]]
+    p = [float(v) for v in rows[probability]]
+    n = len(y)
+    brier = sum((yi - pi) ** 2 for yi, pi in zip(y, p)) / n
+    eps = 1e-15
+    log_loss = -sum(
+        yi * math.log(min(max(pi, eps), 1 - eps))
+        + (1 - yi) * math.log(1 - min(max(pi, eps), 1 - eps))
+        for yi, pi in zip(y, p)
+    ) / n
+    table = []
+    ece = 0.0
+    for index in range(bins):
+        lower, upper = index / bins, (index + 1) / bins
+        positions = [i for i, value in enumerate(p) if lower <= value <= upper and (index == bins - 1 or value < upper)]
+        if not positions:
+            continue
+        mean_p = sum(p[i] for i in positions) / len(positions)
+        rate = sum(y[i] for i in positions) / len(positions)
+        ece += len(positions) / n * abs(rate - mean_p)
+        table.append({"bin": index + 1, "lower": lower, "upper": upper, "n": len(positions), "mean_probability": mean_p, "observed_rate": rate})
+    return {"n": n, "brier": brier, "log_loss": log_loss, "ece": ece, "calibration_table": table}
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--seasons", default="2018-2024")
-    ap.add_argument("--bins", type=int, default=10)
-    ap.add_argument("--min-train-seasons", type=int, default=2)
-    ap.add_argument("--out", default="data/calibration_report.json")
-    args = ap.parse_args()
-
-    df = add_pregame_form_features(load_team_game_panel(_parse_seasons(args.seasons)))
-    df = df.dropna(subset=FEATURE_COLS + ["won"])
-    df = df[(df.pre_games_played >= 3) & (df.opp_pre_games_played >= 3)].copy()
-
-    ys, ps, per_season = [], [], []
-    for season, tr, te in season_walk_forward_masks(df, min_train_seasons=args.min_train_seasons):
-        _, res, pred = fit_logistic_baseline(df, FEATURE_COLS, tr, te)
-        test = df.loc[te].dropna(subset=FEATURE_COLS + ["won"])
-        y = test["won"].to_numpy(dtype=float)
-        p = np.asarray(pred, dtype=float)
-        ys.append(y)
-        ps.append(p)
-        per_season.append(
-            {
-                "season": int(season),
-                "n": int(len(test)),
-                "brier": brier_score(y, p),
-                "log_loss": log_loss_binary(y, p),
-                "ece": expected_calibration_error(y, p, n_bins=args.bins),
-                "accuracy": float(res.accuracy),
-            }
-        )
-
-    y_all = np.concatenate(ys) if ys else np.array([])
-    p_all = np.concatenate(ps) if ps else np.array([])
-    ece = expected_calibration_error(y_all, p_all, n_bins=args.bins) if len(y_all) else None
-    report = {
-        "model": "logistic_baseline_sports_ds_features",
-        "n": int(len(y_all)),
-        "bins": args.bins,
-        "brier": brier_score(y_all, p_all) if len(y_all) else None,
-        "log_loss": log_loss_binary(y_all, p_all) if len(y_all) else None,
-        "ece": ece,
-        "calibration_table": calibration_table(y_all, p_all, n_bins=args.bins) if len(y_all) else [],
-        "per_season": per_season,
-        "verdict": verdict_from_ece(ece, len(y_all)) if len(y_all) else "invalid-eval",
-    }
-
-    out = Path(args.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    if report["n"]:
-        print(
-            f"n={report['n']} brier={report['brier']:.4f} ece={report['ece']:.4f} "
-            f"ll={report['log_loss']:.4f} verdict={report['verdict']}"
-        )
-    else:
-        print("no folds")
-    print(f"wrote {out}")
-    return 0 if report["n"] else 1
+    args = parse_args()
+    if args.bins < 2:
+        raise SystemExit("--bins must be at least 2")
+    if bool(args.filter_col) != bool(args.filter_value):
+        raise SystemExit("--filter-col and --filter-value must be provided together")
+    df = load_frame(args.input)
+    required = [args.target, args.probability]
+    required += [args.group_col] if args.group_col else []
+    required += [args.filter_col] if args.filter_col else []
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise SystemExit(f"missing required columns: {', '.join(missing)}")
+    clean = df[required].dropna().copy()
+    if args.filter_col:
+        clean = clean[clean[args.filter_col].astype(str) == args.filter_value].copy()
+    if clean.empty:
+        raise SystemExit("no complete rows to evaluate")
+    if not set(clean[args.target].unique()) <= {0, 1, False, True}:
+        raise SystemExit(f"{args.target!r} must contain only 0/1 values")
+    if not clean[args.probability].between(0, 1).all():
+        raise SystemExit(f"{args.probability!r} must be between 0 and 1")
+    report = metrics(clean, args.target, args.probability, args.bins)
+    if args.filter_col:
+        report["filter"] = {"column": args.filter_col, "value": args.filter_value}
+    if args.group_col:
+        report["groups"] = {
+            str(group): metrics(part, args.target, args.probability, args.bins)
+            for group, part in clean.groupby(args.group_col, sort=True)
+        }
+    report["verdict"] = "inspect-sample-size" if report["n"] < 100 else ("well-calibrated" if report["ece"] <= 0.05 else "recalibration-candidate")
+    text = json.dumps(report, indent=2)
+    print(text)
+    if args.out:
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(text + "\n", encoding="utf-8")
+        print(f"wrote {out}")
+    return 0
 
 
 if __name__ == "__main__":

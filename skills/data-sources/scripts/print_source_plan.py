@@ -11,10 +11,15 @@ TEMPLATE = """# Data source plan
 Question:
 Sport/league:
 Grain needed:
+Decision time:
 Historical depth:
 Primary source/package:
 Fallback:
-Fields required at T:\nKnown coverage gaps:
+Fields required at T:
+Raw snapshot location:
+Retrieval timestamp:
+Sanity checks:
+Known coverage gaps:
 License/ToS notes:
 Next skill: nflreadpy | sportsdataverse-py | pybaseball
 """
@@ -25,6 +30,8 @@ def main() -> int:
     p.add_argument("--out", default="")
     args = p.parse_args()
     if args.out:
+        if Path(args.out).suffix.lower() not in {".md", ".txt"}:
+            p.error("--out must end in .md or .txt")
         path = Path(args.out)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(TEMPLATE, encoding="utf-8")

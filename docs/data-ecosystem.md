@@ -51,3 +51,9 @@ See `requirements/python-data.txt` and `docs/environment.md`.
 5. interpretation / reporting
 
 Loading data is not analysis.
+
+## Optional toolkit adapter
+
+When the user explicitly wants repository-provided normalized panels or CLI
+loaders, use `sports-ds-bridge`. Export CSV or Parquet and continue with the
+standalone skill; do not make downstream skills import the toolkit.

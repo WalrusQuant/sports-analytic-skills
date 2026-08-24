@@ -1,222 +1,108 @@
 ---
 name: nflreadpy
 description: >
-  Load NFL data through sports_ds and nflverse/nflreadpy: schedules, team-game
-  panels, PBP, rosters, player stats, and smoke/snapshot scripts. Use for any
-  NFL acquisition step before EDA or modeling — even if the user only says
-  "get NFL data" or "load schedules." Prefer sports_ds wrappers for modeling
-  panels; use raw nflreadpy for lower-level releases. Includes full CLI path
-  into win/margin/Elo pipelines, panel traps, and snapshot rules.
-version: "0.6.0"
+  Load NFL schedules, play-by-play, rosters, and player or team statistics
+  directly from nflverse with nflreadpy. Use for NFL acquisition, schema review,
+  bounded snapshots, and preparing user-owned analysis artifacts.
 license: MIT
 metadata:
-  version: "0.6.0"
+  version: "0.7.0"
 ---
 
 # nflreadpy / nflverse Loader
 
-## Overview
+## Outcome
 
-NFL data plane for this repo.
-
-- Prefer **`sports_ds` wrappers** for modeling panels
-- Use **raw `nflreadpy`** when you need PBP, rosters, or other nflverse releases directly
-
-Upstream ecosystem: nflverse data releases + `nflreadpy`.
-
-This skill gets data into a clean panel. It does not replace doctrine, EDA, or
-leakage checks.
-
----
-
-## When to Use This Skill
-
-Use when:
-
-- NFL schedules / scores / team-game panels
-- nflverse PBP, rosters, player stats, injuries, snaps
-- Building inputs for EDA and win/margin/Elo models
-- User says “get NFL data” or “load schedules”
-
-Do **not** use when:
-
-| Need | Go instead |
-|---|---|
-| Non-NFL leagues | `sportsdataverse-py` / `pybaseball` |
-| Environment missing | `environment-setup` |
-| Source undecided | `data-sources` |
-| Feature legality | `feature-rules` |
-
----
+Create a documented, user-owned NFL data artifact at the grain required by the
+analysis. Record seasons, loader function, retrieval time, schema, row count,
+source release, and transformations.
 
 ## Installation
 
 ```bash
-pip install -e .
-# nflreadpy comes with sports_ds dependencies
+python -m pip install nflreadpy polars pyarrow
 ```
 
-First download needs network; later runs use cache.
-
----
-
-## Load with sports_ds (preferred for modeling)
-
-```python
-from sports_ds.data.nfl import load_schedules, load_team_game_panel
-
-sched = load_schedules([2023, 2024])
-panel = load_team_game_panel([2023, 2024])
-# panel grain: team-game with won, points_for/against, is_home, opponent, ...
-```
-
-CLI:
-
-```bash
-sports-ds nfl-eda --seasons 2023-2024
-sports-ds nfl-win-pipeline --seasons 2018-2024
-sports-ds nfl-margin-pipeline --seasons 2018-2024
-sports-ds nfl-elo --seasons 2018-2024
-sports-ds leakage-audit --sport nfl --seasons 2023-2024
-sports-ds calibrate --sport nfl --seasons 2018-2024
-sports-ds feature-registry | head
-```
-
-Code: `src/sports_ds/data/nfl.py`  
-Panel contract: `docs/panel-contract.md`
-
-### Team-game panel contract
-
-| Column | Meaning |
-|---|---|
-| `game_id` | contest id |
-| `season`, `week`, `gameday` | time |
-| `team`, `opponent` | abbreviations |
-| `is_home` | 1 home / 0 away |
-| `points_for`, `points_against` | final scores |
-| `won`, `point_diff` | derived labels |
-
-Only completed games with non-null scores are kept.
-
-Trap: overall win rate ~0.5 on full panels; home advantage only on `is_home == 1`.
-
----
-
-## Direct nflreadpy (lower level)
+## Direct loads
 
 ```python
 import nflreadpy as nfl
 
-pbp = nfl.load_pbp([2023, 2024])
-sched = nfl.load_schedules([2023, 2024])
+seasons = [2022, 2023, 2024]
+schedules = nfl.load_schedules(seasons)
+pbp = nfl.load_pbp([2024])
+player_stats = nfl.load_player_stats(seasons)
 rosters = nfl.load_rosters([2024])
-stats = nfl.load_player_stats([2023, 2024])
 ```
 
-Always check column names on the version you installed — nflverse schemas evolve.
-
-Release notes: `references/nflverse_releases.md`  
-Panel notes: `references/panel_contract.md`
-
----
+Loader availability can change by release. Inspect `dir(nflreadpy)` and the
+official package documentation before assuming a function or schema.
 
 ## Workflow
 
-1. Confirm NFL + grain (schedule vs team-game vs pbp).
-2. Load via `sports_ds` for modeling panels.
-3. Sanity-check row counts, seasons, home win rate.
-4. Run EDA (`sports-ds nfl-eda` or `eda-sports` scripts).
-5. Build time-safe features / Elo as needed.
-6. Hand off to validation + modeling skills.
-7. Snapshot any custom join tables you create.
+1. Lock the analytical grain and seasons.
+2. Select the narrowest nflverse release that contains the required fields.
+3. Load one season first and inspect type, columns, row count, and natural key.
+4. Normalize only after preserving a raw snapshot.
+5. Distinguish scheduled, completed, postponed, and canceled games.
+6. Validate team codes, game identifiers, weeks, dates, and scores.
+7. Save Parquet plus a JSON or Markdown manifest.
+8. Hand the saved artifact to the next analysis skill.
 
----
+## Team-game contract
 
-## Scripts
+When deriving one row per team per game, require:
 
-```bash
-python skills/nflreadpy/scripts/smoke_load.py
-python skills/nflreadpy/scripts/load_game_panel.py --seasons 2023-2024
-python skills/nflreadpy/scripts/describe_panel.py --seasons 2023-2024
+```text
+game_id, season, week, gameday, team, opponent, is_home,
+points_for, points_against, won, point_diff
 ```
 
----
+Completed games should produce exactly two complementary rows. Preserve the raw
+schedule row so the transformation can be audited.
 
-## Hard Constraints
-
-1. Prefer release loaders over scraping.
-2. Do not treat raw PBP columns as pre-game features without as-of rules.
-3. Completed games only for outcome models unless forecasting future slates intentionally.
-4. Snapshot data used for claims.
-5. Keep team abbreviations consistent within a season (nflverse standard).
-6. Do not model the doubled panel without understanding home/away rows.
-
----
-
-## Anti-Patterns
-
-- Loading full PBP for a schedule-only question
-- Using post-game EPA as a pre-kickoff feature
-- Mixing home and away rows without understanding the doubled panel
-- Silent schema drift across nflreadpy versions
-- Claiming home advantage from overall win rate on the full panel
-
----
-
-## Output Contract
-
-Done means:
-
-- [ ] Grain/window stated
-- [ ] Load succeeded with row counts
-- [ ] Panel contract verified if modeling
-- [ ] Home-rate trap checked if relevant
-- [ ] Next skill handoff named
-
----
-
-## Worked Example
+## Helpers
 
 ```bash
-sports-ds nfl-eda --seasons 2018-2024
-# expect overall win rate ~0.5; home win rate > 0.5 on is_home==1
-sports-ds nfl-win-pipeline --seasons 2018-2024
-sports-ds leakage-audit --sport nfl --seasons 2023-2024
+python <path-to-nflreadpy>/scripts/smoke_load.py --season 2024
+python <path-to-nflreadpy>/scripts/load_game_panel.py \
+  --seasons 2023-2024 \
+  --raw-out data/nfl_schedules.parquet \
+  --out data/nfl_team_games.parquet
+python <path-to-nflreadpy>/scripts/describe_panel.py \
+  --input data/nfl_team_games.parquet
 ```
 
----
+All helpers parse `--help` before importing nflreadpy. The output file is owned
+by the user and can be consumed by any dataframe or modeling tool.
 
-## Bundled Resources
+## Validation checks
 
-### references/
-- `nflverse_releases.md`
-- `panel_contract.md`
+- requested seasons are present
+- `game_id` is unique at game grain
+- completed games have both teams and plausible scores
+- home and away teams differ
+- dates and week fields are internally consistent
+- duplicate and missing rates are reported
+- derived team-game rows are paired and complementary
 
-### scripts/
-- `smoke_load.py`
-- `load_game_panel.py`
-- `describe_panel.py`
+## Hard constraints
 
----
+- Do not load all play-by-play seasons when schedules suffice.
+- Do not treat current rosters as historical without an as-of rule.
+- Do not train on rows without a documented completion status.
+- Do not join releases on player names when stable IDs exist.
+- Do not silently rewrite historical team codes.
 
-## Related Skills
+## Output contract
 
-- `environment-setup`
-- `data-sources`
-- `eda-sports`
-- `feature-rules`
-- `predictive-modeling`
-- `ratings-strength-models`
+Return artifact path, source release, retrieval timestamp, seasons, grain,
+natural key, row count, columns, filters, known gaps, and sanity-check results.
 
----
+## Resources
 
-## Quick Command Card
-
-```bash
-pip install -e .
-sports-ds nfl-eda --seasons 2023-2024
-sports-ds nfl-win-pipeline --seasons 2018-2024
-sports-ds nfl-margin-pipeline --seasons 2018-2024
-sports-ds nfl-elo --seasons 2018-2024
-python skills/nflreadpy/scripts/smoke_load.py
-```
+- `references/nflverse_releases.md` — release selection
+- `references/panel_contract.md` — team-game normalization
+- `scripts/smoke_load.py` — bounded source probe
+- `scripts/load_game_panel.py` — raw schedule to two-row team-game export
+- `scripts/describe_panel.py` — portable panel validation and summary

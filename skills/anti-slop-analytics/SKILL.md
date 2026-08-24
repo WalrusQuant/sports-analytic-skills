@@ -1,224 +1,93 @@
 ---
 name: anti-slop-analytics
 description: >
-  Kill analytics presentation slop in sports work: chartjunk, fake certainty,
-  cropped axes, vanity dashboards, baseline erasure, metric laundering, and
-  unreproducible screenshot science. Use when reviewing figures, tables,
-  notebooks, or report visuals for sports modeling — even if the user only says
-  "make this look better" or "clean up the charts." Includes slop catalog,
-  replacements, decision tables, and figure audit scripts tied to sports_ds
-  pipeline outputs.
-version: "0.6.0"
+  Review sports figures, tables, notebooks, and reports for chartjunk, fake
+  certainty, cropped axes, baseline erasure, metric laundering, and weak
+  reproducibility. Use when asked to clean up or audit analytical presentation.
 license: MIT
 metadata:
-  version: "0.6.0"
+  version: "0.7.0"
 ---
 
-# Anti-Slop Analytics (Sports)
+# Anti-Slop Analytics
 
-## Overview
+## Outcome
 
-Sports analytics fails in public when visuals lie softer than the text.
+Produce an item-by-item keep, fix, or kill review. Every retained item must have
+a defensible claim, population, period, denominator, baseline, uncertainty
+statement, and reproduction pointer.
 
-This skill enforces honest presentation for sports modeling results. Score each
-visual `keep` / `fix` / `kill`.
+## Inputs
 
-Works on:
+- the figure, table, notebook, or report
+- the claim each item is intended to support
+- the underlying user-owned data or metrics artifact when available
+- the decision context and audience
 
-- EDA charts from `sports-visualization`
-- walk-forward metric bars from pipeline JSON
-- calibration plots
-- model cards / README figures
-- notebook output dumps
-
-Pretty is optional. Honest is required.
-
----
-
-## When to Use This Skill
-
-Use when:
-
-- Reviewing charts, tables, dashboards, or notebook outputs
-- Preparing figures for README, posts, papers, or model cards
-- User asks to “make it look more impressive”
-- Suspected vanity metrics or cropped axes
-- Pairing with `results-reporting` before publishing
-
-Do **not** use when:
-
-| Need | Go instead |
-|---|---|
-| Designing validation/metrics | `validation-design` |
-| Leakage mechanics | `leakage-audit` |
-| No visual/table exists yet | create figure first via `sports-visualization` |
-| Need the full writeup | `results-reporting` |
-
----
-
-## Installation
-
-```bash
-pip install -e .
-```
-
-No special deps for the audit template.
-
----
-
-## Slop Catalog (fail these)
-
-1. **Certainty cosplay** — no uncertainty, no sample size, huge font conclusion
-2. **Axis crimes** — truncated axes that manufacture drama
-3. **Time cherry-pick** — zoom to the winning window only
-4. **Metric laundering** — flashy secondary metric hides primary failure
-5. **Baseline erasure** — model curve with no reference
-6. **Legend fog** — unreadable encodings, 12 colors, no point
-7. **Dual-axis trickery** — unrelated series forced into fake correlation
-8. **Heatmap theater** — giant correlation mats with no hypothesis
-9. **3D / pie distraction** for simple comparisons
-10. **Screenshot science** — unreproducible UI grabs as proof
-11. **Probabilities as destiny** — 53% shown like a lock
-12. **One hot streak highlight reel** as season truth
-13. **In-sample cosplay** — training fit shown as walk-forward validation
-14. **Sport-context wipe** — no sport/grain/period on the figure
-
-Details: `references/slop_catalog.md`, `references/replacements.md`
-
----
+If an artifact is missing, audit what is visible and label every unverifiable
+property as unknown. Do not infer provenance from appearance.
 
 ## Workflow
 
-1. Identify the intended claim of each visual.
-2. Check encoding honesty (axes, scales, filters, missing baselines).
-3. Check statistical honesty (n, period, uncertainty, selection).
-4. Check claim alignment (does visual match the evidence?).
-5. Mark each visual: `keep` / `fix` / `kill`.
-6. Rewrite titles/captions to state what was measured.
-7. Prefer one clear visual over five decorative ones.
-8. If the figure comes from a pipeline, require the JSON/command path.
+1. Inventory every figure and table with its filename or stable identifier.
+2. Write the single claim each item supports. Kill items with no decision-relevant claim.
+3. Verify sport, grain, period, sample size, exclusions, and denominator.
+4. Check that the comparison includes the relevant null or baseline.
+5. Inspect axes, scales, bins, smoothing, color, ordering, and annotations.
+6. Separate in-sample, held-out, and forward-looking results.
+7. Require uncertainty or explicitly state why it is unavailable.
+8. Trace the item to a user-owned data file, metrics file, notebook, or command.
+9. Assign keep, fix, or kill and prescribe the smallest honest replacement.
+
+## Failure catalog
+
+| Failure | Why it fails | Preferred replacement |
+|---|---|---|
+| Cropped quantitative axis | exaggerates small changes | zero or justified domain range |
+| Dual axes | implies a relationship through scaling | aligned panels or indexed series |
+| Ranking without uncertainty | treats noise as order | intervals or stability ranks |
+| Accuracy without base rate | hides class imbalance | baseline plus proper score |
+| Mean without distribution | hides tails and skew | interval, quantiles, or distribution |
+| Unlabeled smoothing | conceals transformation | label method and parameters |
+| Decorative 3-D or gradients | adds non-data ink | flat marks with direct labels |
+| Screenshot-only evidence | cannot be checked | exported artifact plus source pointer |
+
+## Verdict rubric
+
+- **Keep:** claim, scope, baseline, uncertainty, and provenance are all clear.
+- **Fix:** the underlying calculation is usable but presentation can mislead.
+- **Kill:** the item is wrong-grain, unverifiable, redundant, or decision-irrelevant.
+
+## Hard constraints
+
+- Never remove a baseline because it makes a result look weaker.
+- Never mix training and held-out metrics in one unlabeled series.
+- Never label a probability as calibrated without a calibration check.
+- Never imply causality from observational association.
+- Never hide missing data, filters, or excluded seasons.
+
+## Output contract
+
+Return:
+
+1. an executive verdict;
+2. an audit row per item;
+3. exact replacement instructions for every fix;
+4. a list of missing evidence;
+5. the artifact paths or commands needed to reproduce retained items.
+
+## Helper
+
+Run the bundled helper by absolute path or from this skill directory:
 
 ```bash
-python skills/anti-slop-analytics/scripts/figure_audit_template.py --out data/figure_audit.md
-python skills/anti-slop-analytics/scripts/figure_audit_template.py \
-  --title "NBA walk-forward log-loss" \
-  --claim "logistic beats constant" \
-  --out data/nba_fig_audit.md
+python <path-to-anti-slop-analytics>/scripts/figure_audit_template.py --out data/figure_audit.md
 ```
 
-Good paired commands:
+The helper writes a user-owned Markdown checklist and requires no project package.
 
-```bash
-sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1 --json-out data/nba_win.json
-python skills/sports-visualization/scripts/plot_walkforward_metrics.py --json data/nba_win.json
-python skills/anti-slop-analytics/scripts/figure_audit_template.py --out data/nba_fig_audit.md
-```
+## Resources
 
----
-
-## Verdict Rubric
-
-| Verdict | When |
-|---|---|
-| `keep` | claim, labels, baseline, n/period all honest |
-| `fix` | salvageable with axis/label/baseline repairs |
-| `kill` | manufactured drama, missing baseline on model claim, unreproducible |
-
-If unsure between fix and kill, kill the decorative version and redraw simply.
-
----
-
-## Replacement Defaults
-
-| Instead of | Prefer |
-|---|---|
-| Rainbow equity-style curve only | metric table + baseline deltas + period notes |
-| Pie charts for model compare | dot/bar with shared baseline |
-| Giant feature importance flex | top drivers + stability caveat |
-| Smooth marketing gradient cards | plain tables with n and dates |
-| “Insight” callout boxes | falsifiable sentence + limit |
-| Single-season hero chart | full walk-forward fold table |
-
----
-
-## Hard Constraints
-
-1. Never truncate axes to manufacture an effect without explicit warning (default: don’t).
-2. Never drop losing segments silently.
-3. Never present in-sample curves as validation.
-4. Every key figure needs: period, n (or event count), metric definition, sport/grain.
-5. If uncertainty is unknown, say unknown — do not draw fake error bars.
-6. Baseline required whenever a model claim is made.
-7. Repro path required for any figure used in a public claim.
-
----
-
-## Anti-Patterns
-
-- Dashboard makeup on a weak model
-- Annotation spam that tells viewers what to feel
-- Color as argument
-- One magical chart carrying the whole claim
-- UI skins over missing method
-- Hiding the constant baseline because “it looks worse”
-
----
-
-## Output Contract
-
-- [ ] Each visual scored keep / fix / kill
-- [ ] Specific slop issues named
-- [ ] Replacement guidance given
-- [ ] Caption/title rewrites where needed
-- [ ] Remaining misread risk stated
-- [ ] Repro path present or explicitly missing
-
----
-
-## Worked Example
-
-**Input:** chart titled “Dominant Model” showing cumulative accuracy from one season, y-axis starts at 0.55, no baseline, no sample size.
-
-**Audit:** axis crime + cherry-pick + baseline erasure + overclaim title → `kill`
-
-**Replace with:** walk-forward log-loss vs baselines by season; title “Walk-forward log-loss vs baselines (2019–2024)”.
-
-```bash
-sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win.json
-python skills/sports-visualization/scripts/plot_walkforward_metrics.py \
-  --json data/nfl_win.json \
-  --metric logistic_log_loss \
-  --baseline constant_log_loss \
-  --out data/nfl_wf.png
-```
-
----
-
-## Bundled Resources
-
-### references/
-- `slop_catalog.md`
-- `replacements.md`
-
-### scripts/
-- `figure_audit_template.py`
-
----
-
-## Related Skills
-
-- `results-reporting`
-- `sports-visualization`
-- `calibration-check`
-- `model-interpretation`
-- `model-card`
-
----
-
-## Quick Command Card
-
-```bash
-python skills/anti-slop-analytics/scripts/figure_audit_template.py --out data/figure_audit.md
-sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win.json
-python skills/sports-visualization/scripts/plot_walkforward_metrics.py --json data/nfl_win.json
-```
+- `references/slop_catalog.md` — expanded failure patterns
+- `references/replacements.md` — honest visual replacements
+- `scripts/figure_audit_template.py` — portable audit template writer

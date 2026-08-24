@@ -1,91 +1,186 @@
 #!/usr/bin/env python3
-"""Monte Carlo season win totals from an Elo as-of table."""
+"""Monte Carlo season win totals from a one-row-per-game probability table."""
 
 from __future__ import annotations
 
 import argparse
 import json
 from pathlib import Path
-
-import numpy as np
-import pandas as pd
+from typing import Any
 
 
-def elo_diff_to_prob(elo_diff: np.ndarray) -> np.ndarray:
-    return 1.0 / (1.0 + 10.0 ** (-np.asarray(elo_diff, dtype=float) / 400.0))
+def load_table(path: Path):
+    try:
+        import pandas as pd
+    except ImportError as exc:
+        raise SystemExit(
+            "pandas is required; install it with: python -m pip install pandas"
+        ) from exc
+    suffix = path.suffix.lower()
+    if suffix == ".csv":
+        return pd.read_csv(path)
+    if suffix in {".parquet", ".pq"}:
+        return pd.read_parquet(path)
+    if suffix in {".json", ".jsonl", ".ndjson"}:
+        return pd.read_json(path, lines=suffix != ".json")
+    raise SystemExit("--input must be CSV, Parquet, JSON, JSONL, or NDJSON")
 
 
-def simulate_season(home_games: pd.DataFrame, n_sims: int, seed: int) -> dict:
+def simulate_season(
+    games: Any,
+    *,
+    probability_col: str,
+    n_sims: int,
+    seed: int,
+    threshold: float | None,
+) -> dict[str, Any]:
+    import numpy as np
+
+    required = {"team", "opponent", probability_col}
+    missing = sorted(required.difference(games.columns))
+    if missing:
+        raise ValueError(f"input is missing required columns: {', '.join(missing)}")
+    if n_sims < 1:
+        raise ValueError("n_sims must be at least 1")
+    if games.empty:
+        raise ValueError("input contains no games")
+    if games[["team", "opponent", probability_col]].isna().any().any():
+        raise ValueError("team, opponent, and probability must not be null")
+    if (games["team"] == games["opponent"]).any():
+        raise ValueError("team and opponent must differ")
+
+    try:
+        probabilities = games[probability_col].to_numpy(dtype=float)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{probability_col} must be numeric") from exc
+    if not np.isfinite(probabilities).all() or not (
+        (probabilities >= 0) & (probabilities <= 1)
+    ).all():
+        raise ValueError(f"{probability_col} must contain finite values in [0, 1]")
+
     rng = np.random.default_rng(seed)
-    teams = sorted(set(home_games["team"]).union(set(home_games["opponent"])))
-    team_index = {t: i for i, t in enumerate(teams)}
-    n_teams = len(teams)
-    n_games = len(home_games)
+    teams = sorted(set(games["team"]).union(set(games["opponent"])))
+    team_index = {team: index for index, team in enumerate(teams)}
+    home_idx = games["team"].map(team_index).to_numpy()
+    away_idx = games["opponent"].map(team_index).to_numpy()
+    wins = np.zeros((n_sims, len(teams)), dtype=float)
 
-    p_home = elo_diff_to_prob(home_games["elo_diff"].to_numpy())
-    home_idx = home_games["team"].map(team_index).to_numpy()
-    away_idx = home_games["opponent"].map(team_index).to_numpy()
+    for game_index, probability in enumerate(probabilities):
+        home_wins = rng.random(n_sims) < probability
+        wins[:, home_idx[game_index]] += home_wins
+        wins[:, away_idx[game_index]] += ~home_wins
 
-    wins = np.zeros((n_sims, n_teams), dtype=float)
-    # vectorized by game chunks to limit memory
-    for g in range(n_games):
-        draws = rng.random(n_sims) < p_home[g]
-        wins[:, home_idx[g]] += draws.astype(float)
-        wins[:, away_idx[g]] += (~draws).astype(float)
+    standings = []
+    for team in teams:
+        values = wins[:, team_index[team]]
+        row = {
+            "team": team,
+            "mean_wins": float(values.mean()),
+            "p05": float(np.quantile(values, 0.05)),
+            "p50": float(np.quantile(values, 0.50)),
+            "p95": float(np.quantile(values, 0.95)),
+        }
+        if threshold is not None:
+            row["prob_wins_at_least_threshold"] = float((values >= threshold).mean())
+        standings.append(row)
 
-    summary = []
-    for t in teams:
-        w = wins[:, team_index[t]]
-        summary.append(
-            {
-                "team": t,
-                "mean_wins": float(w.mean()),
-                "p05": float(np.quantile(w, 0.05)),
-                "p50": float(np.quantile(w, 0.50)),
-                "p95": float(np.quantile(w, 0.95)),
-            }
-        )
-    summary = sorted(summary, key=lambda r: r["mean_wins"], reverse=True)
     return {
         "n_sims": n_sims,
         "seed": seed,
-        "n_games": n_games,
-        "n_teams": n_teams,
+        "n_games": len(games),
+        "n_teams": len(teams),
+        "probability_column": probability_col,
+        "win_threshold": threshold,
         "assumptions": [
-            "independent games conditional on pre-game Elo probs",
-            "probs from elo_diff via logistic Elo formula",
-            "home rows only (each game once)",
+            "independent games conditional on supplied pre-event probabilities",
+            "one row per game",
+            "the focal team wins with the supplied probability",
         ],
-        "standings": summary,
+        "standings": sorted(standings, key=lambda row: row["mean_wins"], reverse=True),
     }
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--input", type=Path, required=True, help="CSV, Parquet, or JSON schedule"
+    )
+    parser.add_argument("--season", required=True, help="Season value to simulate")
+    parser.add_argument("--season-col", default="season")
+    parser.add_argument("--game-col", default="game_id")
+    parser.add_argument("--home-col", default="is_home")
+    parser.add_argument("--team-col", default="team")
+    parser.add_argument("--opponent-col", default="opponent")
+    parser.add_argument("--probability-col", default="win_probability")
+    parser.add_argument("--n-sims", type=int, default=5000)
+    parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument(
+        "--threshold", type=float, help="Optional win-total threshold to estimate"
+    )
+    parser.add_argument("--out", type=Path, required=True)
+    return parser.parse_args()
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--elo-csv", required=True)
-    ap.add_argument("--season", type=int, required=True)
-    ap.add_argument("--n-sims", type=int, default=5000)
-    ap.add_argument("--seed", type=int, default=7)
-    ap.add_argument("--out", default="data/season_win_sim.json")
-    args = ap.parse_args()
+    args = parse_args()
+    if args.n_sims < 1:
+        raise SystemExit("--n-sims must be at least 1")
+    frame = load_table(args.input)
+    required = [
+        args.season_col,
+        args.game_col,
+        args.home_col,
+        args.team_col,
+        args.opponent_col,
+        args.probability_col,
+    ]
+    missing = [column for column in required if column not in frame.columns]
+    if missing:
+        raise SystemExit(f"missing required columns: {', '.join(missing)}")
 
-    elo = pd.read_csv(args.elo_csv)
-    season = elo[elo["season"] == args.season].copy()
-    home = season[season["is_home"] == 1].copy()
-    if home.empty:
-        raise SystemExit(f"no home games for season {args.season}")
+    selected = frame[frame[args.season_col].astype(str) == str(args.season)].copy()
+    selected = selected[selected[args.home_col] == 1].copy()
+    if selected.empty:
+        raise SystemExit(f"no one-row-per-game records for season {args.season!r}")
+    if selected[args.game_col].isna().any() or selected[args.game_col].duplicated().any():
+        raise SystemExit(
+            f"{args.game_col!r} must be non-null and unique after season/home filtering"
+        )
+    selected = selected.rename(
+        columns={
+            args.team_col: "team",
+            args.opponent_col: "opponent",
+            args.probability_col: "win_probability",
+        }
+    )
 
-    report = simulate_season(home, n_sims=args.n_sims, seed=args.seed)
-    report["season"] = args.season
-    report["source_csv"] = args.elo_csv
+    try:
+        report = simulate_season(
+            selected,
+            probability_col="win_probability",
+            n_sims=args.n_sims,
+            seed=args.seed,
+            threshold=args.threshold,
+        )
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    report.update(
+        {
+            "season": args.season,
+            "source": str(args.input),
+            "game_column": args.game_col,
+        }
+    )
 
-    out = Path(args.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(f"season={args.season} games={report['n_games']} sims={args.n_sims}")
     for row in report["standings"][:5]:
-        print(f"  {row['team']}: mean={row['mean_wins']:.1f} p05={row['p05']:.0f} p95={row['p95']:.0f}")
-    print(f"wrote {out}")
+        print(
+            f"  {row['team']}: mean={row['mean_wins']:.1f} "
+            f"p05={row['p05']:.0f} p95={row['p95']:.0f}"
+        )
+    print(f"wrote {args.out}")
     return 0
 
 

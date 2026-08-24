@@ -1,217 +1,102 @@
 ---
 name: sportsdataverse-py
 description: >
-  Load multi-sport data with sportsdataverse and the sports_ds multi-sport
-  panels/pipelines for NBA and MLB (NHL loader exists but is not the focus).
-  Use when work spans leagues or needs SDV loaders outside pure nflverse NFL
-  releases — even if the user only says "get NBA data", "run MLB win model", or
-  "load schedules." Includes package CLI paths, bulk loader recipes, sanity
-  checks, and handoff rules.
-version: "0.6.0"
+  Load public multi-sport data directly with SportsDataverse Python. Use for NBA,
+  MLB, NHL, college sports, soccer, and other supported league sources when a
+  user needs schedules, box scores, rosters, or event data.
 license: MIT
 metadata:
-  version: "0.6.0"
+  version: "0.7.0"
 ---
 
-# sportsdataverse-py
+# SportsDataverse Python
 
-## Overview
+## Outcome
 
-Package skill for SportsDataverse Python **and** the `sports_ds` multi-sport
-wrappers built on top of it.
-
-Upstream docs: https://py.sportsdataverse.org  
-Install name: `sportsdataverse`
-
-For bulk NFL release-style loads, prefer `nflreadpy` / `sports_ds.data.nfl`.
-
----
-
-## When to Use This Skill
-
-Use when:
-
-- Multi-sport projects (NBA / MLB first-class in `sports_ds`)
-- SDV bulk schedule loaders
-- ESPN-style scoreboards, rosters, PBP where SDV wraps them
-- User says “get NBA data,” “MLB schedules,” “SportsDataverse”
-
-Do **not** use when:
-
-| Need | Go instead |
-|---|---|
-| Pure nflverse NFL release loads | `nflreadpy` |
-| Deep Statcast/FanGraphs baseball pulls | `pybaseball` |
-| Environment missing | `environment-setup` |
-| Source undecided | `data-sources` |
-
----
+Create a user-owned multi-sport artifact with documented league, source module,
+loader function, arguments, grain, schema, coverage, retrieval time, and checks.
+SportsDataverse APIs vary by version, so discover the installed interface before
+performing a large pull.
 
 ## Installation
 
 ```bash
-pip install -e ".[multi]"
-# or
-pip install sportsdataverse
+python -m pip install sportsdataverse pandas pyarrow
 ```
 
-Requires network on first download.
-
----
-
-## sports_ds first-class paths (prefer these)
-
-```bash
-# panels + EDA
-sports-ds nba-eda --seasons 2023-2024
-sports-ds mlb-eda --seasons 2023-2024
-
-# walk-forward pipelines
-sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1
-sports-ds nba-margin-pipeline --seasons 2023-2024 --min-train-seasons 1
-sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1
-sports-ds mlb-win-pipeline --seasons 2023-2024 --min-train-seasons 1
-sports-ds mlb-margin-pipeline --seasons 2023-2024 --min-train-seasons 1
-sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1
-
-# trust checks
-sports-ds leakage-audit --sport nba --seasons 2023-2024
-sports-ds calibrate --sport mlb --seasons 2023-2024 --min-train-seasons 1
-```
-
-Python:
+## Interface discovery
 
 ```python
-from sports_ds.data.nba import load_nba_team_game_panel
-from sports_ds.data.mlb import load_mlb_team_game_panel
-from sports_ds.pipelines.nba_win_model import run_nba_win_pipeline
-from sports_ds.pipelines.mlb_margin_model import run_mlb_margin_pipeline
+import importlib
+import sportsdataverse
 
-nba = load_nba_team_game_panel([2023, 2024])
-mlb = load_mlb_team_game_panel([2023, 2024])
-run_nba_win_pipeline([2023, 2024], min_train_seasons=1)
-run_mlb_margin_pipeline([2023, 2024], min_train_seasons=1)
+league = importlib.import_module("sportsdataverse.nba")
+print([name for name in dir(league) if name.startswith("load_")])
 ```
 
-Panel contract: `docs/panel-contract.md`
-
----
-
-## Direct SDV bulk loaders (under the hood)
-
-| Sport | Preferred bulk loader | Notes |
-|---|---|---|
-| NBA | `sportsdataverse.nba.load_nba_schedule(seasons)` | final scores; `return_as_pandas=True` |
-| MLB | `mlb.mlb_schedule(season=...)` + `parse_mlb_api_schedule` | Stats API dict → parsed frame |
-| NHL | `load_nhl_schedule` | many historical dumps corrupt; not focus |
-
-```python
-from sportsdataverse.nba import load_nba_schedule
-from sportsdataverse import mlb
-from sportsdataverse.mlb import parse_mlb_api_schedule
-
-nba = load_nba_schedule([2023, 2024], return_as_pandas=True)
-mlb_df = parse_mlb_api_schedule(mlb.mlb_schedule(season=2024, sport_id=1, game_type="R"))
-```
-
-Do **not** pass `season=` into `espn_*_schedule` helpers — those take `dates=` and will error or return a single scoreboard slice.
-
-Patterns: `references/load_patterns.md`  
-NFL choice: `references/when_not_nflreadpy.md`
-
----
+Consult the installed package documentation and function signatures. Do not
+guess a loader name from another league module.
 
 ## Workflow
 
-1. Install `[multi]`.
-2. Load via `sports_ds` panel helpers when possible.
-3. Run EDA (`*-eda`) and confirm home win rate is sane.
-4. Run win/margin/Elo pipelines under season walk-forward.
-5. Run leakage/calibration checks.
-6. Hand off to interpretation/reporting skills.
+1. Lock sport, competition, grain, seasons, and required fields.
+2. Confirm the installed package version and supported league module.
+3. Inspect available functions and their signatures.
+4. Run the smallest representative request.
+5. Convert to pandas only when the next tool requires it.
+6. Validate natural keys, dates, teams, scores, duplicates, and missingness.
+7. Normalize column names in a separate derived artifact.
+8. Save raw and normalized artifacts with retrieval metadata.
+9. Record source limitations and a fallback.
 
----
+## Normalized schedule schema
 
-## Hard Constraints
+When preparing game-level analysis, prefer these durable fields:
 
-1. Prefer bulk release/API loaders over date-by-date scoreboard scraping.
-2. Normalize to the shared team-game panel before modeling.
-3. Filter completed games; drop duplicate `game_id`s.
-4. Sanity-check scores (unique pairs, home-win rate not ~0 or ~1).
-5. Snapshot parquet for any claim you may need to reproduce.
-6. For NFL bulk PBP/schedules, prefer `nflreadpy` unless SDV-specific fields are required.
-7. Do not silently model corrupt dumps.
-
----
-
-## Anti-Patterns
-
-- Using `espn_*_schedule(season=2024)` and thinking you got a season
-- Modeling without completed-game filters
-- Ignoring corrupt constant-score dumps
-- Mixing raw SDV column names with `sports_ds` feature code without normalization
-- Silent schema drift mid-experiment
-
----
-
-## Output Contract
-
-Done means:
-
-- [ ] League chosen
-- [ ] Panel rows/teams/seasons reported
-- [ ] Home win rate sanity checked
-- [ ] Pipeline or explicit blocker reported
-- [ ] Next skill handoff named
-
----
-
-## Worked Examples
-
-### NBA end-to-end
-```bash
-pip install -e ".[multi]"
-sports-ds nba-eda --seasons 2023-2024
-sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1 --json-out data/nba_win.json
-sports-ds leakage-audit --sport nba --seasons 2023-2024
+```text
+game_id, season, event_time, home_team, away_team,
+home_score, away_score, status, source
 ```
 
-### MLB margin + Elo
-```bash
-sports-ds mlb-margin-pipeline --seasons 2023-2024 --min-train-seasons 1
-sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1
-```
+Keep unmapped source fields rather than discarding them. Derive team-game rows
+only after the game-level source artifact passes uniqueness checks.
 
----
+## Validation checks
 
-## Bundled Resources
+- module and loader names are recorded
+- requested competitions and seasons are present
+- event IDs are unique at game grain
+- completed status agrees with non-null outcomes
+- team names or IDs are consistent within the source
+- timestamps and timezones are understood
+- pagination or request limits did not truncate the result
+- schema drift across seasons is reported
 
-### references/
-- `load_patterns.md`
-- `when_not_nflreadpy.md`
+## Hard constraints
 
-### scripts/
-- `smoke_load.py`
+- Do not assume every league module has the same API.
+- Do not swallow endpoint or schema errors and return empty data.
+- Do not merge leagues before normalizing identifiers and grain.
+- Do not treat post-event fields as pre-event predictors.
+- Do not perform an unbounded event-level pull.
+- Preserve source attribution and retrieval time.
 
----
-
-## Related Skills
-
-- `data-sources`
-- `environment-setup`
-- `nflreadpy` for NFL bulk
-- `pybaseball` for Statcast depth
-- `eda-sports`, `feature-rules`, `validation-design`, `predictive-modeling`
-
----
-
-## Quick Command Card
+## Helper
 
 ```bash
-pip install -e ".[multi]"
-sports-ds nba-eda --seasons 2023-2024
-sports-ds mlb-eda --seasons 2023-2024
-sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1
-sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1
-python skills/sportsdataverse-py/scripts/smoke_load.py
+python <path-to-sportsdataverse-py>/scripts/smoke_load.py --modules nba,mlb,nhl
 ```
+
+The helper parses arguments before importing the optional public package and
+performs only a lightweight module probe.
+
+## Output contract
+
+Return artifact paths, package version, league module, loader and arguments,
+retrieval timestamp, grain, keys, rows, schema, filters, checks, and known gaps.
+
+## Resources
+
+- `references/load_patterns.md` — robust direct-load patterns
+- `references/when_not_nflreadpy.md` — source selection guidance
+- `scripts/smoke_load.py` — installed-module probe

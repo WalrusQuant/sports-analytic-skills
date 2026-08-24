@@ -3,8 +3,15 @@
 
 from __future__ import annotations
 
+import argparse
+
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--season", type=int, default=2024)
+    args = parser.parse_args()
+    if not 1871 <= args.season <= 2100:
+        parser.error("--season must be between 1871 and 2100")
     try:
         from pybaseball import batting_stats
     except ImportError as exc:
@@ -14,14 +21,14 @@ def main() -> int:
 
     print("pybaseball import ok")
     try:
-        df = batting_stats(2024)
+        df = batting_stats(args.season)
     except Exception as exc:
-        print(f"FAIL: batting_stats(2024) errored: {exc}")
+        print(f"FAIL: batting_stats({args.season}) errored: {exc}")
         return 2
 
     n = len(df)
     cols = list(df.columns)[:8]
-    print(f"OK: batting_stats(2024) rows={n} sample_cols={cols}")
+    print(f"OK: batting_stats({args.season}) rows={n} sample_cols={cols}")
     return 0
 
 

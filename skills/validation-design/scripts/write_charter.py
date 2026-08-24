@@ -26,7 +26,7 @@ TEMPLATE = """# Validation charter
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--out", default="data/validation_charter.md")
+    p.add_argument("--out", required=True, help="Markdown output path")
     args = p.parse_args()
     path = Path(args.out)
     path.parent.mkdir(parents=True, exist_ok=True)

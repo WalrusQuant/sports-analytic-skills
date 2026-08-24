@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Walk-forward error slices for sports_ds logistic win models."""
+"""Summarize held-out probability errors across user-selected slices."""
 
 from __future__ import annotations
 
@@ -7,113 +7,83 @@ import argparse
 import json
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 
-from sports_ds.features.team_form import add_pregame_form_features
-from sports_ds.models.baselines import fit_logistic_baseline
-from sports_ds.pipelines.team_win import FEATURE_COLS
-from sports_ds.validation.splits import season_walk_forward_masks
-
-
-def _parse_seasons(raw: str) -> list[int]:
-    if "-" in raw and "," not in raw:
-        a, b = raw.split("-", 1)
-        return list(range(int(a), int(b) + 1))
-    return [int(x.strip()) for x in raw.split(",") if x.strip()]
-
-
-def _load_panel(sport: str, seasons: list[int]) -> pd.DataFrame:
-    if sport == "nfl":
-        from sports_ds.data.nfl import load_team_game_panel
-
-        return load_team_game_panel(seasons)
-    if sport == "nba":
-        from sports_ds.data.nba import load_nba_team_game_panel
-
-        return load_nba_team_game_panel(seasons)
-    if sport == "mlb":
-        from sports_ds.data.mlb import load_mlb_team_game_panel
-
-        return load_mlb_team_game_panel(seasons)
-    raise ValueError(sport)
+def load_table(path: Path):
+    try:
+        import pandas as pd
+    except ImportError as exc:
+        raise SystemExit("This command requires pandas. Install it with: pip install pandas") from exc
+    if path.suffix.lower() == ".csv":
+        return pd.read_csv(path)
+    if path.suffix.lower() in {".parquet", ".pq"}:
+        return pd.read_parquet(path)
+    if path.suffix.lower() in {".json", ".jsonl", ".ndjson"}:
+        return pd.read_json(path, lines=path.suffix.lower() != ".json")
+    raise SystemExit("--input must be CSV, Parquet, JSON, JSONL, or NDJSON")
 
 
-def _ll(y, p, eps=1e-15):
-    p = np.clip(np.asarray(p, dtype=float), eps, 1 - eps)
-    y = np.asarray(y, dtype=float)
-    return float(-np.mean(y * np.log(p) + (1 - y) * np.log(1 - p)))
+def metrics(group, actual_col: str, prob_col: str) -> dict:
+    import numpy as np
+
+    actual = group[actual_col].to_numpy(dtype=float)
+    probability = np.clip(group[prob_col].to_numpy(dtype=float), 1e-15, 1 - 1e-15)
+    return {
+        "n": int(len(group)),
+        "log_loss": float(-np.mean(actual * np.log(probability) + (1 - actual) * np.log(1 - probability))),
+        "brier": float(np.mean((actual - probability) ** 2)),
+        "accuracy": float(((probability >= 0.5) == actual).mean()),
+        "base_rate": float(actual.mean()),
+        "mean_probability": float(probability.mean()),
+    }
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--sport", default="nfl", choices=["nfl", "nba", "mlb"])
-    ap.add_argument("--seasons", default="2018-2024")
-    ap.add_argument("--min-train-seasons", type=int, default=2)
-    ap.add_argument("--out", default="")
-    args = ap.parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", type=Path, required=True, help="held-out predictions in CSV, Parquet, or JSON")
+    parser.add_argument("--actual-col", default="actual")
+    parser.add_argument("--prob-col", default="probability")
+    parser.add_argument("--slice-cols", default="season,is_home", help="comma-separated categorical columns")
+    parser.add_argument("--filter-col", help="Optional column used to select one evaluation perspective")
+    parser.add_argument("--filter-value", help="String value required in --filter-col")
+    parser.add_argument("--min-n", type=int, default=20)
+    parser.add_argument("--out", type=Path, required=True)
+    args = parser.parse_args()
 
-    seasons = _parse_seasons(args.seasons)
-    df = add_pregame_form_features(_load_panel(args.sport, seasons))
-    df = df.dropna(subset=FEATURE_COLS + ["won"]).copy()
-    df = df[(df.pre_games_played >= 3) & (df.opp_pre_games_played >= 3)]
+    if bool(args.filter_col) != bool(args.filter_value):
+        raise SystemExit("--filter-col and --filter-value must be provided together")
+    frame = load_table(args.input)
+    slice_cols = [c.strip() for c in args.slice_cols.split(",") if c.strip()]
+    required = [args.actual_col, args.prob_col, *slice_cols]
+    required += [args.filter_col] if args.filter_col else []
+    missing = [column for column in required if column not in frame.columns]
+    if missing:
+        raise SystemExit(f"missing required columns: {', '.join(missing)}")
+    frame = frame.dropna(subset=[args.actual_col, args.prob_col]).copy()
+    if args.filter_col:
+        frame = frame[frame[args.filter_col].astype(str) == args.filter_value].copy()
+    if frame.empty:
+        raise SystemExit("no complete rows remain after filtering")
+    if not frame[args.actual_col].astype(float).isin([0.0, 1.0]).all():
+        raise SystemExit(f"{args.actual_col} must contain binary 0/1 outcomes")
+    if not frame[args.prob_col].astype(float).between(0, 1).all():
+        raise SystemExit(f"{args.prob_col} must contain probabilities in [0, 1]")
 
-    rows = []
-    for season, tr, te in season_walk_forward_masks(df, min_train_seasons=args.min_train_seasons):
-        _, res, pred = fit_logistic_baseline(df, FEATURE_COLS, tr, te)
-        part = df.loc[te].dropna(subset=FEATURE_COLS + ["won"]).copy()
-        part["p"] = np.asarray(pred, dtype=float)
-        for home_val, name in [(1, "home"), (0, "away")]:
-            sub = part[part["is_home"] == home_val]
-            if sub.empty:
-                continue
-            y = sub["won"].to_numpy(dtype=float)
-            p = sub["p"].to_numpy(dtype=float)
-            rows.append(
-                {
-                    "season": int(season),
-                    "slice": name,
-                    "n": int(len(sub)),
-                    "log_loss": _ll(y, p),
-                    "accuracy": float(((p >= 0.5) == y).mean()),
-                    "base_rate": float(y.mean()),
-                }
-            )
-        # probability tails
-        for lo, hi, name in [(0.0, 0.35, "p_low"), (0.35, 0.65, "p_mid"), (0.65, 1.01, "p_high")]:
-            sub = part[(part["p"] >= lo) & (part["p"] < hi)]
-            if len(sub) < 20:
-                continue
-            y = sub["won"].to_numpy(dtype=float)
-            p = sub["p"].to_numpy(dtype=float)
-            rows.append(
-                {
-                    "season": int(season),
-                    "slice": name,
-                    "n": int(len(sub)),
-                    "log_loss": _ll(y, p),
-                    "accuracy": float(((p >= 0.5) == y).mean()),
-                    "base_rate": float(y.mean()),
-                    "mean_p": float(p.mean()),
-                }
-            )
-        rows.append(
-            {
-                "season": int(season),
-                "slice": "all",
-                "n": int(len(part)),
-                "log_loss": float(res.log_loss),
-                "accuracy": float(res.accuracy),
-                "base_rate": float(part["won"].mean()),
-            }
-        )
-
-    report = {"sport": args.sport, "model": "logistic_form", "slices": rows}
-    out = Path(args.out or f"data/{args.sport}_slice_errors.json")
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    print(pd.DataFrame(rows).to_string(index=False))
-    print(f"wrote {out}")
+    rows = [{"slice_column": "all", "slice_value": "all", **metrics(frame, args.actual_col, args.prob_col)}]
+    for column in slice_cols:
+        for value, group in frame.groupby(column, dropna=False):
+            if len(group) >= args.min_n:
+                rows.append({"slice_column": column, "slice_value": str(value), **metrics(group, args.actual_col, args.prob_col)})
+    report = {"source": str(args.input), "actual_column": args.actual_col, "probability_column": args.prob_col, "slices": rows}
+    if args.filter_col:
+        report["filter"] = {"column": args.filter_col, "value": args.filter_value}
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    try:
+        import pandas as pd
+        print(pd.DataFrame(rows).to_string(index=False))
+    except ImportError:
+        pass
+    print(f"wrote {args.out}")
     return 0
 
 

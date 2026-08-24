@@ -15,8 +15,8 @@ TEMPLATE = """# Leakage audit
 
 ## Findings
 
-1. [PASS/FAIL]
-2. [PASS/FAIL]
+1. [PASS/REVIEW/FAIL]
+2. [PASS/REVIEW/FAIL]
 
 ## Contaminated fields
 
@@ -31,7 +31,7 @@ TEMPLATE = """# Leakage audit
 -
 
 ## Verdict
-\nCLEAN | NOT CLEAN
+\nCLEAN | REVIEW REQUIRED | NOT CLEAN
 
 - Auditor:
 - Date:
@@ -40,7 +40,7 @@ TEMPLATE = """# Leakage audit
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--out", default="data/leakage_audit_report.md")
+    p.add_argument("--out", required=True, help="Markdown output path")
     args = p.parse_args()
     path = Path(args.out)
     path.parent.mkdir(parents=True, exist_ok=True)

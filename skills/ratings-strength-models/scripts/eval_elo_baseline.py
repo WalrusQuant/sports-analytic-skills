@@ -1,35 +1,71 @@
 #!/usr/bin/env python3
-"""Walk-forward evaluate Elo baseline via sports_ds package pipeline."""
+"""Evaluate an as-of Elo prediction table by season."""
 
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
-from sports_ds.pipelines.nfl_elo_baseline import format_elo_report, run_nfl_elo_baseline
 
-
-def _parse_seasons(raw: str) -> list[int]:
-    if "-" in raw and "," not in raw:
-        a, b = raw.split("-", 1)
-        return list(range(int(a), int(b) + 1))
-    return [int(x.strip()) for x in raw.split(",") if x.strip()]
+def load_table(path: Path):
+    try:
+        import pandas as pd
+    except ImportError as exc:
+        raise SystemExit("This command requires pandas. Install it with: pip install pandas") from exc
+    if path.suffix.lower() == ".csv":
+        return pd.read_csv(path)
+    if path.suffix.lower() in {".parquet", ".pq"}:
+        return pd.read_parquet(path)
+    if path.suffix.lower() in {".json", ".jsonl", ".ndjson"}:
+        return pd.read_json(path, lines=path.suffix.lower() != ".json")
+    raise SystemExit("--input must be CSV, Parquet, JSON, JSONL, or NDJSON")
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--seasons", default="2018-2024")
-    p.add_argument("--k", type=float, default=20.0)
-    p.add_argument("--home-adv", type=float, default=65.0)
-    p.add_argument("--min-train-seasons", type=int, default=2)
-    args = p.parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", type=Path, required=True, help="as-of predictions in CSV, Parquet, or JSON")
+    parser.add_argument("--season-col", default="season")
+    parser.add_argument("--actual-col", default="actual")
+    parser.add_argument("--prob-col", default="win_probability")
+    parser.add_argument("--home-col", default="is_home", help="when present, only home rows are scored")
+    args = parser.parse_args()
 
-    result = run_nfl_elo_baseline(
-        seasons=_parse_seasons(args.seasons),
-        min_train_seasons=args.min_train_seasons,
-        k=args.k,
-        home_adv=args.home_adv,
-    )
-    print(format_elo_report(result))
+    frame = load_table(args.input)
+    required = [args.season_col, args.actual_col, args.prob_col]
+    missing = [column for column in required if column not in frame.columns]
+    if missing:
+        raise SystemExit(f"missing required columns: {', '.join(missing)}")
+    if args.home_col in frame.columns:
+        frame = frame[frame[args.home_col] == 1]
+    frame = frame.dropna(subset=required).copy()
+    if frame.empty:
+        raise SystemExit("no scoreable rows")
+    try:
+        frame[args.actual_col] = frame[args.actual_col].astype(float)
+        frame[args.prob_col] = frame[args.prob_col].astype(float)
+    except (TypeError, ValueError) as exc:
+        raise SystemExit("actual and probability columns must be numeric") from exc
+    if not frame[args.actual_col].isin([0.0, 0.5, 1.0]).all():
+        raise SystemExit(f"{args.actual_col} must contain 0, 0.5, or 1")
+    if not frame[args.prob_col].between(0, 1).all():
+        raise SystemExit(f"{args.prob_col} must contain probabilities in [0, 1]")
+    import numpy as np
+    import pandas as pd
+    rows = []
+    for season, group in frame.groupby(args.season_col):
+        actual = group[args.actual_col].to_numpy(dtype=float)
+        probability = np.clip(group[args.prob_col].to_numpy(dtype=float), 1e-15, 1 - 1e-15)
+        decided = np.isin(actual, [0.0, 1.0])
+        rows.append({
+            "season": season,
+            "n": len(group),
+            "ties": int((~decided).sum()),
+            "log_loss": -np.mean(actual * np.log(probability) + (1 - actual) * np.log(1 - probability)),
+            "brier": np.mean((actual - probability) ** 2),
+            "accuracy": np.mean((probability[decided] >= 0.5) == actual[decided]) if decided.any() else np.nan,
+            "constant_0_5_log_loss": -np.log(0.5),
+        })
+    print(pd.DataFrame(rows).to_string(index=False))
     return 0
 
 

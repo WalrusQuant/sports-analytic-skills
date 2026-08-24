@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sports DS Bridge"
+  short_description: "Connect sports_ds data to standalone skills"
+  default_prompt: "Use $sports-ds-bridge to load sports data and hand it to a standalone analysis skill."

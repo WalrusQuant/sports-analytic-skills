@@ -1,6 +1,7 @@
 # Documentation standard
 
-Public docs help a stranger use the sports modeling skill library and toolkit.
+Public docs help a stranger use the standalone sports modeling skills. The
+optional toolkit is a secondary integration path.
 
 ## Public front door (README)
 
@@ -9,9 +10,9 @@ The README is a **product page**, not a project tracker.
 It should include:
 
 1. What the library is
-2. Install + first commands
-3. Skill inventory with jobs
-4. Package/CLI overview
+2. Skill-only install + first prompts
+3. Skill inventory with jobs and artifact expectations
+4. Optional bridge/toolkit overview
 5. Design rules
 6. Links to deeper docs
 7. License
@@ -47,4 +48,5 @@ It should **not** include:
 
 ## Skill doc minimum
 
-See `docs/skill-authoring.md`. Depth bar is a full operator manual with scripts and references, not a one-page outline.
+See `docs/skill-authoring.md`. Include only the guidance and resources that
+materially improve the task; depth is not measured by length.

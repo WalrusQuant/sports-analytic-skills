@@ -3,7 +3,6 @@ name: skill-name
 description: >
   One or two sentences. State WHAT the skill does and WHEN an agent should
   load it. Write for discovery, not marketing.
-version: "0.1.0"
 license: MIT
 ---
 
@@ -20,6 +19,7 @@ license: MIT
 ## Required inputs
 
 - …
+- State the file format, grain, and minimum fields.
 
 ## Procedure
 
@@ -30,7 +30,8 @@ license: MIT
 ## Hard constraints
 
 - …
-- Never …
+- Never require `sports_ds`, a repository checkout, or a pipeline. Only the
+  dedicated `sports-ds-bridge` skill may integrate with that optional toolkit.
 
 ## Anti-patterns
 
@@ -46,7 +47,8 @@ Done means:
 
 ## Handoffs
 
-- Next: `other-skill` if …
+- Optionally suggest `other-skill` if available; the core job remains usable
+  without it.
 - Stop if …
 
 ## Worked example

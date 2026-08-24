@@ -1,51 +1,58 @@
 #!/usr/bin/env python3
-"""Smoke checks that pre-game features are shifted (not equal to current outcomes)."""
+"""Run fast leakage checks on a user-owned modeling table."""
 
 from __future__ import annotations
 
-import sys
+import argparse
+from pathlib import Path
 
-import pandas as pd
 
-from sports_ds.data.nfl import load_team_game_panel
-from sports_ds.features.team_form import add_pregame_form_features
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", required=True, help="CSV, Parquet, or JSON records file")
+    parser.add_argument("--target", required=True, help="Outcome column")
+    parser.add_argument("--features", required=True, help="Comma-separated feature columns")
+    return parser.parse_args()
+
+
+def load_frame(path: str):
+    try:
+        import pandas as pd
+    except ImportError as exc:
+        raise SystemExit("pandas is required; install it with: python -m pip install pandas") from exc
+    suffix = Path(path).suffix.lower()
+    if suffix == ".csv": return pd.read_csv(path)
+    if suffix in {".parquet", ".pq"}: return pd.read_parquet(path)
+    if suffix in {".json", ".jsonl", ".ndjson"}: return pd.read_json(path, lines=suffix != ".json")
+    raise SystemExit("--input must be CSV, Parquet, JSON, JSONL, or NDJSON")
 
 
 def main() -> int:
-    panel = load_team_game_panel([2023, 2024])
-    df = add_pregame_form_features(panel)
-    # current won must not equal pre_win_pct identically on rows with history
-    hist = df[df["pre_games_played"] >= 1].copy()
-    if hist.empty:
-        print("FAIL: no rows with history")
-        return 1
-
-    # pre_win_pct should not be perfectly identical to current won
-    same = (hist["pre_win_pct"] == hist["won"]).mean()
-    if same > 0.95:
-        print(f"FAIL: pre_win_pct equals won too often ({same:.3f})")
+    args = parse_args()
+    features = [c.strip() for c in args.features.split(",") if c.strip()]
+    if not features:
+        raise SystemExit("--features must name at least one column")
+    df = load_frame(args.input)
+    if df.empty:
+        raise SystemExit("input contains no rows to check")
+    missing = [c for c in [args.target, *features] if c not in df.columns]
+    if missing:
+        raise SystemExit(f"missing required columns: {', '.join(missing)}")
+    banned_tokens = {"target", "label", "result", "score", "won", "win", "loss", "points_for", "points_against", "point_diff"}
+    named = sorted(c for c in features if c == args.target or c.lower() in banned_tokens)
+    identical = []
+    for col in features:
+        part = df[[col, args.target]].dropna()
+        if len(part) and bool((part[col] == part[args.target]).all()):
+            identical.append(col)
+    if named:
+        print(f"FAIL: target/outcome-like feature names: {named}")
+    if identical:
+        print(f"FAIL: features identical to target on complete rows: {identical}")
+    if named or identical:
         return 2
-
-    # first game overall for each team should have NA pre features
-    first = df.sort_values(["team", "season", "week"]).groupby(["team"], as_index=False).head(1)
-    na_rate = first["pre_win_pct"].isna().mean()
-    if na_rate < 0.9:
-        print(f"FAIL: expected NA pre_win_pct on each team's first game; na_rate={na_rate:.3f}")
-        return 3
-
-    # current-game outcomes must not be in model feature list used by pipeline
-    from sports_ds.pipelines.nfl_win_model import FEATURE_COLS
-
-    banned = {"won", "points_for", "points_against", "point_diff"}
-    overlap = banned.intersection(FEATURE_COLS)
-    if overlap:
-        print(f"FAIL: pipeline features include outcomes: {overlap}")
-        return 4
-
-    print(
-        f"OK: leakage smoke passed (pre_win_pct==won rate={same:.3f}, "
-        f"first_team_game_na={na_rate:.3f})"
-    )
+    print(f"OK: {len(features)} features passed name and exact-target smoke checks")
+    print("manual follow-up required: verify source timestamps, joins, shifts, and fold-local transforms")
     return 0
 
 

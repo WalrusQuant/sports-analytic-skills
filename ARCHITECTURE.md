@@ -1,95 +1,110 @@
 # Architecture
 
-## Product
+## Product boundary
 
-This repo is a **sports modeling skill pack**:
+The primary product is the standalone skill pack under `skills/`. A user can
+install those skills into an agent host and apply them to existing data without
+cloning this repository or installing its Python package.
 
-1. `skills/` — deep agent skills (manual + references + scripts)
-2. `src/sports_ds/` — installable toolkit the skills operate
-3. `sports-ds` CLI — one-command workflows on public sports data
+`sports_ds` is an optional toolkit in the same repository. It provides public
+data loaders, normalized panels, reusable analysis components, a CLI, and
+reference pipelines. The `sports-ds-bridge` skill is the only integration point
+between that toolkit and the generic skills.
 
-See `docs/product-charter.md` for scope and v1 success criteria.
-
-```text
-Agent / human
-    │
-    ├─ skills/<topic>/SKILL.md
-    ├─ skills/<topic>/references/
-    ├─ skills/<topic>/scripts/
-    │
-    └─ sports_ds package + sports-ds CLI
-           load → EDA → features/ratings → baselines/ML
-           → walk-forward → leakage/calibration → report
-```
-
-## Skill layout (every topic)
+## Dependency direction
 
 ```text
-skills/<skill-id>/
-  SKILL.md
-  references/
-  scripts/
+user CSV / Parquet / JSON ───────────────> generic skill
+public Python data library ──────────────> data-source skill
+
+sports_ds data/core/CLI (optional)
+                │
+                v
+        sports-ds-bridge
+                │ portable artifact
+                v
+          generic skill
+
+sports_ds pipelines ──> sports_ds core modules
 ```
 
-## Package layout
+Forbidden edges:
+
+```text
+generic skill guidance/scripts -X-> sports_ds
+sports_ds core modules         -X-> sports_ds.pipelines
+```
+
+Tests enforce the first edge. Package structure and review enforce the second.
+
+## Standalone skill contract
+
+Every generic skill must:
+
+- state the task it performs and when it applies;
+- document the minimum input fields or artifact shape;
+- work with a skill-only installation;
+- use only public dependencies in bundled helpers;
+- resolve helpers and references relative to its own `SKILL.md`;
+- avoid repository-root paths, editable installs, toolkit CLI commands, and
+  pipeline-specific schemas;
+- validate required inputs before analysis;
+- treat another skill as an optional handoff, never an undeclared runtime.
+
+A skill does not need a script when judgment and code guidance are sufficient.
+When a script exists, `--help` must work in isolation without network access or
+the optional toolkit.
+
+## Portable artifacts
+
+Skills exchange ordinary files owned by the user's project:
+
+- CSV or Parquet for observation, feature, prediction, and schedule tables;
+- JSON for fold metrics, calibration summaries, simulations, and reports;
+- Markdown for charters, audit notes, experiment logs, and model cards.
+
+Each consumer owns and validates its exact schema. Producers must not rely on
+filenames or implicit pipeline provenance to communicate meaning.
+
+## Optional toolkit layout
 
 ```text
 src/sports_ds/
-  data/          # nfl/nba/mlb loaders, team-game + NFL player panels
+  data/          # nfl/nba/mlb loaders and normalized panels
   eda/
-  features/      # time-safe team form (rich EWMA/rest) + player form
-  ratings/       # as-of Elo
-  metrics/       # log-loss, brier, calibration/ECE
-  audit/         # leakage audits
-  models/        # baselines, classifiers, regressors, ensembles
-  validation/    # season walk-forward masks
-  pipelines/     # team win/margin/elo, rich win ladder, NFL player
+  features/      # time-safe team and player features
+  ratings/
+  metrics/
+  audit/
+  models/
+  validation/
+  pipelines/     # optional reference orchestration
   cli.py
 ```
 
-## Standard analysis path
+Core modules remain usable without importing `pipelines`. Pipelines compose
+core modules and may expose compatibility aliases, but core ownership of schemas,
+constants, metrics, and transformations must stay outside orchestration.
+
+## Standard methodology
+
+The following is a composable path, not a required pipeline:
 
 ```text
-doctrine → load → EDA → time-safe features / ratings → baselines
-  → statistical and/or predictive models
-  → walk-forward validation + leakage + calibration
-  → interpret / report / model card / experiment log
+question -> data -> EDA -> legal features / ratings -> baselines
+         -> model -> time-ordered validation -> trust checks
+         -> interpretation / simulation / reporting
 ```
 
-## Concrete pipelines (package CLI)
+An agent loads only the skills relevant to the request.
 
-| Command | What it does |
-|---|---|
-| `sports-ds nfl-eda` | NFL team-game panel EDA |
-| `sports-ds nfl-win-pipeline` | form features + win walk-forward |
-| `sports-ds nfl-win-rich` | rich features + logistic/GBM/Elo ensemble |
-| `sports-ds nfl-margin-pipeline` | form features + margin walk-forward |
-| `sports-ds nfl-elo` | as-of Elo + logistic walk-forward |
-| `sports-ds nfl-player-eda` | NFL skill-position player panel EDA |
-| `sports-ds nfl-player-pipeline` | player form + fantasy/volume walk-forward |
-| `sports-ds nba-player-eda` | NBA player boxscore panel EDA (needs `[multi]`) |
-| `sports-ds nba-player-pipeline` | NBA player form + fantasy/points walk-forward |
-| `sports-ds mlb-player-eda` | MLB batter boxscore panel EDA (needs `[multi]`) |
-| `sports-ds mlb-player-pipeline` | MLB batter form + fantasy walk-forward (cached boxscores) |
-| `sports-ds calibrate` | win-logistic calibration/ECE |
-| `sports-ds leakage-audit` | pre-game form time-safety audit |
-| `sports-ds nba-eda` | NBA team-game panel EDA (needs `[multi]`) |
-| `sports-ds nba-win-pipeline` | NBA win walk-forward (needs `[multi]`) |
-| `sports-ds nba-margin-pipeline` | NBA margin walk-forward (needs `[multi]`) |
-| `sports-ds nba-elo` | NBA Elo baseline walk-forward (needs `[multi]`) |
-| `sports-ds mlb-eda` | MLB team-game panel EDA (needs `[multi]`) |
-| `sports-ds mlb-win-pipeline` | MLB win walk-forward (needs `[multi]`) |
-| `sports-ds mlb-margin-pipeline` | MLB margin walk-forward (needs `[multi]`) |
-| `sports-ds mlb-elo` | MLB Elo baseline walk-forward (needs `[multi]`) |
-| `sports-ds feature-registry` | Print feature legality registry |
-| `sports-ds calibrate --sport` | Calibration for nfl/nba/mlb |
-| `sports-ds leakage-audit --sport` | Leakage audit for nfl/nba/mlb |
+## Verification
 
-## Design rules
+Repository checks should prove both products independently:
 
-- no future-using features in pre-game models
-- baselines before celebrating ML
-- walk-forward over random splits for season sports
-- package usable without any agent host
-- multi-sport skill map; NFL deepest, NBA second wired path
-- skills drive package APIs; scripts should not reimplement core math
+1. validate every skill's structure;
+2. reject `sports_ds` imports outside `sports-ds-bridge`;
+3. run every helper's `--help` from an unrelated working directory;
+4. smoke-test representative helpers on synthetic portable artifacts;
+5. run the optional toolkit's unit and integration suite;
+6. retain optional live-data tests behind explicit environment gates.

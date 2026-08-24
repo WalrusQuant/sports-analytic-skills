@@ -146,6 +146,18 @@ DEFAULT_MLB_PLAYER_FEATURE_COLS = [
 ]
 
 
+def _merge_columns(frame: pd.DataFrame, columns: dict[str, pd.Series]) -> pd.DataFrame:
+    """Replace or append columns in one concat while preserving column order."""
+    if not columns:
+        return frame
+    original_order = list(frame.columns)
+    appended = [name for name in columns if name not in frame.columns]
+    replacements = pd.DataFrame(columns, index=frame.index)
+    base = frame.drop(columns=list(columns), errors="ignore")
+    merged = pd.concat([base, replacements], axis=1)
+    return merged.loc[:, [*original_order, *appended]]
+
+
 def add_pregame_player_form_features(
     panel: pd.DataFrame,
     *,
@@ -191,50 +203,62 @@ def add_pregame_player_form_features(
             position_values = ()
 
     df = panel.sort_values(["player_id", "season", "week", "gameday", "game_id"]).copy()
+    present_stat_cols = [column for column in stat_cols if column in df.columns]
+    df = _merge_columns(
+        df,
+        {
+            column: pd.to_numeric(df[column], errors="coerce")
+            for column in present_stat_cols
+        },
+    )
     g = df.groupby("player_id", group_keys=False)
 
-    df["pre_games_played"] = g["player_id"].apply(lambda s: s.shift(1).expanding().count())
+    derived: dict[str, pd.Series] = {
+        "pre_games_played": g["player_id"].apply(
+            lambda series: series.shift(1).expanding().count()
+        )
+    }
 
-    for col in stat_cols:
-        if col not in df.columns:
-            continue
-        s = pd.to_numeric(df[col], errors="coerce")
-        df[col] = s
-        df[f"pre_{col}"] = g[col].apply(lambda x: x.shift(1).expanding().mean())
+    for col in present_stat_cols:
+        derived[f"pre_{col}"] = g[col].apply(
+            lambda series: series.shift(1).expanding().mean()
+        )
         for w in windows:
-            df[f"roll{w}_{col}"] = g[col].apply(
+            derived[f"roll{w}_{col}"] = g[col].apply(
                 lambda x, ww=w: x.shift(1).rolling(ww, min_periods=1).mean()
             )
         for sp in ewma_spans:
-            df[f"ewma{sp}_{col}"] = g[col].apply(
+            derived[f"ewma{sp}_{col}"] = g[col].apply(
                 lambda x, span=sp: x.shift(1).ewm(span=span, min_periods=1).mean()
             )
 
     if "week" in df.columns:
-        df["season_week"] = pd.to_numeric(df["week"], errors="coerce")
+        derived["season_week"] = pd.to_numeric(df["week"], errors="coerce")
 
     # batting order slot known pre-game when lineup is set; normalize 100/200.. -> 1..9
     if "batting_order" in df.columns:
         bo = pd.to_numeric(df["batting_order"], errors="coerce")
         # API often uses 100,200,...,900 or 1-9
         slot = bo.where(bo <= 9, (bo // 100).where(bo >= 100, bo))
-        df["batting_order_slot"] = slot.clip(lower=1, upper=9)
+        derived["batting_order_slot"] = slot.clip(lower=1, upper=9)
 
     if "rest_days" not in df.columns and "gameday" in df.columns:
         prev = g["gameday"].shift(1)
-        df["rest_days"] = (pd.to_datetime(df["gameday"]) - pd.to_datetime(prev)).dt.days
-        df.loc[df["rest_days"].notna(), "rest_days"] = df.loc[
-            df["rest_days"].notna(), "rest_days"
-        ].clip(lower=0, upper=15)
+        rest_days = (
+            pd.to_datetime(df["gameday"]) - pd.to_datetime(prev)
+        ).dt.days
+        derived["rest_days"] = rest_days.clip(lower=0, upper=15)
 
     # opp pitcher quality is game-level known at lineup time if starter is announced;
     # keep as-is (not player-shifted). Coerce numeric.
     if "opp_k9" in df.columns:
-        df["opp_k9"] = pd.to_numeric(df["opp_k9"], errors="coerce")
+        derived["opp_k9"] = pd.to_numeric(df["opp_k9"], errors="coerce")
 
     if "position" in df.columns and position_values:
         for pos in position_values:
             safe = str(pos).replace(" ", "_")
-            df[f"pos_{safe}"] = (df["position"].astype(str) == str(pos)).astype(int)
+            derived[f"pos_{safe}"] = (
+                df["position"].astype(str) == str(pos)
+            ).astype(int)
 
-    return df
+    return _merge_columns(df, derived)
