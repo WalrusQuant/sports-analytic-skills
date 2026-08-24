@@ -1,81 +1,58 @@
 ---
 name: predictive-modeling
 description: >
-  Predictive ML for sports: model choice, training protocol, feature matrices,
-  and evaluation against baselines under time-safe splits. Use for forecasting
-  outcomes, stats, or ranks after baselines exist.
-version: "0.1.0"
+  Run sports predictive modeling with the sports_ds package. Use for NFL
+  team-win modeling and walk-forward evaluation against baselines.
+version: "0.2.0"
 license: MIT
 ---
 
-# Predictive Modeling (Sports)
+# Predictive Modeling
 
-Machine learning skill for sports prediction tasks.
+This skill operates the **real modeling code** in `src/sports_ds`.
 
-## When to use
+## Do this
 
-- Tabular prediction on games/players/possessions
-- Nonlinear effects likely after linear baselines
-- Need a disciplined train/validate protocol for ML models
+```bash
+pip install -e .
+sports-ds nfl-win-pipeline --seasons 2018-2024
+```
 
-## When not to use
+## What the code does
 
-- No baselines yet → `baseline-models` first
-- Explanatory inference is the goal → `statistical-modeling`
-- Sequence ratings only → `ratings-strength-models` / `time-series-sports`
+- builds team-game panel from nflverse schedules
+- engineers pre-game form features (`sports_ds.features.team_form`)
+- walk-forward splits by season (`sports_ds.validation.splits`)
+- fits:
+  - constant win-rate baseline
+  - logistic baseline
+  - hist gradient boosting classifier
+- prints log-loss / Brier / accuracy
 
-## Model ladder (climb only as earned)
+## Code map
 
-1. strong linear/logistic baseline
-2. regularized linear / GLM
-3. tree ensembles (HistGBM/XGBoost/LightGBM)
-4. careful neural nets only if data and problem justify
+- pipeline: `src/sports_ds/pipelines/nfl_win_model.py`
+- models: `src/sports_ds/models/`
+- features: `src/sports_ds/features/team_form.py`
+- CLI: `src/sports_ds/cli.py`
 
-## Procedure
+## Rules
 
-1. Confirm question, target, T, metrics.
-2. Build time-safe feature matrix (`feature-rules`).
-3. Lock walk-forward design (`validation-design`).
-4. Fit baselines first.
-5. Fit candidate ML with tuning inside training folds only.
-6. Evaluate on forward folds; compare to baselines.
-7. Calibrate probabilities if needed (`calibration-check`).
-8. Interpret drivers (`model-interpretation`).
-9. Log experiment (`experiment-log`).
+1. Run baselines every time.
+2. Do not hand-roll leaked rolling features; use package feature builders or mirror their shift(1) pattern.
+3. Report walk-forward metrics, not one random split.
+4. If extending to new targets (margin/total), add code under `models/` + `pipelines/`, not only markdown.
 
-## Hard constraints
+## Extend
 
-- No ML before baselines
-- No random split default on chronological sports data
-- No tuning on final holdout
-- No leakage features
-- Complexity must earn metric gains, not vibes
-
-## Anti-patterns
-
-- XGBoost as step 1
-- Huge feature soup
-- Early stopping on true test labels
-- Reporting only accuracy for imbalanced outcomes
+```python
+from sports_ds.pipelines.nfl_win_model import run_nfl_win_pipeline
+result = run_nfl_win_pipeline(seasons=list(range(2018, 2025)))
+```
 
 ## Output contract
 
-- [ ] Baseline metrics present
-- [ ] Candidate metrics present on same folds
-- [ ] Tuning scope stated
-- [ ] Lift vs baseline quantified
-- [ ] Keep / discard decision
-
-## Handoffs
-
-- `feature-rules`, `leakage-audit`
-- `calibration-check`
-- `model-interpretation`
-- `sports-visualization`
-- `results-reporting`
-
-## Stack hints
-
-- `scikit-learn`, `xgboost`/`lightgbm` optional
-- `polars`/`pandas` matrices
-- persist models + configs for reproducibility
+- [ ] Command/pipeline ran
+- [ ] Baseline + model metrics shown
+- [ ] Seasons and row counts reported
+- [ ] Notes if model fails to beat baseline

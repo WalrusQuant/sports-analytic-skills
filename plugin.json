@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "sports-analytic-skills",
-  "version": "0.5.1",
-  "description": "Agent Skills for sports data science: data loading, EDA, statistical modeling, predictive ML, ratings, simulation, and reporting across sports.",
+  "version": "0.6.0",
+  "description": "Sports data science system: Python toolkit + agent skills for loading, EDA, modeling, and walk-forward validation.",
   "author": {
     "name": "Adam Wickwire",
     "url": "https://adamwickwire.com"

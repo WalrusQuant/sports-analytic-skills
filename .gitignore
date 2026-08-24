@@ -15,6 +15,10 @@ __pycache__/
 venv/
 .env
 .env.*
+*.egg-info/
+build/
+dist/
+.eggs/
 
 # Node
 node_modules/
@@ -41,3 +45,4 @@ data/
 *.key
 credentials*
 secrets*
+src/sports_ds.egg-info/

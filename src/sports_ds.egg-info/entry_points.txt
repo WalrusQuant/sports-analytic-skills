@@ -1,2 +1,0 @@
-[console_scripts]
-sports-ds = sports_ds.cli:main
