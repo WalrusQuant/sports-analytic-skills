@@ -2,72 +2,64 @@
 
 Thanks for helping improve Sports Analytic Skills.
 
-## Current mode
+## What this project is
 
-- Skills are drafted under `skills/` with honest `draft` status until hardened
-- Prefer methodology quality over inventory growth
-- Review any skill before enabling it on an agent host
+A sports modeling **skill pack** for AI agents, plus the `sports_ds` toolkit those skills run. Public docs should help a stranger understand the product and get started.
 
-## What good looks like
+## Skill shape
 
-### Docs changes
+Every skill lives under `skills/<id>/` and should include:
 
-- Keep planned vs shipped vs ready honest
-- Update README badges/counts if skill inventory changes
-- Cross-link architecture, taxonomy, and roadmap when structure changes
-- Keep public docs free of private tracker IDs, personal runtime notes, or internal process diary language
-- Plain clear writing; no tip-shop tone
+- `SKILL.md` — full operator manual
+- `references/` — deep method detail
+- `scripts/` — runnable helpers when useful
 
-### New skills
+Use [templates/skill/SKILL.md](./templates/skill/SKILL.md) and [docs/skill-authoring.md](./docs/skill-authoring.md).
 
-1. Open from [templates/skill/SKILL.md](./templates/skill/SKILL.md)
-2. Follow [docs/skill-authoring.md](./docs/skill-authoring.md)
-3. Meet [docs/documentation-standard.md](./docs/documentation-standard.md)
-4. Add the skill to taxonomy/roadmap only when the draft is real
-5. Prefer one sharp skill over three vague ones
+## Quality bar
 
-### Skill quality gate
+A skill is in good shape when it has:
 
-A skill may be considered ready when:
+- a discovery-grade description in frontmatter
+- clear when-to-use guidance
+- an ordered workflow
+- sports-specific decision tables / code
+- worked examples on public data
+- hard constraints (time safety, baselines, honest metrics)
+- scripts documented in the skill when shipped
 
-- discovery-grade frontmatter description exists
-- when/when-not gates are explicit
-- hard constraints and anti-patterns are real
-- output contract is checkable
-- worked example exists (synthetic/public default)
-- no tip-service or autobet behavior
-- no single-sport bias unless it is a declared sport module
-
-### Scripts
-
-If a skill ships `scripts/`:
-
-- keep them small and readable
-- include `tests/`
-- document inputs/outputs in `SKILL.md`
-- no hidden network side effects by default
-
-## Scope boundaries
+## Scope
 
 In scope:
 
-- multi-sport modeling methodology
-- validation, leakage, critique
-- market evaluation layered onto modeling
-- later sport modules as domain constraints
+- sports data loading, EDA, features, ratings, stats/ML, validation, simulation, reporting
+- multi-sport methodology
+- public data ecosystems (nflverse, SportsDataverse, pybaseball, …)
 
-Out of scope:
+Out of scope for this pack:
 
-- pick selling
-- guaranteed profit systems
+- pick selling / tip services
+- guaranteed-profit framing
 - book account automation
-- private bankroll productization
+
+## Docs
+
+- Keep the README a real product page (why, getting started, examples, catalog, layout)
+- No private tracker IDs or personal runtime notes in public docs
+- Prefer clear explanation over inventory-only dumps
+
+## Scripts and tests
+
+If you add scripts:
+
+- keep them small and readable
+- run from repo root with the package installed
+- add or update tests when behavior is package-level
+- document how to run them in `SKILL.md`
 
 ## Review checklist
 
-- [ ] Does this reduce agent slop in sports analytics?
-- [ ] Is it sport-agnostic unless intentionally a sport module?
-- [ ] Are claims honest?
-- [ ] Are docs complete enough for a stranger?
-- [ ] Did we avoid fake “complete library” language?
-- [ ] Did we keep private tracking/process notes out of public docs?
+- [ ] Does this help an agent run a real sports analysis path?
+- [ ] Is time safety respected for predictive work?
+- [ ] Are baselines and validation honest?
+- [ ] Can a stranger follow the docs without chat history?
