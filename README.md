@@ -1,128 +1,128 @@
 # Sports Analytic Skills
 
-**K-Dense-style agent skills for sports modeling and analytics.**
+Agent skills for **sports modeling and analytics** — deep operator manuals, sports-specific workflows, reference docs, and runnable Python scripts. Works with any agent that supports the [Agent Skills](https://agentskills.io/) standard. Also ships as an [Agent Plugins](https://agent-plugins.org/) package (`plugin.json` + `skills/`).
 
-A portable [Agent Skills](https://agentskills.io/) / [Agent Plugins](https://agent-plugins.org/) pack: deep operator manuals, sports-specific workflows, bundled reference docs, and runnable Python scripts agents can execute. Plus an installable toolkit (`sports_ds`) the skills drive on real public sports data.
+The skills drive a real Python toolkit (`sports_ds`) on public sports data (nflverse, SportsDataverse, pybaseball, and more).
+
+---
+
+## Getting started
 
 ```bash
 git clone https://github.com/WalrusQuant/sports-analytic-skills.git
 cd sports-analytic-skills
-python3 -m venv .venv && source .venv/bin/activate
+
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -e .
 
-# agent install
+# verify
+pytest -q
+sports-ds nfl-eda --seasons 2024
+```
+
+Install the skills into an agent host:
+
+```bash
 npx skills add WalrusQuant/sports-analytic-skills
 ```
 
+Optional multi-sport loaders:
+
+```bash
+pip install -e ".[multi]"
+```
+
 ---
 
-## What each skill contains
+## What this is
 
-Every skill is a folder under `skills/`:
+A sports data science skill pack for agents and humans:
 
-| Piece | Purpose |
+| Layer | Role |
 |---|---|
-| `SKILL.md` | Full operator manual (workflow, code, decision tables, reporting) |
-| `references/` | Deep method detail too long for the main file |
-| `scripts/` | Runnable sports-specific Python helpers for agents |
+| `skills/<name>/SKILL.md` | Full topic manual: when to use, workflow, code, reporting |
+| `skills/<name>/references/` | Deep method detail |
+| `skills/<name>/scripts/` | Runnable sports helpers agents can execute |
+| `src/sports_ds/` | Installable package: load → EDA → features → model → validate |
+| `sports-ds` CLI | One-command workflows on real data |
 
-This matches the structure of serious scientific agent-skill packs: **not** thin prompt stubs, **not** a project status board.
+Each skill is built so an agent can run a full analysis path without inventing method from scratch.
 
 ---
 
-## Skills (23)
+## What's included
 
 ### Foundation
-
-| Skill | What the agent learns to do |
+| Skill | Purpose |
 |---|---|
-| [`sports-modeling-doctrine`](skills/sports-modeling-doctrine/) | Lock the question, baselines, time order, and success metrics before modeling |
-| [`environment-setup`](skills/environment-setup/) | Install and verify the toolkit + skill scripts |
-| [`data-sources`](skills/data-sources/) | Choose public sports data ecosystems for a question |
+| [sports-modeling-doctrine](skills/sports-modeling-doctrine/) | Question, baselines, time order, success metrics |
+| [environment-setup](skills/environment-setup/) | Install and verify toolkit + scripts |
+| [data-sources](skills/data-sources/) | Choose public sports data ecosystems |
 
 ### Data loaders
-
-| Skill | What the agent learns to do |
+| Skill | Purpose |
 |---|---|
-| [`nflreadpy`](skills/nflreadpy/) | Load NFL data (nflverse) and build team-game panels |
-| [`sportsdataverse-py`](skills/sportsdataverse-py/) | Multi-sport SportsDataverse loads |
-| [`pybaseball`](skills/pybaseball/) | MLB Statcast and season tables |
+| [nflreadpy](skills/nflreadpy/) | NFL via nflverse / team-game panels |
+| [sportsdataverse-py](skills/sportsdataverse-py/) | Multi-sport SportsDataverse loads |
+| [pybaseball](skills/pybaseball/) | MLB Statcast and season tables |
 
 ### EDA and presentation
-
-| Skill | What the agent learns to do |
+| Skill | Purpose |
 |---|---|
-| [`eda-sports`](skills/eda-sports/) | Structured sports-panel EDA before modeling |
-| [`sports-visualization`](skills/sports-visualization/) | Honest sports figures for EDA and reports |
-| [`anti-slop-analytics`](skills/anti-slop-analytics/) | Kill chartjunk, fake certainty, baseline erasure |
+| [eda-sports](skills/eda-sports/) | Sports-panel EDA before modeling |
+| [sports-visualization](skills/sports-visualization/) | Honest sports figures |
+| [anti-slop-analytics](skills/anti-slop-analytics/) | Kill chartjunk and fake certainty |
 
 ### Modeling
-
-| Skill | What the agent learns to do |
+| Skill | Purpose |
 |---|---|
-| [`feature-rules`](skills/feature-rules/) | Build time-safe pre-game features |
-| [`time-series-sports`](skills/time-series-sports/) | Rolling / EWMA form and ordered performance |
-| [`baseline-models`](skills/baseline-models/) | Strong simple baselines before complexity |
-| [`statistical-modeling`](skills/statistical-modeling/) | GLMs, diagnostics, effect sizes, hierarchical structure |
-| [`predictive-modeling`](skills/predictive-modeling/) | ML under season walk-forward validation |
-| [`ratings-strength-models`](skills/ratings-strength-models/) | Elo / power ratings and as-of strength |
+| [feature-rules](skills/feature-rules/) | Time-safe pre-game features |
+| [time-series-sports](skills/time-series-sports/) | Rolling / EWMA form |
+| [baseline-models](skills/baseline-models/) | Strong simple baselines first |
+| [statistical-modeling](skills/statistical-modeling/) | GLMs, diagnostics, effect sizes, hierarchical models |
+| [predictive-modeling](skills/predictive-modeling/) | ML under season walk-forward validation |
+| [ratings-strength-models](skills/ratings-strength-models/) | Elo / power ratings |
 
 ### Validation and simulation
-
-| Skill | What the agent learns to do |
+| Skill | Purpose |
 |---|---|
-| [`validation-design`](skills/validation-design/) | Season walk-forward and metric locks |
-| [`leakage-audit`](skills/leakage-audit/) | Look-ahead and target leakage review |
-| [`calibration-check`](skills/calibration-check/) | Probability reliability (ECE, Brier, curves) |
-| [`simulation-sports`](skills/simulation-sports/) | Monte Carlo game/season projections |
+| [validation-design](skills/validation-design/) | Season walk-forward and metric locks |
+| [leakage-audit](skills/leakage-audit/) | Look-ahead / target leakage review |
+| [calibration-check](skills/calibration-check/) | Probability reliability |
+| [simulation-sports](skills/simulation-sports/) | Monte Carlo season / matchup projections |
 
 ### Reporting
-
-| Skill | What the agent learns to do |
+| Skill | Purpose |
 |---|---|
-| [`model-interpretation`](skills/model-interpretation/) | Drivers, error slices, failure modes |
-| [`results-reporting`](skills/results-reporting/) | Clear write-ups with baselines and limits |
-| [`model-card`](skills/model-card/) | Durable model documentation |
-| [`experiment-log`](skills/experiment-log/) | Reproducible experiment records |
+| [model-interpretation](skills/model-interpretation/) | Drivers, error slices, failure modes |
+| [results-reporting](skills/results-reporting/) | Clear write-ups with baselines |
+| [model-card](skills/model-card/) | Durable model documentation |
+| [experiment-log](skills/experiment-log/) | Reproducible experiment records |
 
 ---
 
-## How an agent should work a sports problem
+## How a full analysis runs
 
 ```text
-sports-modeling-doctrine
-    → data-sources + loader skill (nflreadpy / sportsdataverse-py / pybaseball)
-    → eda-sports
-    → feature-rules (+ time-series-sports / ratings-strength-models as needed)
-    → baseline-models
-    → statistical-modeling and/or predictive-modeling
-    → validation-design + leakage-audit + calibration-check
-    → model-interpretation → results-reporting / model-card / experiment-log
+doctrine
+  → pick source + load data
+  → EDA
+  → time-safe features (form / ratings)
+  → baselines
+  → statistical model and/or ML
+  → walk-forward validation + leakage audit + calibration
+  → interpret → report / model card / experiment log
 ```
 
----
-
-## Toolkit the skills drive (`sports_ds`)
-
-Skills are not floating prompts. They operate real code:
-
-```text
-src/sports_ds/
-  data/           # nflverse loaders, team-game panel
-  eda/            # panel summaries
-  features/       # shifted pre-game form features
-  models/         # baselines + classifiers
-  validation/     # season walk-forward splits
-  pipelines/      # end-to-end NFL win model
-  cli.py
-```
+### CLI examples
 
 ```bash
 sports-ds nfl-eda --seasons 2023-2024
 sports-ds nfl-win-pipeline --seasons 2018-2024
 ```
 
-Example skill scripts:
+### Skill script examples
 
 ```bash
 python skills/eda-sports/scripts/panel_report.py --seasons 2023-2024
@@ -135,24 +135,44 @@ python skills/leakage-audit/scripts/audit_pregame_features.py --seasons 2023-202
 
 ---
 
+## Package layout
+
+```text
+src/sports_ds/
+  data/           # loaders (nflverse first)
+  eda/            # panel summaries
+  features/       # shifted pre-game form features
+  models/         # baselines + classifiers
+  validation/     # season walk-forward splits
+  pipelines/      # end-to-end NFL win model
+  cli.py
+skills/           # agent skills (SKILL.md + references + scripts)
+tests/
+docs/
+```
+
+---
+
 ## Design rules
 
-1. **Sports modeling first** — wins, margins, counts, ratings, form, simulation, reporting on public sports data.
-2. **Time safety** — pre-game features must be knowable at decision time T; walk-forward over random game shuffles.
-3. **Baselines before complexity** — constant / home / logistic form before celebrating trees.
-4. **Skills drive code** — manuals point at package APIs and bundled scripts.
-5. **Sport-agnostic core** — NFL is the first concrete pipeline; the skill map stays multi-sport.
+1. Sports modeling first — wins, margins, counts, ratings, form, simulation, reporting.
+2. Time safety — pre-game features must be knowable at decision time T.
+3. Walk-forward validation over random game shuffles for season sports.
+4. Baselines before complexity.
+5. Skills drive real code (`sports_ds` + bundled scripts).
+6. Multi-sport core; NFL is the first fully wired pipeline.
 
 ---
 
 ## Docs
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — system layout
-- [docs/getting-started.md](./docs/getting-started.md) — install and first runs
-- [docs/skill-authoring.md](./docs/skill-authoring.md) — how skills in this pack are written
-- [docs/taxonomy.md](./docs/taxonomy.md) — skill domains
-- [docs/data-ecosystem.md](./docs/data-ecosystem.md) — public sports data sources
-- [docs/environment.md](./docs/environment.md) — runtime deps
+- [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [Getting started](./docs/getting-started.md)
+- [Skill authoring](./docs/skill-authoring.md)
+- [Skill taxonomy](./docs/taxonomy.md)
+- [Data ecosystem](./docs/data-ecosystem.md)
+- [Environment](./docs/environment.md)
+- [Contributing](./CONTRIBUTING.md)
 
 ---
 
