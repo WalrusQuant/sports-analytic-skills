@@ -1,155 +1,210 @@
 ---
 name: leakage-audit
 description: >
-  Audit sports-modeling pipelines for look-ahead and target leakage. Use when
-  reviewing features, joins, labels, splits, or any “too good” backtest that
-  may have seen the future.
-version: "0.1.0"
+  Audit sports modeling pipelines for look-ahead and target leakage. Use when
+  reviewing features, joins, labels, splits, or any backtest that looks too
+  good. Covers pre-game legality, same-game contamination, season-aggregate
+  bleed, split mistakes, and sports_ds feature checks with a runnable auditor.
+version: "0.3.0"
 license: MIT
+metadata:
+  version: "0.3.0"
 ---
 
-# Leakage Audit
+# Leakage Audit (Sports)
 
-Adversarial modeling-spine skill. Assume leakage until the pipeline proves
-time-safe. This skill tears apart feature/label/split contamination.
+## Overview
 
-## When to use
+Assume leakage until the pipeline proves time-safe. This skill is an adversarial
+review of features, labels, joins, and splits for sports predictive work.
 
-- Any finished or draft feature matrix before claiming performance
+Output: a written audit with pass/fail items, contaminated fields, and required fixes.
+
+## When to Use This Skill
+
+- Any feature matrix before claiming predictive performance
 - Backtests that look suspiciously strong
-- Reviewing joins across schedule, box score, injury, and odds tables
-- User says “just quick model” with rich historical tables
-- After `feature-rules` as a second-pass audit
+- Reviewing joins across schedule, box score, injury, tracking, or lineup tables
+- After `feature-rules` as a second pass
+- Before publishing model results
 
-## When not to use
+---
 
-- Brand-new problem with no pipeline yet → start with `feature-rules`
-- Market CLV evaluation specifics → `clv-evaluation`
-- Ethics of overclaiming results → `ethics` after audit verdict
-- Sport trivia without a data pipeline
+## Installation
 
-## Required inputs
+```bash
+pip install -e .
+```
 
-Minimum:
+---
 
-- Declared prediction timestamp rule T
-- Target definition
-- Feature list / pipeline code / SQL
-- Split or walk-forward method
+## Audit Workflow
 
-Optional:
+1. **Lock decision time T** (e.g., scheduled kickoff, lineup lock, pitch release).
+2. **Lock target** (win, margin, player stat, etc.) and grain.
+3. **Inventory every feature** and when it becomes knowable.
+4. **Inspect transforms** for missing `shift(1)` / as-of joins.
+5. **Inspect splits** for future seasons/weeks in train.
+6. **Run automated checks** on the matrix when possible.
+7. **Write the verdict** with required repairs.
 
-- Row-level sample
-- Source refresh delays
-- Reported metrics that seem too good
+Do not skip to metrics.
 
-## Leakage classes
+---
 
-1. **Target leakage** — feature contains outcome information
-2. **Look-ahead leakage** — feature uses data from t > T
-3. **Split leakage** — train/test not isolated (same event, player-game clones, random shuffle on time series)
-4. **Aggregation leakage** — group stats computed with future or current row
-5. **Label leakage** — label redefined using future knowledge
-6. **Market leakage** — using closes/post lines for open-time decisions
-7. **Leakage by correction** — restated stats treated as live-available
+## Sports Leakage Catalog
 
-## Procedure
+| Pattern | Example | Fix |
+|---|---|---|
+| Same-game outcome as feature | `points_for`, `won`, current EPA | drop / use only as target |
+| No shift on rolling form | `rolling(5).mean()` includes current game | `.shift(1)` then roll |
+| Final-season stats on early weeks | season EPA average on week 1 | expanding as-of only |
+| Opponent season totals include current game | opp PF includes this matchup | compute opp pre-game only |
+| Injury/participation without timestamp | “inactive” known post-game | timestamped source or drop |
+| Random K-fold on games | shuffles future into train | season/week walk-forward |
+| Target encoding fit on full data | mean win rate by team on all seasons | fit inside train fold only |
+| Post-game join keys | merging final box to pre-game rows | as-of merge on time |
 
-1. **Restate T and label timing**
-   - When is the prediction made?
-   - When does the label become known?
+---
 
-2. **Map every input field to a known-time**
-   - `known_by <= T` required for legal training/inference inputs
+## Automated Audit (`sports_ds` NFL features)
 
-3. **Inspect joins**
-   - Keys only, or keys + time?
-   - as-of merges vs exact event ID merges that pull same-game stats
+```bash
+python skills/leakage-audit/scripts/audit_pregame_features.py --seasons 2023-2024
+```
 
-4. **Inspect aggregates**
-   - Expanding/rolling windows end index
-   - Groupby target means
-   - Season stats computation order
+What it checks:
 
-5. **Inspect splits**
-   - Random K-fold on chronological sports events = fail by default
-   - Adjacent-event leakage across train/test without embargo
-   - Duplicate entities on both sides
+- banned outcome columns not in model feature list
+- first team game has NA pre-game form
+- `pre_*` / rolling features are not identical to current `won`
+- pipeline feature list from `sports_ds.pipelines.nfl_win_model.FEATURE_COLS`
 
-6. **Run red-flag checks**
-   - Near-perfect AUC/R² on hard tasks
-   - Single feature dominates with post-event meaning
-   - Performance collapses when shifting features by +1 event
-   - Shuffle-of-time destroys or does not destroy performance unexpectedly
+Python:
 
-7. **Assign audit verdict**
+```python
+import sys
+from pathlib import Path
+sys.path.append(str(Path("skills/leakage-audit/scripts").resolve()))
+from audit_pregame_features import audit_frame
 
-| Verdict | Meaning |
-|---|---|
-| `clean` | No material leakage found under stated assumptions |
-| `suspect` | Timing ambiguities remain; claim capped |
-| `contaminated` | Confirmed leakage path |
-| `fatal` | Core label/feature design is invalid |
+from sports_ds.data.nfl import load_team_game_panel
+from sports_ds.features.team_form import add_pregame_form_features
 
-8. **Prescribe fixes**
-   - Drop fields, shift timestamps, embargo splits, rebuild aggregates
-   - Require re-validation from scratch after fixes
+df = add_pregame_form_features(load_team_game_panel([2023, 2024]))
+print(audit_frame(df))
+```
 
-## Hard constraints
+---
 
-- Never clear a pipeline that uses random splits on time-ordered sports events without explicit justification
-- Never accept same-event box-score features for pre-event claims
-- Never accept target encodings fit on the full shuffled dataset
-- Never accept “probably fine” without a known-time map
-- If audit is blocked by missing timestamps, verdict is at best `suspect`
-- Contaminated pipelines cannot support `paper` or `market-relative` claims until rebuilt
+## Manual Review Checklist
 
-## Anti-patterns
+### A. Target and T
 
-- **Metric denial:** “but CV score is high, so leakage is okay”
-- **One-column blindness:** checking features, ignoring label construction
-- **Notebook order tricks:** cells re-run out of order creating hidden state leakage
-- **ID merge comfort:** assuming event IDs make time safety automatic
-- **Partial purge:** dropping one leaked column, leaving leaked aggregates
-- **Test peeking:** using test performance to choose which leakage to ignore
+- [ ] Target definition written
+- [ ] T written in plain language
+- [ ] Labels cannot be known before T
 
-## Output contract
+### B. Feature legality
 
-Done means:
+For each feature:
 
-- [ ] T and label-time restated
-- [ ] Known-time map for key fields
-- [ ] Leakage classes checked
-- [ ] Verdict: `clean` / `suspect` / `contaminated` / `fatal`
-- [ ] Concrete failure paths listed (if any)
-- [ ] Required fixes listed
-- [ ] Claim-level implication stated (`explore` only, rebuild, etc.)
+- [ ] Source table/time known
+- [ ] Legal at T? yes/no
+- [ ] If delayed, delay handled
 
-## Handoffs
+### C. Panel construction
 
-- `feature-rules` — rebuild legal features
-- `validation-design` — fix split/embargo design
-- `backtest-critique` — full claim teardown including leakage findings
-- `doctrine` — downgrade/kill claim level
-- `ethics` — block overclaim language on contaminated work
-- **Stop** after `fatal` until redesign
+- [ ] Team-game double rows understood (home and away)
+- [ ] Opponent features merged as pre-game only
+- [ ] No accidental use of both teams’ current scores
 
-## Worked example
+### D. Splits
 
-**Request:** “Model predicts player points at 0.95 R² using team total and player minutes.”
+- [ ] Train max time < test min time
+- [ ] No scaler/encoder fit on full dataset before split
+- [ ] Hyperparams tuned only inside train
 
-1. T claimed: pre-tip.
-2. Features: player minutes, team total points.
-3. Audit:
-   - minutes and team total are same-event outcomes for pre-tip T
-   - target leakage + look-ahead
-4. Verdict: `fatal` for pre-tip claim.
-5. Fix paths:
-   - either predict pre-tip with prior-event features only
-   - or change task to in-game projection with in-game T and only then-available live stats
+### E. “Too good” triggers
 
-## References
+If walk-forward log-loss is near-perfect or accuracy is absurd for the sport:
 
-- Feature legality: `skills/feature-rules`
-- Splits: `skills/validation-design`
-- Claim impact: `skills/doctrine`
+- [ ] Re-check same-game fields
+- [ ] Re-check shift
+- [ ] Re-check opponent merge
+- [ ] Re-check that test rows were not in train feature fits
+
+---
+
+## Worked Example (NFL pre-game win model)
+
+Legal:
+
+- `is_home`
+- shifted prior win % differential
+- shifted rolling point-diff differential
+
+Illegal:
+
+- current `points_for`
+- current `won`
+- final 2024 team EPA used in week 1 2024
+
+Package path that implements legal form features:
+
+`src/sports_ds/features/team_form.py` (`shift(1)` before expanding/rolling)
+
+---
+
+## Audit Report Template
+
+```text
+Leakage audit
+Target: …
+Grain: …
+Decision time T: …
+Feature count: …
+Splits: …
+
+Findings:
+1. [FAIL/PASS] …
+2. [FAIL/PASS] …
+
+Contaminated fields: …
+Required fixes: …
+Verdict: CLEAN / NOT CLEAN
+```
+
+---
+
+## Hard Constraints
+
+1. A strong metric is not evidence of cleanliness.
+2. If legality is uncertain, mark FAIL until proven.
+3. Do not “fix” leakage by dropping the ugly test season.
+4. Document every exception (e.g., live in-game T).
+
+---
+
+## Bundled Resources
+
+### scripts/
+
+- `audit_pregame_features.py` — automated checks for sports_ds pre-game features
+
+### references/
+
+- `leakage_patterns.md` — extended pattern list
+
+### package code
+
+- `src/sports_ds/features/team_form.py`
+- `src/sports_ds/pipelines/nfl_win_model.py`
+
+---
+
+## Related skills
+
+- Build features: `feature-rules`
+- Validation design: `validation-design`
+- Model run: `baseline-models` / `predictive-modeling` / `statistical-modeling`

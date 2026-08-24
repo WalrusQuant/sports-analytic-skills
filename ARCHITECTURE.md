@@ -1,16 +1,21 @@
 # Architecture
 
-## Product
+## System
 
-A **sports data science system**:
+Sports Analytic Skills is a **sports data science skill library** with an installable toolkit.
 
-1. Python package (`sports_ds`) that loads sports data, explores it, engineers features, models, validates, and reports
-2. CLI entrypoints for real workflows
-3. Agent skills that operate the package
+```text
+Agent / human
+    │
+    ├─ skills/*/SKILL.md      deep topic manuals
+    ├─ skills/*/scripts/      sports-specific runnable helpers
+    ├─ skills/*/references/   method detail
+    │
+    └─ sports_ds package + sports-ds CLI
+           load → EDA → features → baselines/ML → walk-forward → report
+```
 
-Code is the product. Skills are the interface for agents.
-
-## Layout
+## Package
 
 ```text
 src/sports_ds/
@@ -18,46 +23,51 @@ src/sports_ds/
   eda/           exploratory summaries
   features/      time-safe feature builders
   models/        baselines + predictive models
-  validation/    walk-forward splits / metrics helpers
+  validation/    walk-forward splits
   pipelines/     end-to-end workflows
   cli.py
-skills/          agent operator manuals for the above
-scripts/         thin runners
-tests/           unit tests
 ```
 
-## Core workflow
+## Core analysis path
 
 ```text
 load data
  → EDA
  → time-safe features
  → baselines
- → model
+ → statistical or ML model
  → walk-forward validation
- → interpret / report
+ → calibration / interpretation / report
 ```
 
-## Current implemented pipeline
+## First concrete pipeline
 
 `sports-ds nfl-win-pipeline`
 
 - data: nflverse schedules via nflreadpy
-- panel: team-game rows
-- features: pre-game form only (shifted)
+- grain: team-game
+- features: shifted pre-game form differentials
 - models: constant baseline, logistic, hist GBM
 - validation: season walk-forward
 
-## Next pipelines
+## Skill contract
 
-- NFL margin/total models
-- ratings/Elo module with as-of ratings
-- NBA/MLB loaders + one model each
-- richer EDA/viz exports
+Every topic skill should eventually include:
+
+1. discovery description agents can match
+2. install / deps if needed
+3. ordered workflow
+4. sports-specific decision tables
+5. code against `sports_ds` or public loaders
+6. `scripts/` agents can execute
+7. `references/` for deep method detail
+8. worked examples on public sports data
+9. reporting template
 
 ## Design rules
 
 - no future-using features in pre-game models
 - baselines before celebrating ML
 - walk-forward over random splits for season sports
-- keep package usable without any agent host
+- package usable without any agent host
+- multi-sport core; no single-sport identity

@@ -12,4 +12,18 @@
 | simulation | simulation-sports |
 | reporting | model-interpretation, model-card, results-reporting, experiment-log |
 
-**Drafted:** 23
+## Dependency sketch
+
+```text
+environment-setup / data-sources
+        ↓
+package loaders (nflreadpy / sportsdataverse-py / pybaseball)
+        ↓
+eda-sports → feature-rules → baseline-models
+        ↓
+statistical-modeling  and/or  predictive-modeling  and/or  ratings-strength-models
+        ↓
+validation-design → leakage-audit → calibration-check
+        ↓
+model-interpretation → results-reporting / model-card / experiment-log
+```

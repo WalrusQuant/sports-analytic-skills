@@ -1,99 +1,50 @@
 # Documentation standard
 
-Documentation is part of the product. Public docs should help a stranger understand and use the library without private context.
+Public docs help a stranger use the sports modeling skill library and toolkit.
 
-## Why this file exists
+## Public front door (README)
 
-A skill pack fails quietly when:
+The README is a **product page**, not a project tracker.
 
-- the README is thin
-- planned work is written as if shipped
-- install story is missing
-- skill contracts are inconsistent
-- strangers cannot tell what the system is for
-- public docs mix in private trackers or internal process notes
+It should include:
 
-## Public vs internal
+1. What the library is
+2. Install + first commands
+3. Skill inventory with jobs
+4. Package/CLI overview
+5. Design rules
+6. Links to deeper docs
+7. License
 
-Public docs (README, architecture, skill files, getting started, contributing):
+It should **not** include:
 
-- no private project-tracker IDs
-- no personal runtime install state
-- no internal chat/process diary language
-- prior art belongs in a short dedicated section, not constant comparisons
+- personal status diaries
+- private tracker IDs
+- “done / next / blocked” project management tables
+- chat-process language
 
-Internal notes, if needed, stay out of the public front door.
-
-## Public front door (README) must include
-
-1. One-sentence identity
-2. Honest status table (planned vs drafted vs ready)
-3. Why it exists / problem statement
-4. What it is / what it is not
-5. Design principles
-6. Architecture overview with pointer to deep doc
-7. Inventory / available skills section
-8. Repo layout
-9. Getting started
-10. Skill structure contract
-11. Security/trust notes
-12. Disclaimer
-13. Roadmap pointer
-14. Contributing pointer
-15. FAQ
-16. Prior art
-17. License + citation
-
-## Deep docs map
+## Deep docs
 
 | Doc | Job |
 |---|---|
 | `README.md` | Public orientation |
-| `ARCHITECTURE.md` | System design truth |
+| `ARCHITECTURE.md` | System design |
 | `CONTRIBUTING.md` | Contribution and quality gates |
-| `docs/roadmap.md` | Sequencing |
-| `docs/taxonomy.md` | Skill domains and IDs |
-| `docs/getting-started.md` | Install/use paths |
-| `docs/skill-authoring.md` | How to write skills |
-| `docs/documentation-standard.md` | This file |
-| `references/prior-art.md` | Lineage and standards |
-
-## Honesty rules
-
-- Never badge a skill count higher than drafted skills
-- Use “planned”, “draft”, “ready” language explicitly
-- Examples must be synthetic or public unless user-supplied private data is clearly marked
-- Do not imply a polished product release when drafts are early
-- Do not imply multi-agent harness until it exists
+| `docs/getting-started.md` | Install/use |
+| `docs/skill-authoring.md` | How to write deep skills |
+| `docs/taxonomy.md` | Domains and skill IDs |
+| `docs/data-ecosystem.md` | Public sports data sources |
+| `docs/environment.md` | Runtime deps |
+| `docs/roadmap.md` | Sequencing for depth expansion |
 
 ## Writing style
 
-- Direct, technical, low hype
-- No tip-shop language
-- No single-sport favoritism in core docs
-- Prefer tables and contracts over vibes
-- Short sections with anchors over walls of lore
-- Write for strangers, not for the authors’ private workflow
+- Direct, technical
+- Sports modeling language
+- Prefer decision tables and code over slogans
+- Short sections
+- Write for strangers and agents
 
 ## Skill doc minimum
 
-Every `SKILL.md` needs:
-
-- discovery description
-- when / when not
-- inputs
-- procedure
-- hard constraints
-- anti-patterns
-- output contract
-- handoffs
-- worked example
-- references
-
-## Definition of “docs are good enough”
-
-- stranger understands the project in 3 minutes from README
-- stranger can find architecture and authoring rules without chat history
-- no section claims capabilities that are not in the repo
-- install path is clear
-- public pages do not leak private tracking or machine-specific state
+See `docs/skill-authoring.md`. Depth bar is a full operator manual with scripts and references, not a one-page outline.

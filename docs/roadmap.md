@@ -1,14 +1,28 @@
 # Roadmap
 
-## Done
+Sequencing for deepening the sports modeling skill library.
 
-- [x] Sports DS skill map: EDA, stats, ML, ratings, form, sim, viz, reporting
-- [x] Data plane: nflverse, SportsDataverse, pybaseball
-- [x] Public README centered on modeling and analysis
+## Core path
 
-## Next
+1. Deep topic skills with sports-specific scripts (K-Dense depth bar)
+2. Expand `sports_ds` pipelines (margin, ratings, more sports)
+3. Sport modules only after core skill depth is real
 
-- [ ] Deepen package skills with real load/model recipes + scripts
-- [ ] Dogfood one end-to-end NFL prediction workflow
-- [ ] More DS depth where earned
-- [ ] Sport modules after core feels real
+## Skill depth bar
+
+Each skill should match serious scientific agent-skill depth:
+
+- long SKILL.md with full workflow
+- install notes
+- decision tables for sports problems
+- runnable `scripts/`
+- `references/` for method detail
+- worked public-data examples
+- reporting template
+
+## Package expansion
+
+- ratings / Elo as-of module
+- margin and scoring models
+- NBA / MLB loader paths wired into package workflows
+- richer diagnostics exports

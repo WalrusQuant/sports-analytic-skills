@@ -2,6 +2,8 @@
 
 How to write skills for this repo.
 
+Quality bar: deep scientific-style agent skills, specialized for **sports modeling and analytics**.
+
 Template: [../templates/skill/SKILL.md](../templates/skill/SKILL.md)
 
 ## One skill = one job
@@ -10,16 +12,16 @@ Good:
 
 - `leakage-audit` audits leakage
 - `validation-design` designs validation
-- `clv-evaluation` evaluates closing-line performance
+- `statistical-modeling` runs sports GLMs and diagnostics
 
 Bad:
 
 - `sports-analytics-everything`
-- `nfl-and-also-bankroll-and-also-scrapers`
+- skills that only restate the README
 
 If you need two jobs, write two skills and hand off.
 
-## Frontmatter rules
+## Frontmatter
 
 ```yaml
 ---
@@ -27,134 +29,46 @@ name: kebab-case-id
 description: >
   What it does and when to load it.
   Include trigger phrases an agent can match.
+  Be specific and long enough for discovery.
 version: "0.x.y"
 license: MIT
 ---
 ```
 
-Description quality bar:
+## Required depth
 
-- specific enough for discovery
-- includes when-to-use signals
-- not marketing copy
-- no fake breadth
+Every skill should include:
 
-## Required sections
-
-### When to use
-
-Concrete triggers.
-
-### When not to use
-
-Explicit refusals / better handoffs.
-
-### Required inputs
-
-Data, metadata, constraints. Mark optional clearly.
-
-### Procedure
-
-Numbered steps an agent can execute without inventing forbidden shortcuts.
-
-### Hard constraints
-
-Non-negotiables. These are the hard rules the agent must not bend.
-
-Examples:
-
-- no future-knowing features
-- no “guaranteed edge” claims
-- if no market data, mark paper-only
-
-### Anti-patterns
-
-Top real failure modes, not filler.
-
-### Output contract
-
-Checklist of what “done” means. Must be checkable.
-
-### Handoffs
-
-Which skills come next, and when to stop.
-
-### Worked example
-
-Synthetic or public data default. Keep it short and real.
-
-### References
-
-Methods, papers, standards, prior art.
-
-## Foundation triad boundaries
-
-Do not dump everything into `doctrine`.
-
-| Skill | Owns | Does not own |
-|---|---|---|
-| `doctrine` | edge definition, evidence rank, ship/kill | legal/claim refusals, stake math language |
-| `ethics` | honesty, refusals, not-advice, anti-hype | validation mechanics |
-| `risk` | uncertainty, calibration framing, stake discipline language | full bankroll product design |
-
-If a sentence fits two, put it in the narrower skill.
-
-## Modeling-first rule
-
-Core skills should work without a sportsbook.
-
-Market concepts enter when:
-
-- evaluating claims against markets
-- cleaning odds panels
-- deciding whether a model may claim actionable edge
-
-A modeling skill may hand off to market skills. It should not hard-require them for basic validity work.
-
-## Sport modules
-
-Only after core is stable.
-
-A sport module must add constraints the core cannot express, for example:
-
-- clock/possession structure
-- scoring process quirks
-- substitution/lineup constraints
-- season/playoff regime rules
-
-Not allowed as a sport module:
-
-- wiki recap of the sport
-- favorite-team lore
-- generic ML restated with league nouns
-
-No sport is the default first module.
+1. **Overview** — what the agent will produce
+2. **When to use** — concrete triggers
+3. **Installation** — packages / `sports_ds` if needed
+4. **Workflow** — ordered steps
+5. **Sports decision tables** — model/test/metric choices for sports outcomes
+6. **Code** — `sports_ds` APIs, CLI, or loader examples
+7. **Scripts** — `scripts/*.py` agents can run
+8. **References** — `references/*.md` for method detail
+9. **Worked example** — public sports data
+10. **Reporting template** — what a finished answer looks like
+11. **Hard constraints** — non-negotiables (time safety, baselines, etc.)
 
 ## Scripts policy
 
-Scripts are optional helpers.
+Ship scripts when they:
 
-Ship scripts only when they:
-
-- encode a deterministic check worth reusing
+- encode a reusable sports analysis check
+- run against public data or `sports_ds`
 - are small enough to audit
-- have tests
 - are documented in the skill
 
-Judgment stays in markdown.
+Judgment stays in markdown. Execution helpers live in scripts.
 
 ## Naming
 
 - IDs: `kebab-case`
-- prefer durable methodology names over brand names
-- avoid bookmaker-specific skill names in core
+- prefer durable methodology names
+- sports-specific where the method is sports-specific
 
-## Draft vs ready
+## Modeling-first rule
 
-| State | Meaning |
-|---|---|
-| planned | listed in taxonomy/roadmap only |
-| draft | exists under `skills/` but incomplete |
-| ready | passes quality gate in CONTRIBUTING.md |
-
-README counts only ready/draft with honest labels. Do not market planned skills as included.
+Core skills work on sports outcomes and public sports data.
+They do not require sportsbook/odds workflows to be useful.
