@@ -1,68 +1,64 @@
 # Architecture
 
-## System
+## Product
 
-Sports Analytic Skills is a **sports data science skill library** with an installable toolkit.
+This repo is a **K-Dense-style sports modeling skill pack**:
+
+1. `skills/` — deep agent skills (manual + references + scripts)
+2. `src/sports_ds/` — installable toolkit the skills operate
+3. `sports-ds` CLI — one-command workflows on public sports data
 
 ```text
 Agent / human
     │
-    ├─ skills/*/SKILL.md      deep topic manuals
-    ├─ skills/*/scripts/      sports-specific runnable helpers
-    ├─ skills/*/references/   method detail
+    ├─ skills/<topic>/SKILL.md
+    ├─ skills/<topic>/references/
+    ├─ skills/<topic>/scripts/
     │
     └─ sports_ds package + sports-ds CLI
            load → EDA → features → baselines/ML → walk-forward → report
 ```
 
-## Package
+## Skill layout (every topic)
+
+```text
+skills/<skill-id>/
+  SKILL.md
+  references/
+  scripts/
+```
+
+## Package layout
 
 ```text
 src/sports_ds/
-  data/          loaders (nflverse first)
-  eda/           exploratory summaries
-  features/      time-safe feature builders
-  models/        baselines + predictive models
-  validation/    walk-forward splits
-  pipelines/     end-to-end workflows
+  data/
+  eda/
+  features/
+  models/
+  validation/
+  pipelines/
   cli.py
 ```
 
-## Core analysis path
+## Standard analysis path
 
 ```text
-load data
- → EDA
- → time-safe features
- → baselines
- → statistical or ML model
- → walk-forward validation
- → calibration / interpretation / report
+doctrine → load → EDA → time-safe features → baselines
+  → statistical and/or predictive models
+  → walk-forward validation + leakage + calibration
+  → interpret / report / model card / experiment log
 ```
 
 ## First concrete pipeline
 
 `sports-ds nfl-win-pipeline`
 
-- data: nflverse schedules via nflreadpy
-- grain: team-game
-- features: shifted pre-game form differentials
-- models: constant baseline, logistic, hist GBM
-- validation: season walk-forward
-
-## Skill contract
-
-Every topic skill should eventually include:
-
-1. discovery description agents can match
-2. install / deps if needed
-3. ordered workflow
-4. sports-specific decision tables
-5. code against `sports_ds` or public loaders
-6. `scripts/` agents can execute
-7. `references/` for deep method detail
-8. worked examples on public sports data
-9. reporting template
+- nflverse schedules via nflreadpy
+- team-game grain
+- shifted pre-game form features
+- constant vs logistic vs hist GBM
+- season walk-forward
 
 ## Design rules
 
@@ -70,4 +66,4 @@ Every topic skill should eventually include:
 - baselines before celebrating ML
 - walk-forward over random splits for season sports
 - package usable without any agent host
-- multi-sport core; no single-sport identity
+- multi-sport skill map; NFL is the first wired pipeline
