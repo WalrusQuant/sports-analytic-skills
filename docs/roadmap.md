@@ -4,7 +4,7 @@ Sequencing for deepening the sports modeling skill library.
 
 ## Core path
 
-1. Deep topic skills with sports-specific scripts (K-Dense depth bar)
+1. Deep topic skills with sports-specific scripts (full operator manuals + refs + scripts)
 2. Expand `sports_ds` pipelines (margin, ratings, more sports)
 3. Sport modules only after core skill depth is real
 

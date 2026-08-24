@@ -2,7 +2,7 @@
 
 ## Product
 
-This repo is a **K-Dense-style sports modeling skill pack**:
+This repo is a **sports modeling skill pack**:
 
 1. `skills/` — deep agent skills (manual + references + scripts)
 2. `src/sports_ds/` — installable toolkit the skills operate
