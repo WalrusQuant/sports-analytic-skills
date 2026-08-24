@@ -1,28 +1,31 @@
 ---
 name: model-interpretation
 description: >
-  Interpret sports models after fit: coefficient tables, odds ratios, feature
-  effects, error slices by season/home/tails, largest misses, ablation checks,
-  and limits under leakage-safe features. Use after fitting a sports model to
-  explain behavior and failure modes — even if the user only asks "what is the
-  model using" or "where does it fail." Includes walk-forward slice scripts.
-version: "0.4.0"
+  Interpret sports models without fooling yourself: coefficient/effect reads,
+  error slices, largest misses, calibration context, and stability checks
+  across seasons. Use after a walk-forward run when explaining why a model
+  wins or fails — even if the user only says "why did it miss" or "what
+  drives this." Includes slice scripts and package JSON handoffs for
+  NFL/NBA/MLB.
+version: "0.5.0"
 license: MIT
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # Model Interpretation (Sports)
 
 ## Overview
 
-Explain what a sports model is doing and where it fails:
+Explain model behavior after evaluation — not instead of evaluation.
 
-- **global** drivers (coefs / importances)
-- **local** example games
-- **segments** (season, home/away, probability tails)
+Interpretation answers:
 
-Interpretation is **not causality**. It is structured description tied to validated performance.
+- what the model relies on
+- where it fails
+- whether failures are concentrated (home/away, season, probability tails)
+
+It does **not** turn a losing walk-forward into a win.
 
 ---
 
@@ -30,162 +33,109 @@ Interpretation is **not causality**. It is structured description tied to valida
 
 Use when:
 
-- After baseline / ML / statistical model fit
-- Need driver explanations for a report
-- Debugging segment failures (home dogs, early season, blowouts)
-- Checking whether “important” features are just leakage
-- User asks “what is it using?” or “where does it fail?”
+- After win/margin/Elo pipelines finish
+- Debugging bad folds
+- Writing results/model cards
+- User asks “why” / “largest misses” / “where does it break”
 
 Do **not** use when:
 
-- Model not trained yet
-- Features known leaked — fix with `leakage-audit` / `feature-rules` first
+- No held-out predictions yet
+- Leakage still open → `leakage-audit` first
+- Pure presentation cleanup → `anti-slop-analytics`
 
 ---
 
-## Installation
-
+## Installation\n
 ```bash
-pip install -e .\n```
-
----
-
-## Techniques
-
-| Technique | Good for | Caution |
-|---|---|---|
-| GLM coefficients / odds ratios | logistic/linear sports models | scale and collinearity |
-| Tree importances | GBM/histGBM | unstable, not causal |
-| Partial dependence / ALE-style | nonlinear effects | correlated features |
-| Residual / error slices | finding broken segments | need enough n |
-| Largest misses case study | intuition checks | anecdote risk |
-| Ablation | feature group value | do walk-forward |
-
-Details: `references/interpretation_methods.md`
+pip install -e .
+pip install -e ".[multi]"   # NBA/MLB panels
+```
 
 ---
 
 ## Workflow
 
-1. Confirm features are time-safe.
-2. **Global picture:** top drivers (coefs or importances).
-3. **Local picture:** example games with large errors.
-4. **Slice errors** by season, home/away, predicted-prob buckets.
-5. Separate correlation from actionable explanation.
-6. Document limits.
-7. Hand off to `results-reporting`.
-
----
-
-## Scripts
-
-### Error slices on walk-forward logistic
+1. Confirm the evaluation is walk-forward (not in-sample flex).
+2. Collect predictions + actuals + keys (season, team, is_home, p_hat).
+3. Global metrics first (already in pipeline JSON).
+4. Slice errors by season / home-away / probability bins.
+5. List largest misses with context (favorite blown out, etc.).
+6. For linear models: read coefficients with scale caveats.
+7. For trees: prefer slice stability over single importance bar chart.
+8. Feed findings into `results-reporting` / `model-card`.
 
 ```bash
-python skills/model-interpretation/scripts/slice_errors.py \
-  --seasons 2018-2024 \
-  --out data/slice_errors.json
+# produce artifacts
+sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win.json
+sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1 --json-out data/nba_win.json
+
+# slice helpers
+python skills/model-interpretation/scripts/slice_errors.py --seasons 2018-2024
+python skills/model-interpretation/scripts/largest_misses.py --seasons 2018-2024
 ```
 
-Reports log-loss/accuracy by season and home/away for the sports_ds logistic baseline.
-
-### Coefficient / OR view
-
-```bash
-python skills/statistical-modeling/scripts/glm_diagnostics.py --seasons 2018-2023
-```
-
-### Largest misses
-
-```bash
-python skills/model-interpretation/scripts/largest_misses.py --seasons 2018-2024 --top 20
-```
-
----
-
-## Slice Checklist (Sports)
-
-- [ ] By season
-- [ ] Home vs away
-- [ ] Early season vs late season (week buckets)
-- [ ] Predicted probability tails (0–0.2, 0.8–1.0)
-- [ ] Large favorite / large dog buckets if rating/prob available
-
-Mark slices with tiny n as unstable.  
-See `references/slice_guide.md`.
+Methods: `references/interpretation_methods.md`  
+Slice guide: `references/slice_guide.md`
 
 ---
 
 ## Hard Constraints
 
-1. Importance ≠ causality.
-2. Don’t explain a leaked model as insight.
-3. Slice metrics with enough n or mark unstable.
-4. Keep interpretation tied to validation evidence.
-5. No story-fitting after peeking at one weird game only.
+1. Never interpret a model that failed leakage.
+2. Never treat coefficient sign as causal without design.
+3. Never hide slices where the model loses.
+4. Probability tails need calibration context (`calibration-check`).
+5. One season hero story is not generalization.
 
 ---
 
 ## Anti-Patterns
 
-- SHAP theater on a contaminated pipeline
-- One importance bar chart as the whole story
-- Ignoring systematic miss segments
-- Causal language from observational sports data
-- Explaining in-sample fit as generalization
+- Feature importance theater without metric lift
+- Explaining noise as narrative
+- Only showing best-case slices
+- Confusing correlation of form features with “team quality truth”
 
 ---
 
-## Reporting Template
+## Output Contract
 
-```text
-Interpretation
-Model:
-Global drivers:
-Key slices:
-Largest misses:
-Ablation (if any):
-Limits: correlational; time-safe features only; …
-```
+- [ ] Global metrics restated with baseline
+- [ ] At least two slices reported
+- [ ] Largest misses listed with context
+- [ ] Limits of interpretation stated
+- [ ] Next test named if follow-up needed
 
 ---
 
 ## Bundled Resources
 
 ### references/
-| File | Contents |
-|---|---|
-| `interpretation_methods.md` | methods overview |
-| `slice_guide.md` | segment checklist |
+- `interpretation_methods.md`
+- `slice_guide.md`
 
 ### scripts/
-| File | Contents |
-|---|---|
-| `slice_errors.py` | walk-forward error slices |
-| `largest_misses.py` | biggest probability misses |
-
-### related package
-- `src/sports_ds/models/baselines.py`
-- `skills/statistical-modeling/scripts/glm_diagnostics.py`
+- `slice_errors.py`
+- `largest_misses.py`
 
 ---
 
 ## Related Skills
 
-| Need | Skill |
-|---|---|
-| Reporting | `results-reporting` |
-| Features | `feature-rules` |
-| Leakage | `leakage-audit` |
-| EDA | `eda-sports` |
-| Calibration | `calibration-check` |
+- `results-reporting`
+- `calibration-check`
+- `model-card`
+- `predictive-modeling`
+- `statistical-modeling`
 
 ---
 
 ## Quick Command Card
 
 ```bash
+sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win.json
 python skills/model-interpretation/scripts/slice_errors.py --seasons 2018-2024
 python skills/model-interpretation/scripts/largest_misses.py --seasons 2018-2024
-python skills/statistical-modeling/scripts/glm_diagnostics.py --seasons 2018-2023
+sports-ds calibrate --sport nba --seasons 2023-2024 --min-train-seasons 1
 ```

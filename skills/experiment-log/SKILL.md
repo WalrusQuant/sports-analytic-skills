@@ -5,11 +5,12 @@ description: >
   cut, validation charter, metrics, leakage status, decision, and artifacts.
   Use when running trials, comparing model versions, or preventing notebook
   amnesia — even if the user only says "log this run." Includes schema,
-  templates, and a new-experiment stub script.
-version: "0.4.0"
+  decision rules, and a new-experiment stub script wired to sports_ds CLI paths
+  for NFL/NBA/MLB.
+version: "0.5.0"
 license: MIT
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # Experiment Log
@@ -20,6 +21,8 @@ Ops skill for reproducible sports-modeling work.
 
 **If it is not logged, it did not happen.**
 
+Use before/after `sports-ds` pipeline runs so wins and losses both leave a trail.
+
 ---
 
 ## When to Use This Skill
@@ -27,7 +30,7 @@ Ops skill for reproducible sports-modeling work.
 Use when:
 
 - Starting a training/evaluation run
-- Comparing model variants
+- Comparing model variants (form vs Elo, win vs margin, NFL vs NBA)
 - After critique/audit decisions
 - Before writing a model card version bump
 - Any time an agent is about to overwrite results in a notebook cell and move on
@@ -45,7 +48,7 @@ Minimum:
 
 - Experiment ID (or generate one)
 - Hypothesis / change being tested
-- Data window + target + T
+- Sport + data window + target + T
 - Validation reference
 - Result summary
 - Decision (`keep` / `discard` / `follow-up`)
@@ -53,9 +56,9 @@ Minimum:
 Optional:
 
 - Code commit hash / notebook path
-- Config YAML
+- Config YAML / Elo params
 - Random seeds
-- Links to plots/metrics files
+- Links to plots/metrics JSON
 
 ---
 
@@ -65,6 +68,7 @@ Optional:
 experiment_id: YYYYMMDD-<slug>-<nn>
 timestamp_utc:
 operator:
+sport:
 hypothesis:
 target:
 prediction_timestamp_rule:
@@ -83,10 +87,12 @@ results_summary:
 decision: keep | discard | follow-up
 next_actions:
 artifacts:
+package_commands:
 notes:
 ```
 
-Full notes: `references/log_schema.md`
+Full notes: `references/log_schema.md`  
+Decision rules: `references/decision_rules.md`
 
 ---
 
@@ -94,9 +100,9 @@ Full notes: `references/log_schema.md`
 
 1. **Create ID before the run** (not after seeing results).
 2. **Write hypothesis in falsifiable form**
-   - “Adding rest-differential improves walk-forward log-loss vs baseline B.”
-3. **Attach charter + feature set refs**
-4. **Run once under locked config**
+   - “NBA Elo logistic beats constant on 2024 walk-forward log-loss.”
+3. **Attach charter + feature set refs** (`sports-ds feature-registry` names OK).
+4. **Run once under locked config** via package CLI when possible.
 5. **Log metrics exactly as specified by charter**
 6. **Decision**
    - `keep` only if success threshold met
@@ -106,8 +112,29 @@ Full notes: `references/log_schema.md`
 8. **Update model card only on `keep` version bumps**
 
 ```bash
-python skills/experiment-log/scripts/new_experiment.py --slug homewin-rest
-python skills/experiment-log/scripts/new_experiment.py --slug elo-vs-form --out-dir data/experiments
+python skills/experiment-log/scripts/new_experiment.py --slug nba-elo-vs-const
+python skills/experiment-log/scripts/new_experiment.py --slug mlb-margin-ridge --sport mlb --out-dir data/experiments
+```
+
+---
+
+## Package command patterns to log
+
+```bash
+# NFL
+sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/exp_nfl_win.json
+sports-ds nfl-margin-pipeline --seasons 2018-2024 --json-out data/exp_nfl_margin.json
+sports-ds nfl-elo --seasons 2018-2024 --json-out data/exp_nfl_elo.json
+
+# NBA / MLB (requires [multi])
+sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_nba_win.json
+sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_nba_elo.json
+sports-ds mlb-margin-pipeline --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_mlb_margin.json
+sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_mlb_elo.json
+
+# Trust checks
+sports-ds leakage-audit --sport nba --seasons 2023-2024
+sports-ds calibrate --sport mlb --seasons 2023-2024 --min-train-seasons 1
 ```
 
 ---
@@ -119,6 +146,7 @@ python skills/experiment-log/scripts/new_experiment.py --slug elo-vs-form --out-
 3. Never log only winners.
 4. Never claim reproducibility without data window + config + charter references.
 5. Post-hoc metrics must be marked `post-hoc` and cannot silently drive the primary decision.
+6. Sport and package command must be recorded for multi-sport work.
 
 ---
 
@@ -129,6 +157,7 @@ python skills/experiment-log/scripts/new_experiment.py --slug elo-vs-form --out-
 - Config amnesia
 - Moving goalposts inside one ID
 - Unlinked screenshots as evidence
+- Logging NBA results under an NFL command path
 
 ---
 
@@ -149,18 +178,20 @@ Done means:
 ## Worked Example
 
 ```text
-experiment_id: 20260824-homewin-rest-01
-hypothesis: Pre-event rest differential improves log-loss vs rating-only logistic.
+experiment_id: 20260824-nba-elo-01
+sport: nba
+hypothesis: As-of Elo + home logistic beats constant train rate on 2024 walk-forward log-loss.
 target: won
 prediction_timestamp_rule: scheduled_start
-data_window: 2018-2024 seasons
-baseline_refs: [constant_train_rate, rating_logit_v2]
-validation_charter_ref: wf_season_v1
-model_family: logistic_rating_plus_rest
-metrics_primary: log_loss=0.601 (vs 0.608 rating_logit_v2)
-leakage_audit_status: clean
-decision: keep
-next_actions: freeze as candidate for model-card home_win_logit_v3
+data_window: 2023-2024
+baseline_refs: [constant_train_rate]
+validation_charter_ref: wf_season_min1
+model_family: elo_logistic
+metrics_primary: elo_logistic_log_loss vs constant_log_loss
+leakage_audit_status: CLEAN
+package_commands:
+  - sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_nba_elo.json
+decision: keep | discard | follow-up  # fill after run
 ```
 
 ---
@@ -190,5 +221,8 @@ next_actions: freeze as candidate for model-card home_win_logit_v3
 ## Quick Command Card
 
 ```bash
-python skills/experiment-log/scripts/new_experiment.py --slug nfl-win-form
+python skills/experiment-log/scripts/new_experiment.py --slug nba-form-vs-elo
+sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_nba_win.json
+sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/exp_nba_elo.json
+python skills/results-reporting/scripts/render_pipeline_report.py --json data/exp_nba_elo.json
 ```

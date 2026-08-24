@@ -11,6 +11,7 @@ from pathlib import Path
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--slug", default="run")
+    p.add_argument("--sport", default="")
     p.add_argument("--out-dir", default="data/experiments")
     args = p.parse_args()
 
@@ -21,6 +22,7 @@ def main() -> int:
 - experiment_id: {exp_id}
 - timestamp_utc: {now.strftime('%Y-%m-%dT%H:%M:%SZ')}
 - operator:
+- sport: {args.sport}
 - hypothesis:
 - target:
 - prediction_timestamp_rule:
@@ -38,6 +40,7 @@ def main() -> int:
 - decision: keep | discard | follow-up
 - next_actions:
 - artifacts:
+- package_commands:
 - notes:
 """
     out_dir = Path(args.out_dir)

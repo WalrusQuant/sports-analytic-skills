@@ -31,9 +31,10 @@ sports-ds leakage-audit --seasons 2023-2024
 - `nfl-margin-pipeline` — point-diff walk-forward (constant / ridge / hist GBR)
 - `nfl-elo` — as-of Elo + logistic baseline under walk-forward
 - `calibrate` / `leakage-audit` — trust checks on the form feature path
-- `nba-eda` / `nba-win-pipeline` — NBA path (requires `pip install -e ".[multi]"`)
-- `mlb-eda` / `mlb-win-pipeline` — MLB path (requires `[multi]`)
-- `nhl-eda` / `nhl-win-pipeline` — NHL path (requires `[multi]`; some historical SDV dumps are corrupt and skipped)
+- `nba-eda` / `nba-win-pipeline` / `nba-margin-pipeline` / `nba-elo` — NBA path (requires `pip install -e ".[multi]"`)
+- `mlb-eda` / `mlb-win-pipeline` / `mlb-margin-pipeline` / `mlb-elo` — MLB path (requires `[multi]`)
+- `feature-registry` — print legal feature specs
+- `calibrate --sport` / `leakage-audit --sport` — trust checks on nfl/nba/mlb
 
 ## Run skill scripts
 

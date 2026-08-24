@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""Write a blank sports model card markdown file."""
+"""Write a sports model card markdown stub."""
 
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
 
-TEMPLATE = """# Model card: NAME vVERSION
+TEMPLATE = """# Model card: {name} {version}
 
 ## Identity
-- Name:
-- Version:
+- Name: {name}
+- Version: {version}
 - Date:
+- Sport:
+- Owner:
 
 ## Intended use
 - In scope:
@@ -19,21 +21,29 @@ TEMPLATE = """# Model card: NAME vVERSION
 
 ## Target and timing
 - Target:
-- Grain:
+- Grain: team-game
 - Decision time T:\n\n## Data\n- Sources:
 - Window:
-- n:\n\n## Features\n- Set:
+- n:\n- Panel builder:
+
+## Features
+- Set / registry names:
 - Time-safety:
+- `sports-ds feature-registry` notes:
 
 ## Baselines
--
+- Constant / home / Elo / form:
+- Comparison rule:
 
 ## Validation
-- Design:
+- Design: season walk-forward
 - Primary metric:
+- Secondary metrics:
 
 ## Results
--
+- Mean walk-forward:
+- Per-season / per-fold:
+- Calibration:
 
 ## Limits
 -
@@ -42,16 +52,25 @@ TEMPLATE = """# Model card: NAME vVERSION
 - Retrain:
 - Kill conditions:
 - Experiments:
+- Package commands:
+  ```bash
+  # fill with exact commands used
+  ```
 """
 
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--name", default="NAME")
+    p.add_argument("--version", default="vVERSION")
     p.add_argument("--out", default="data/model_card.md")
     args = p.parse_args()
     path = Path(args.out)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(TEMPLATE, encoding="utf-8")
+    path.write_text(
+        TEMPLATE.format(name=args.name, version=args.version),
+        encoding="utf-8",
+    )
     print(f"wrote {path}")
     return 0
 

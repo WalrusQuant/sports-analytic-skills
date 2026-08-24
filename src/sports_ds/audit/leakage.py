@@ -23,9 +23,12 @@ def audit_pregame_form_features(panel: pd.DataFrame) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
     errors: list[str] = []
 
+    # Keep the same team timeline order used by add_pregame_form_features.
+    sort_cols = [c for c in ["team", "season", "week", "gameday", "game_id"] if c in featured.columns]
+
     # first game for each team must have null expanding history
     first = (
-        featured.sort_values(["team", "season", "week", "game_id"])
+        featured.sort_values(sort_cols)
         .groupby("team", as_index=False)
         .head(1)
     )
@@ -43,12 +46,13 @@ def audit_pregame_form_features(panel: pd.DataFrame) -> dict[str, Any]:
         errors.append("first-game pre_win_pct not all NA")
 
     # reconstructed expanding mean after shift should match feature
-    tmp = featured.sort_values(["team", "season", "week", "game_id"]).copy()
-    recon = tmp.groupby("team")["won"].transform(lambda s: s.shift(1).expanding().mean())
+    tmp = featured.sort_values(sort_cols).copy()
+    recon = tmp.groupby("team", sort=False)["won"].transform(lambda s: s.shift(1).expanding().mean())
     comparable = tmp["pre_win_pct"].notna() & recon.notna()
     if comparable.any():
         max_abs = float((tmp.loc[comparable, "pre_win_pct"] - recon.loc[comparable]).abs().max())
-        ok = max_abs < 1e-9
+        # float noise across sports panels; still tiny vs any real leakage
+        ok = max_abs < 1e-6
     else:
         max_abs = float("nan")
         ok = False

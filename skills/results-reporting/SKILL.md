@@ -1,15 +1,16 @@
 ---
 name: results-reporting
 description: >
-  Report sports modeling and analysis results clearly: question, data, methods,
-  validation, baselines, metrics, interpretation, limits, figures, and repro
-  pointers. Use for notebook summaries, research notes, README result sections,
-  and agent final answers after a sports model run — even if the user only says
-  "write up the results." Includes a report builder from sports_ds pipeline JSON.
-version: "0.4.0"
+  Report sports modeling and analysis results clearly for NFL/NBA/MLB:
+  question, data, methods, validation, baselines, metrics, interpretation,
+  limits, figures, and repro pointers. Use for notebook summaries, research
+  notes, README result sections, and agent final answers after a sports model
+  run — even if the user only says "write up the results." Includes a report
+  builder from sports_ds pipeline JSON.
+version: "0.5.0"
 license: MIT
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # Results Reporting (Sports)
@@ -26,6 +27,8 @@ Turn a finished sports analysis into a writeup a stranger can trust:
 - repro
 
 No hype. No missing baseline.
+
+Works with `sports-ds` pipeline JSON from NFL/NBA/MLB win, margin, and Elo paths.
 
 ---
 
@@ -51,6 +54,8 @@ Do **not** use when:
 
 ```bash
 pip install -e .
+# multi-sport:
+pip install -e ".[multi]"
 ```
 
 ---
@@ -60,7 +65,7 @@ pip install -e .
 Every sports results writeup includes:
 
 1. **Question**
-2. **Data** — source, grain, period, n
+2. **Data** — sport, source, grain, period, n
 3. **Methods / models**
 4. **Validation design**
 5. **Baselines + results**
@@ -84,138 +89,93 @@ Templates: `references/templates.md`
 5. Separate what the model *predicts* from what it *explains*.
 6. List limits explicitly.
 7. Link exact commands to reproduce.
+8. Optional: anti-slop pass on figures.
 
 ---
 
 ## Generate a draft from pipeline output
 
 ```bash
+# NFL win
 sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win_pipeline.json
 python skills/results-reporting/scripts/render_pipeline_report.py \
   --json data/nfl_win_pipeline.json \
   --out data/nfl_win_report.md
+
+# NBA win
+sports-ds nba-win-pipeline --seasons 2023-2024 --min-train-seasons 1 --json-out data/nba_win.json
+python skills/results-reporting/scripts/render_pipeline_report.py \
+  --json data/nba_win.json \
+  --out data/nba_win_report.md
+
+# MLB margin
+sports-ds mlb-margin-pipeline --seasons 2023-2024 --min-train-seasons 1 --json-out data/mlb_margin.json
+python skills/results-reporting/scripts/render_pipeline_report.py \
+  --json data/mlb_margin.json \
+  --out data/mlb_margin_report.md
+
+# Elo baseline
+sports-ds nba-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/nba_elo.json
+python skills/results-reporting/scripts/render_pipeline_report.py \
+  --json data/nba_elo.json \
+  --out data/nba_elo_report.md
 ```
-
----
-
-## Metric Presentation Rules
-
-| Do | Don't |
-|---|---|
-| Primary metric first | Lead with accuracy only |
-| Show baseline beside model | Model metric in isolation |
-| Per-season + mean | One pooled number hiding bad years |
-| n and period | Orphan percentages |
-| “did not beat baseline” when true | Silent omission of failures |
 
 ---
 
 ## Hard Constraints
 
-1. Lead with the question and metric, not hype.
-2. Always include baselines when performance is claimed.
-3. Always include period and sample size.
-4. Unknowns stay unknown — do not invent.
-5. Do not present in-sample fits as validation.
+1. Never report a model metric without the baseline beside it.
+2. Never hide losing folds.
+3. Always include n and seasons on key claims.
+4. Always include repro commands that match what was run.
+5. Distinguish walk-forward from in-sample.
+6. If leakage audit was not run, say so.
 
 ---
 
 ## Anti-Patterns
 
-- Metric dump without method
-- Hidden filters / silent row drops
-- “Model works” with no baseline
-- Screenshots without repro
-- Cherry-picked best season as the headline
+- Leaderboard screenshot with no method
+- “Model is good” without baseline
+- Average metrics with no fold table
+- Mixing sports without labeling grain
+- Writing a novel before the numbers
 
 ---
 
-## Writeup Template
+## Output Contract
 
-```markdown
-# Results: <title>
+Done means:
 
-## Question
-…
-
-## Data
-Source: …
-Grain: …
-Period: …
-n: …
-
-## Methods
-Models: …
-Features: …
-Decision time T: …
-
-## Validation
-Design: season walk-forward …
-Primary metric: …
-
-## Results
-| Model | Mean metric | Notes |
-|---|---:|---|
-| constant | … | |
-| logistic | … | |
-
-Per-season: …
-
-## Interpretation
-…
-
-## Limits
-…
-
-## Reproduce
-```bash
-…
-```
-```
-
----
-
-## Worked Example (NFL win pipeline)
-
-```text
-Question: Pre-game P(team win) on NFL team-game panel, 2018–2024.
-Data: nflverse schedules via sports_ds / nflreadpy; team-game grain.
-Methods: shifted form features; constant vs logistic vs hist GBM.
-Validation: season walk-forward.
-Results: logistic mean log-loss beats constant; report per-season table.
-Limits: no injuries/EPA roster model; team abbreviations raw.
-Reproduce: sports-ds nfl-win-pipeline --seasons 2018-2024
-```
+- [ ] Question stated
+- [ ] Data/n/period stated
+- [ ] Validation design stated
+- [ ] Baseline + candidate metrics present
+- [ ] Limits present
+- [ ] Repro commands present
 
 ---
 
 ## Bundled Resources
 
 ### references/
-| File | Contents |
-|---|---|
-| `writeup_checklist.md` | completeness checklist |
-| `templates.md` | short/long templates |
+- `templates.md`
+- `writeup_checklist.md`
 
 ### scripts/
-| File | Contents |
-|---|---|
-| `render_pipeline_report.py` | markdown report from pipeline JSON |
-
-### related
-- `model-card`, `experiment-log`, `anti-slop-analytics`, `calibration-check`
+- `render_pipeline_report.py`
 
 ---
 
 ## Related Skills
 
-| Need | Skill |
-|---|---|
-| Model card | `model-card` |
-| Experiment log | `experiment-log` |
-| Figures | `sports-visualization`, `anti-slop-analytics` |
-| Calibration | `calibration-check` |
-| Interpretation | `model-interpretation` |
+- `model-card`
+- `experiment-log`
+- `anti-slop-analytics`
+- `model-interpretation`
+- `validation-design`
+- `baseline-models`
 
 ---
 
@@ -224,4 +184,6 @@ Reproduce: sports-ds nfl-win-pipeline --seasons 2018-2024
 ```bash
 sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win_pipeline.json
 python skills/results-reporting/scripts/render_pipeline_report.py --json data/nfl_win_pipeline.json
+sports-ds mlb-elo --seasons 2023-2024 --min-train-seasons 1 --json-out data/mlb_elo.json
+python skills/results-reporting/scripts/render_pipeline_report.py --json data/mlb_elo.json --out data/mlb_elo_report.md
 ```

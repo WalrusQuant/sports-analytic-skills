@@ -76,9 +76,10 @@ While an agent can use any Python package on its own, these skills give curated 
    - `sports-ds nfl-elo`
    - `sports-ds calibrate`
    - `sports-ds leakage-audit`
-   - `sports-ds nba-eda` / `nba-win-pipeline` (requires `pip install -e ".[multi]"`)
-   - `sports-ds mlb-eda` / `mlb-win-pipeline` (requires `[multi]`)
-   - `sports-ds nhl-eda` / `nhl-win-pipeline` (requires `[multi]`; skip corrupt season dumps)
+   - `sports-ds nba-eda` / `nba-win-pipeline` / `nba-margin-pipeline` / `nba-elo` (requires `pip install -e ".[multi]"`)
+   - `sports-ds mlb-eda` / `mlb-win-pipeline` / `mlb-margin-pipeline` / `mlb-elo` (requires `[multi]`)
+   - `sports-ds feature-registry`, `calibrate --sport`, `leakage-audit --sport`
+   - NHL loaders exist but are not a focus path right now
 
 4. **Agent plugin manifest**
    - `plugin.json` for hosts that load skill packs as plugins
