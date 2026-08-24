@@ -2,57 +2,78 @@
 name: sportsdataverse-py
 description: >
   Load multi-sport data with the sportsdataverse Python package (NBA, WNBA,
-  NCAAB, CFB, NFL, MLB, NHL, soccer, odds, and more). Use when work spans
-  leagues or needs SDV/ESPN-style loaders outside pure nflverse NFL releases.
-version: "0.1.0"
+  NCAAB, CFB, NFL, MLB, NHL, soccer, and more). Use when work spans leagues or
+  needs SDV/ESPN-style loaders outside pure nflverse NFL releases — even if the
+  user only says "get NBA data" or "load CFB schedules." Includes install,
+  example loads, smoke scripts, and handoff rules.
+version: "0.4.0"
 license: MIT
+metadata:
+  version: "0.4.0"
 ---
 
 # sportsdataverse-py
 
+## Overview
+
 Package skill for the SportsDataverse Python distribution.
 
-Upstream docs: [py.sportsdataverse.org](https://py.sportsdataverse.org)  
+Upstream docs: https://py.sportsdataverse.org  
 Install name: `sportsdataverse`
 
-## When to use
+For bulk NFL release-style loads, prefer `nflreadpy` unless you need SDV-specific fields.
+
+---
+
+## When to Use This Skill
+
+Use when:
 
 - Multi-sport projects
 - NBA/WNBA/NCAAB/CFB/NHL/MLB/soccer loads in Python
 - ESPN-style scoreboards, rosters, PBP where SDV wraps them
-- NFL work that specifically wants SDV’s nfl module (else prefer `nflreadpy`)
+- NFL work that specifically wants SDV’s nfl module
 
-## When not to use
+Do **not** use when:
 
-- Pure nflverse NFL release loads → prefer `nflreadpy`
+- Pure nflverse NFL release loads → `nflreadpy`
 - Deep Statcast/FanGraphs baseball pulls → often `pybaseball`
 - No packages installed → `environment-setup`
 
-## Required inputs
+---
+
+## Installation
+
+```bash
+pip install -e ".[multi]"
+# or
+pip install sportsdataverse
+```
+
+---
+
+## Required Inputs
 
 - League/module
 - Endpoint/result type (scoreboard, schedule, pbp, roster, person stats, …)
 - Season/event IDs as required by the endpoint
 - Desired frame type (polars default in modern SDV parsers; pandas optional)
 
-## Install
+---
 
-```bash
-pip install sportsdataverse
-# or
-pip install -r requirements/python-data.txt
-```
-
-## Procedure
+## Workflow
 
 1. Identify league module (`nba`, `nfl`, `mlb`, `nhl`, `cfb`, `soccer`, …).
 2. Prefer parsed DataFrame returns over raw dicts for analysis.
 3. Start with schedule/scoreboard, then deepen to pbp/person stats as needed.
 4. Verify timestamps and IDs before joins.
 5. Snapshot local parquet for experiments.
-6. Hand off to judgment/feature skills.
+6. Hand off to EDA/feature skills.
+7. Apply as-of legality checks before modeling.
 
-## Example loads
+---
+
+## Example Loads
 
 ```python
 # NBA scoreboard (parsed polars in current SDV defaults)
@@ -72,30 +93,38 @@ from sportsdataverse.nhl import nhl_web_pbp, parse_nhl_web_pbp
 
 Exact function names can evolve — check current SDV docs if an import fails.
 
-## Scripts in this skill
+More patterns: `references/load_patterns.md`
 
-- `scripts/smoke_load.py` — import modules and attempt a lightweight call
+---
+
+## Scripts
 
 ```bash
 python skills/sportsdataverse-py/scripts/smoke_load.py
 ```
 
-## Hard constraints
+---
 
-- Pin down league + endpoint before building features
-- Do not assume every SDV function is stable forever; wrap loads and log versions
-- Parsed frames still need as-of legality checks
-- For NFL release-style bulk PBP, prefer `nflreadpy` unless SDV-specific fields are required
-- Respect upstream rate limits and terms
+## Hard Constraints
 
-## Anti-patterns
+1. Pin down league + endpoint before building features.
+2. Do not assume every SDV function is stable forever; wrap loads and log versions.
+3. Parsed frames still need as-of legality checks (`feature-rules`).
+4. For NFL release-style bulk PBP, prefer `nflreadpy` unless SDV-specific fields are required.
+5. Respect upstream rate limits and terms.
+
+---
+
+## Anti-Patterns
 
 - Importing the entire universe for one scoreboard call
 - Mixing raw dict schemas and parsed frames carelessly
 - Treating ESPN timestamps as kickoff-safe without checking
-- Using SDV odds helpers as CLV truth without `market-data-hygiene`
+- Silent schema drift mid-experiment
 
-## Output contract
+---
+
+## Output Contract
 
 Done means:
 
@@ -105,15 +134,32 @@ Done means:
 - [ ] Snapshot plan noted
 - [ ] Next skill handoff named
 
-## Handoffs
+---
+
+## Bundled Resources
+
+### references/
+- `load_patterns.md`
+- `when_not_nflreadpy.md`
+
+### scripts/
+- `smoke_load.py`
+
+---
+
+## Related Skills
 
 - `nflreadpy` if NFL bulk releases are a better fit
 - `pybaseball` for baseball specialist pulls
-- `feature-rules`, `validation-design`, `experiment-log`
-- `market-data-hygiene` if odds are included
+- `environment-setup`
+- `data-sources`
+- `eda-sports`, `feature-rules`, `validation-design`, `experiment-log`
 
-## References
+---
 
-- https://py.sportsdataverse.org/docs/intro
-- https://www.sportsdataverse.org/packages
-- `docs/data-ecosystem.md`
+## Quick Command Card
+
+```bash
+pip install -e ".[multi]"
+python skills/sportsdataverse-py/scripts/smoke_load.py
+```

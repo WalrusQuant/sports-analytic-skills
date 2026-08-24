@@ -1,76 +1,108 @@
 ---
 name: data-sources
 description: >
-  Choose public sports data sources and loader packages for a modeling
-  question across NFL, NBA, MLB, NHL, CFB, soccer, and odds. Use before
-  writing acquisition code or when an agent is unsure which ecosystem to use.
-version: "0.1.0"
+  Choose public sports data sources and loader packages for a modeling question
+  across NFL, NBA, MLB, NHL, CFB, soccer, and more. Use before writing
+  acquisition code or when an agent is unsure which ecosystem to use — even if
+  the user only asks "where do I get data for X." Hands off to nflreadpy,
+  sportsdataverse-py, or pybaseball with a written source plan.
+version: "0.4.0"
 license: MIT
+metadata:
+  version: "0.4.0"
 ---
 
 # Data Sources
 
-Data-plane skill for source selection. Picks an ecosystem and loader path
+## Overview
+
+Data-plane skill for **source selection**. Picks an ecosystem and loader path
 for the question, then hands off to package skills.
 
-## When to use
+Source choice does **not** create predictive value by itself.
+
+---
+
+## When to Use This Skill
+
+Use when:
 
 - “Where do I get data for X?”
 - Starting a new sport/league analysis
 - Comparing nflverse vs SportsDataverse vs specialist packages
 - Before implementing scrapers
 
-## When not to use
+Do **not** use when:
 
 - Environment not set up → `environment-setup`
 - Source already chosen and loading failed → package skill / debug
 - Validation/leakage questions with data already loaded
 
-## Required inputs
+---
+
+## Required Inputs
 
 - Sport/league
 - Grain needed (game, team-game, player-game, pbp, pitch, possession)
 - Historical depth needed
 - Language preference (Python default here)
 
-## Decision guide (Python-first)
+---
+
+## Decision Guide (Python-first)
 
 | Need | Prefer first | Fallback |
 |---|---|---|
-| NFL PBP / rosters / weekly stats | `nflreadpy` (nflverse) | `sportsdataverse.nfl` |
-| CFB | `sportsdataverse.cfb` / cfbfastR (R) | ESPN endpoints via SDV |
-| NBA / WNBA / NCAAB | `sportsdataverse.nba/.wnba/.mbb/.wbb` | league stats endpoints via SDV |
-| MLB pitch/statcast depth | `pybaseball` | `sportsdataverse.mlb` |
-| NHL | `sportsdataverse.nhl` | R fastRhockey |
-| Soccer events | SDV soccer; optional statsbombpy later | other open event data with ToS care |
+| NFL PBP / rosters / weekly / schedules | `nflreadpy` (nflverse) | `sportsdataverse` NFL module |
+| CFB | `sportsdataverse` CFB | — |
+| NBA / WNBA / NCAAB | `sportsdataverse` | — |
+| MLB pitch / Statcast depth | `pybaseball` | `sportsdataverse` MLB |
+| NHL | `sportsdataverse` NHL | — |
+| Soccer events | SDV soccer; optional StatsBomb later | ToS-careful open event data |
 
-## Procedure
+Matrix: `references/source_matrix.md`  
+Ecosystem notes: `docs/data-ecosystem.md`
 
-1. **Restate the modeling question and grain.**
-2. **List fields required at prediction time T** (not every interesting column).
-3. **Pick the least fragile source that provides those fields.**
-4. **Prefer release loaders over live scrapers.**
-5. **Document license/ToS posture.**
-6. **Hand off to package skill** for concrete load code.
-7. **Plan local snapshot** if analysis must be reproducible offline.
+---
 
-## Hard constraints
+## Workflow
 
-- Do not default to ToS-hostile scraping when a public loader exists
-- Do not mix grains casually (pbp rows ≠ game rows) without aggregation rules
-- Do not promise market data if only box scores exist
-- Do not ignore delay/as-of issues in “live” APIs
-- Always note that source choice does not create edge
+1. Restate the modeling question and grain.
+2. List fields required at prediction time T (not every interesting column).
+3. Pick the least fragile source that provides those fields.
+4. Prefer release loaders over live scrapers.
+5. Document license/ToS posture.
+6. Hand off to package skill for concrete load code.
+7. Plan local snapshot if analysis must be reproducible offline.
 
-## Anti-patterns
+```bash
+python skills/data-sources/scripts/print_source_plan.py
+python skills/data-sources/scripts/print_source_plan.py --out data/source_plan.md
+```
 
-- **Scrape first, ask later**
-- **One giant multi-sport dataframe** with incompatible schemas
-- **Odds from memory** / handwritten lines as “data”
-- **Silent source switching** mid-experiment
-- **Using future-enriched vendor stats** for pre-event claims
+---
 
-## Output contract
+## Hard Constraints
+
+1. Do not default to ToS-hostile scraping when a public loader exists.
+2. Do not mix grains casually (pbp rows ≠ game rows) without aggregation rules.
+3. Do not ignore delay/as-of issues in “live” APIs.
+4. Always note that source choice does not create edge.
+5. Snapshot data used for any claim you may need to reproduce.
+
+---
+
+## Anti-Patterns
+
+- Scrape first, ask later
+- One giant multi-sport dataframe with incompatible schemas
+- Silent source switching mid-experiment
+- Using future-enriched vendor stats for pre-event claims
+- Handwritten lines/memory as “data”
+
+---
+
+## Output Contract
 
 Done means:
 
@@ -81,24 +113,41 @@ Done means:
 - [ ] Package skill handoff named
 - [ ] Known coverage gaps listed
 
-## Handoffs
+---
 
-- `environment-setup` if packages missing
-- `nflreadpy` / `sportsdataverse-py` / `pybaseball` for loads
-- `eda-sports` after load
-- `feature-rules` after data acquisition plan is set
+## Worked Example
 
-## Worked example
+**Question:** pre-game NFL team win model using team form features, 2018–2024.
 
-**Question:** pre-game NFL home win model using team form features, 2018–2024.
-
-- Grain: game-level before kickoff
-- Primary: `nflreadpy` schedules + team stats / PBP aggregates
+- Grain: team-game before kickoff
+- Primary: `nflreadpy` schedules via `sports_ds.data.nfl`
 - Fallback: none needed for this scope
-- Odds: optional later via separate panel
-- Handoff: `nflreadpy` → `feature-rules` → `validation-design`
+- Handoff: `nflreadpy` → `eda-sports` → `feature-rules` → `validation-design`
 
-## References
+---
 
-- `docs/data-ecosystem.md`
-- nflverse, SportsDataverse, pybaseball project docs
+## Bundled Resources
+
+### references/
+- `source_matrix.md`
+- `tos_notes.md`
+
+### scripts/
+- `print_source_plan.py`
+
+---
+
+## Related Skills
+
+- `environment-setup`
+- `nflreadpy` / `sportsdataverse-py` / `pybaseball`
+- `eda-sports`
+- `feature-rules`
+
+---
+
+## Quick Command Card
+
+```bash
+python skills/data-sources/scripts/print_source_plan.py --out data/source_plan.md
+```

@@ -3,20 +3,31 @@ name: environment-setup
 description: >
   Install and verify the sports_ds sports data science system and skill
   scripts. Use when setting up a new machine, onboarding an agent, or checking
-  that nflverse loads, tests, CLI pipelines, and skill scripts all run.
-version: "0.3.0"
+  that nflverse loads, tests, CLI pipelines, and skill scripts all run — even
+  if the user only says "it doesn't import" or "set this up." Includes verify
+  scripts and troubleshooting.
+version: "0.4.0"
 license: MIT
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # Environment Setup
 
 ## Overview
 
-Get a clean Python environment that can run the package, CLI, tests, and skill scripts against public sports data.
+Get a clean Python environment that can run:
+
+- the `sports_ds` package
+- `sports-ds` CLI
+- tests
+- skill scripts against public sports data
+
+---
 
 ## When to Use This Skill
+
+Use when:
 
 - First clone of the repo
 - Agent needs a working runtime before modeling
@@ -56,11 +67,11 @@ pip install "pingouin>=0.6" seaborn
 # 1. unit tests
 pytest -q
 
-# 2. package CLI EDA
-sports-ds nfl-eda --seasons 2024
+# 2. package import + tiny load
+python skills/environment-setup/scripts/verify_install.py
 
-# 3. package CLI model pipeline (longer; network + CPU)
-sports-ds nfl-win-pipeline --seasons 2018-2024
+# 3. package CLI EDA
+sports-ds nfl-eda --seasons 2024
 
 # 4. representative skill scripts
 python skills/predictive-modeling/scripts/leakage_smoke.py
@@ -71,16 +82,18 @@ python skills/leakage-audit/scripts/audit_pregame_features.py --seasons 2023-202
 Expected:
 
 - pytest passes
+- verify script prints OK
 - EDA prints row/game/team summary
-- pipeline prints walk-forward metrics vs baseline
 - leakage smoke / audit return OK/CLEAN
+
+Checklist: `references/verify_checklist.md`
 
 ---
 
 ## Runtime Notes
 
 - First nflverse download needs network
-- Data caches via nflreadpy (see its env vars if you need a custom cache dir)
+- Data caches via nflreadpy (env vars if you need a custom cache dir)
 - Python 3.10+ recommended
 - Disk: multi-season NFL extracts can be hundreds of MB+
 
@@ -92,9 +105,12 @@ Expected:
 |---|---|
 | `sports-ds: command not found` | venv active? `pip install -e .` |
 | `ModuleNotFoundError: sports_ds` | install editable from repo root |
-| nflverse download errors | network; retry; check nflreadpy version |
+| nflverse download errors | network; retry; nflreadpy version |
 | empty seasons | active season incomplete or bad season list |
 | skill script import errors | run from repo root with venv active |
+| seaborn/pingouin missing | optional installs above |
+
+More: `references/troubleshooting.md`
 
 ---
 
@@ -108,9 +124,31 @@ Skills live under `skills/<name>/SKILL.md` with `scripts/` and `references/`.
 
 ---
 
+## Bundled Resources
+
+### references/
+- `verify_checklist.md`
+- `troubleshooting.md`
+
+### scripts/
+- `verify_install.py`
+
+---
+
 ## Related Skills
 
 - Data choice: `data-sources`
 - NFL load: `nflreadpy`
 - Multi-sport: `sportsdataverse-py`, `pybaseball`
 - First analysis: `eda-sports`, `sports-modeling-doctrine`
+
+---
+
+## Quick Command Card
+
+```bash
+pip install -e .
+python skills/environment-setup/scripts/verify_install.py
+pytest -q
+sports-ds nfl-eda --seasons 2024
+```

@@ -8,3 +8,5 @@
 - pie/3D distraction
 - screenshot proof
 - probabilities as locks
+- metric laundering
+- legend fog

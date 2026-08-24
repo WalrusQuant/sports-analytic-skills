@@ -1,37 +1,67 @@
 ---
 name: model-card
 description: >
-  Write a model card for a sports model: intended use, data, methods,
-  validation, limits, and maintenance. Use when documenting a model version
-  for reuse or sharing.
-version: "0.1.0"
+  Write a durable model card for a sports model: identity, intended use,
+  target and decision time T, data, features, baselines, validation, results,
+  limits, maintenance, and kill conditions. Use when documenting a kept model
+  version for reuse or sharing — even if the user only says "document this
+  model." Includes card templates and a stub writer script.
+version: "0.4.0"
 license: MIT
+metadata:
+  version: "0.4.0"
 ---
 
-# Model Card (Sports DS)
+# Model Card (Sports)
+
+## Overview
 
 Durable documentation for a sports analysis/prediction model.
 
-## When to use
+A model card freezes what the model is for, how it was evaluated, what it must
+not be used for, and when to kill or retrain it.
 
-- After a model reaches a stable evaluation
-- Before sharing results
+---
+
+## When to Use This Skill
+
+Use when:
+
+- A model reaches a stable evaluation worth keeping
+- Before sharing results beyond a scratch note
 - Versioning a kept model
+- User says “document this model” or “write a model card”
 
-## When not to use
+Do **not** use when:
 
 - No model yet
-- Quick scratch experiment with no keep decision
+- Quick scratch experiment with no keep decision → `experiment-log` only
 
-## Required inputs
+---
+
+## Installation
+
+No special deps. Optional:
+
+```bash
+pip install -e .
+```
+
+---
+
+## Required Inputs
 
 - Model/process name and version
 - Target and prediction timestamp T (if predictive)
 - Data window and sources
 - Validation summary
 - Baseline comparison summary
+- Leakage audit status
+- Limits / failure modes
 
-## Card sections
+---
+
+## Card Sections (required)
 
 1. Identity
 2. Intended use / not-for
@@ -43,45 +73,73 @@ Durable documentation for a sports analysis/prediction model.
 8. Results
 9. Limits and failure modes
 10. Maintenance / retrain / kill conditions
+11. Linked experiments
 
-## Procedure
+Template: `references/card_template.md`
 
-1. Gather evidence from modeling + validation work.
+---
+
+## Workflow
+
+1. Gather evidence from modeling + validation + leakage work.
 2. Draft all sections; use `unknown` explicitly when needed.
 3. Remove unsupported claims.
 4. Link `experiment-log` entries.
-5. Freeze version.
+5. Freeze version (do not silently edit a frozen card — bump version).
 
-## Hard constraints
+```bash
+python skills/model-card/scripts/write_card_stub.py --out data/model_card.md
+```
 
-- Never omit baselines if performance is reported
-- Never hide leakage/validation status
-- Never present exploration as production-ready without saying so
+---
 
-## Output contract
+## Hard Constraints
 
-- [ ] All sections present
-- [ ] Intended use explicit
-- [ ] Baselines + validation summarized
-- [ ] Limits written
-- [ ] Experiment refs linked or marked none
+1. Never omit baselines if performance is reported.
+2. Never hide leakage/validation status.
+3. Never present exploration as production-ready without saying so.
+4. Kill conditions must be concrete and checkable.
 
-## Handoffs
+---
+
+## Worked Example
+
+```text
+Identity: home_win_logit_v3
+Purpose: Estimate pre-kickoff P(team win) from home + form differentials
+Data: nflverse schedules via sports_ds, 2018–2024
+Validation: season walk-forward, primary metric log-loss
+Result: logistic mean log-loss beat constant baseline on most folds
+Leakage: CLEAN (shifted form features)
+Kill conditions: two consecutive seasons failing baseline log-loss; major rule/regime break without revalidation
+```
+
+---
+
+## Bundled Resources
+
+### references/
+- `card_template.md`
+- `kill_conditions.md`
+
+### scripts/
+- `write_card_stub.py`
+
+---
+
+## Related Skills
 
 - `experiment-log`
 - `results-reporting`
-- **Stop** when card is frozen
+- `validation-design`
+- `baseline-models`
+- `sports-modeling-doctrine`
+- `leakage-audit`
 
-## Worked example
+---
 
-**Identity:** `home_win_logit_v3`  
-**Purpose:** Estimate pre-start P(home win) from rating differential and rest.  
-**Result:** walk-forward log-loss beat season base rate and Elo-like baseline over 2018–2024.  
-**Kill conditions:** two consecutive seasons failing baseline log-loss; major rule/regime break without revalidation.
+## Quick Command Card
 
-## References
-
-- `skills/sports-modeling-doctrine`
-- `skills/baseline-models`
-- `skills/validation-design`
-- `skills/experiment-log`
+```bash
+python skills/model-card/scripts/write_card_stub.py --out data/model_card.md
+```

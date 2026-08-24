@@ -1,19 +1,30 @@
 ---
 name: experiment-log
 description: >
-  Record sports-modeling experiments in a reproducible log: hypothesis,
-  data cut, validation charter, results, and decision. Use when running
-  trials, comparing model versions, or preventing notebook amnesia.
-version: "0.1.0"
+  Record sports-modeling experiments in a reproducible log: hypothesis, data
+  cut, validation charter, metrics, leakage status, decision, and artifacts.
+  Use when running trials, comparing model versions, or preventing notebook
+  amnesia — even if the user only says "log this run." Includes schema,
+  templates, and a new-experiment stub script.
+version: "0.4.0"
 license: MIT
+metadata:
+  version: "0.4.0"
 ---
 
 # Experiment Log
 
-Ops skill for reproducible sports-modeling work. If it is not logged, it
-did not happen.
+## Overview
 
-## When to use
+Ops skill for reproducible sports-modeling work.
+
+**If it is not logged, it did not happen.**
+
+---
+
+## When to Use This Skill
+
+Use when:
 
 - Starting a training/evaluation run
 - Comparing model variants
@@ -21,13 +32,14 @@ did not happen.
 - Before writing a model card version bump
 - Any time an agent is about to overwrite results in a notebook cell and move on
 
-## When not to use
+Do **not** use when:
 
 - Pure discussion with no run
-- Final public essay writing → `edge-writeup` / `ethics`
 - Designing the first validation charter only → `validation-design`
 
-## Required inputs
+---
+
+## Required Inputs
 
 Minimum:
 
@@ -45,16 +57,15 @@ Optional:
 - Random seeds
 - Links to plots/metrics files
 
-## Log schema
+---
 
-Use one record per experiment:
+## Log Schema
 
 ```text
 experiment_id: YYYYMMDD-<slug>-<nn>
 timestamp_utc:
 operator:
 hypothesis:
-claim_level_sought:
 target:
 prediction_timestamp_rule:
 data_sources:
@@ -75,7 +86,11 @@ artifacts:
 notes:
 ```
 
-## Procedure
+Full notes: `references/log_schema.md`
+
+---
+
+## Workflow
 
 1. **Create ID before the run** (not after seeing results).
 2. **Write hypothesis in falsifiable form**
@@ -87,27 +102,37 @@ notes:
    - `keep` only if success threshold met
    - `discard` if failed honestly
    - `follow-up` if inconclusive with a specific next test
-7. **Link artifacts**
-   - metrics json, plots, model blob path, commit
+7. **Link artifacts** (metrics json, plots, commit)
 8. **Update model card only on `keep` version bumps**
 
-## Hard constraints
+```bash
+python skills/experiment-log/scripts/new_experiment.py --slug homewin-rest
+python skills/experiment-log/scripts/new_experiment.py --slug elo-vs-form --out-dir data/experiments
+```
 
-- Never invent metrics after the fact without labeling them post-hoc
-- Never reuse an experiment ID for a different config
-- Never log only winners
-- Never claim reproducibility without data window + config + charter references
-- Post-hoc metrics must be marked `post-hoc` and cannot drive the primary decision silently
+---
 
-## Anti-patterns
+## Hard Constraints
 
-- **Notebook folklore:** “we tried this last week, pretty sure it worked”
-- **Winner’s log only**
-- **Config amnesia**
-- **Moving goalposts inside one ID**
-- **Unlinked screenshots as evidence**
+1. Never invent metrics after the fact without labeling them post-hoc.
+2. Never reuse an experiment ID for a different config.
+3. Never log only winners.
+4. Never claim reproducibility without data window + config + charter references.
+5. Post-hoc metrics must be marked `post-hoc` and cannot silently drive the primary decision.
 
-## Output contract
+---
+
+## Anti-Patterns
+
+- Notebook folklore: “we tried this last week, pretty sure it worked”
+- Winner’s log only
+- Config amnesia
+- Moving goalposts inside one ID
+- Unlinked screenshots as evidence
+
+---
+
+## Output Contract
 
 Done means:
 
@@ -119,25 +144,17 @@ Done means:
 - [ ] Artifacts linked or explicitly absent
 - [ ] Follow-up (if any) is a single concrete next test
 
-## Handoffs
+---
 
-- `validation-design` — if charter missing
-- `baseline-models` — if baseline refs missing
-- `leakage-audit` — if audit status unknown on a keep candidate
-- `model-card` — on kept version
-- `doctrine` — claim level changes from cumulative evidence
-- **Stop** after discard unless a new hypothesis exists
-
-## Worked example
+## Worked Example
 
 ```text
 experiment_id: 20260824-homewin-rest-01
 hypothesis: Pre-event rest differential improves log-loss vs rating-only logistic.
-claim_level_sought: paper
-target: home_win
+target: won
 prediction_timestamp_rule: scheduled_start
 data_window: 2018-2024 seasons
-baseline_refs: [season_home_rate, rating_logit_v2]
+baseline_refs: [constant_train_rate, rating_logit_v2]
 validation_charter_ref: wf_season_v1
 model_family: logistic_rating_plus_rest
 metrics_primary: log_loss=0.601 (vs 0.608 rating_logit_v2)
@@ -146,9 +163,32 @@ decision: keep
 next_actions: freeze as candidate for model-card home_win_logit_v3
 ```
 
-## References
+---
 
-- `skills/validation-design`
-- `skills/model-card`
-- `skills/doctrine`
-- `skills/baseline-models`
+## Bundled Resources
+
+### references/
+- `log_schema.md`
+- `decision_rules.md`
+
+### scripts/
+- `new_experiment.py`
+
+---
+
+## Related Skills
+
+- `validation-design`
+- `baseline-models`
+- `leakage-audit`
+- `model-card`
+- `results-reporting`
+- `sports-modeling-doctrine`
+
+---
+
+## Quick Command Card
+
+```bash
+python skills/experiment-log/scripts/new_experiment.py --slug nfl-win-form
+```

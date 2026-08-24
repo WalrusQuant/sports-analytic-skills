@@ -2,22 +2,31 @@
 name: anti-slop-analytics
 description: >
   Kill analytics presentation slop in sports work: chartjunk, fake certainty,
-  cropped axes, vanity dashboards, baseline erasure, and unreproducible
-  screenshot science. Use when reviewing figures, tables, notebooks, or report
-  visuals for sports modeling. Includes a caption/figure audit checklist script.
-version: "0.3.0"
+  cropped axes, vanity dashboards, baseline erasure, metric laundering, and
+  unreproducible screenshot science. Use when reviewing figures, tables,
+  notebooks, or report visuals for sports modeling — even if the user only says
+  "make this look better" or "clean up the charts." Includes slop catalog and
+  figure audit scripts.
+version: "0.4.0"
 license: MIT
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # Anti-Slop Analytics (Sports)
 
 ## Overview
 
-Sports analytics fails in public when visuals lie softer than the text. This skill enforces honest presentation for sports modeling results.
+Sports analytics fails in public when visuals lie softer than the text.
+
+This skill enforces honest presentation for sports modeling results. Score each
+visual `keep` / `fix` / `kill`.
+
+---
 
 ## When to Use This Skill
+
+Use when:
 
 - Reviewing charts, tables, dashboards, or notebook outputs
 - Preparing figures for README, posts, papers, or model cards
@@ -25,7 +34,7 @@ Sports analytics fails in public when visuals lie softer than the text. This ski
 - Suspected vanity metrics or cropped axes
 - Pairing with `results-reporting` before publishing
 
-## When Not to Use
+Do **not** use when:
 
 - Designing validation/metrics from scratch → `validation-design`
 - Leakage mechanics → `leakage-audit`
@@ -47,6 +56,8 @@ Sports analytics fails in public when visuals lie softer than the text. This ski
 10. **Screenshot science** — unreproducible UI grabs as proof
 11. **Probabilities as destiny** — 53% shown like a lock
 12. **One hot streak highlight reel** as season truth
+
+Details: `references/slop_catalog.md`, `references/replacements.md`
 
 ---
 
@@ -120,13 +131,12 @@ python skills/anti-slop-analytics/scripts/figure_audit_template.py --out data/fi
 
 ## Bundled Resources
 
-### scripts/
-
-- `figure_audit_template.py` — markdown audit checklist emitter
-
 ### references/
-
 - `slop_catalog.md`
+- `replacements.md`
+
+### scripts/
+- `figure_audit_template.py`
 
 ---
 
@@ -137,3 +147,11 @@ python skills/anti-slop-analytics/scripts/figure_audit_template.py --out data/fi
 - `calibration-check`
 - `model-interpretation`
 - `model-card`
+
+---
+
+## Quick Command Card
+
+```bash
+python skills/anti-slop-analytics/scripts/figure_audit_template.py --out data/figure_audit.md
+```
