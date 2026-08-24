@@ -59,7 +59,7 @@ Numbered steps an agent can execute without inventing forbidden shortcuts.
 
 ### Hard constraints
 
-Non-negotiables. These are the Taste dials.
+Non-negotiables. These are the hard rules the agent must not bend.
 
 Examples:
 
