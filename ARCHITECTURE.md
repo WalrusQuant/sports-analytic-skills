@@ -1,11 +1,10 @@
 # Architecture — Sports Analytic Skills
 
-**Status:** v0.5 reset (2026-08-24)  
 **Center of gravity:** sports data science for analysis, modeling, and prediction.
 
-## 1. Product definition
+## 1. Goal
 
-Build an agent-usable skill library so a coding agent can:
+An agent-usable skill library so a coding agent can:
 
 1. set up an environment
 2. load public sports data (nflverse, SportsDataverse, pybaseball, etc.)
@@ -14,8 +13,6 @@ Build an agent-usable skill library so a coding agent can:
 5. fit baselines + statistical/ML models
 6. validate over time
 7. interpret, simulate, and report
-
-**Out of scope as product identity:** odds cleaning, EV betting, arbitrage, tip services, bankroll products.
 
 ## 2. Layers
 
@@ -31,8 +28,6 @@ Build an agent-usable skill library so a coding agent can:
 │ walk-forward, leakage, calibration, logs     │
 └──────────────────────────────────────────────┘
 ```
-
-Validation skills support good science. They are not the catalog headline.
 
 ## 3. Domain map
 
@@ -69,18 +64,11 @@ Package skills may include:
 - `scripts/` smoke tests and loaders
 - pointers to upstream docs
 
-They do not reimplement nflverse/SDV. They teach agents how to use them.
+They teach agents how to use upstream sports data packages. They do not reimplement them.
 
-## 6. Non-goals
+## 6. Later
 
-- Betting market microstructure as core content
-- Guaranteed prediction claims
-- Autobet integrations
-- One-sport favoritism in the core pack
-
-## 7. Later
-
-- deeper ML (sequence models, tracking) where earned
-- sport modules (NFL/MLB/NBA/NHL/soccer/golf/…) with domain constraints
-- more package skills (e.g. statsbombpy) when needed
+- deeper ML where earned
+- sport modules (NFL/MLB/NBA/NHL/soccer/golf/…)
+- more package skills when needed
 - optional workflow runner that composes skills end-to-end
