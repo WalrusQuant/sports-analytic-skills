@@ -31,6 +31,7 @@ sports-ds leakage-audit --seasons 2023-2024
 - `nfl-margin-pipeline` — point-diff walk-forward (constant / ridge / hist GBR)
 - `nfl-elo` — as-of Elo + logistic baseline under walk-forward
 - `calibrate` / `leakage-audit` — trust checks on the form feature path
+- `nba-eda` / `nba-win-pipeline` — second-sport path (requires `pip install -e ".[multi]"`)
 
 ## Run skill scripts
 

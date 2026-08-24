@@ -7,6 +7,7 @@ import argparse
 import json
 from pathlib import Path
 
+from sports_ds.audit.leakage import audit_pregame_form_features
 from sports_ds.data.nfl import load_team_game_panel
 from sports_ds.features.team_form import add_pregame_form_features
 from sports_ds.pipelines.nfl_win_model import FEATURE_COLS

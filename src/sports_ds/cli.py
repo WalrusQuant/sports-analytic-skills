@@ -41,6 +41,14 @@ def main(argv: list[str] | None = None) -> int:
     p_eda = sub.add_parser("nfl-eda", help="Load NFL team-game panel and print EDA summary")
     p_eda.add_argument("--seasons", default="2023-2024")
 
+    p_nba_eda = sub.add_parser("nba-eda", help="Load NBA team-game panel and print EDA summary")
+    p_nba_eda.add_argument("--seasons", default="2023-2024")
+
+    p_nba = sub.add_parser("nba-win-pipeline", help="Run NBA team-win walk-forward pipeline")
+    p_nba.add_argument("--seasons", default="2023-2024")
+    p_nba.add_argument("--min-train-seasons", type=int, default=1)
+    p_nba.add_argument("--json-out", default="")
+
     args = parser.parse_args(argv)
 
     if args.cmd == "nfl-win-pipeline":
@@ -160,6 +168,24 @@ def main(argv: list[str] | None = None) -> int:
         seasons = _parse_seasons(args.seasons)
         panel = load_team_game_panel(seasons)
         print(format_summary(summarize_team_game_panel(panel)))
+        return 0
+
+    if args.cmd == "nba-eda":
+        from sports_ds.data.nba import load_nba_team_game_panel
+        from sports_ds.eda.summary import format_summary, summarize_team_game_panel
+
+        seasons = _parse_seasons(args.seasons)
+        panel = load_nba_team_game_panel(seasons)
+        print(format_summary(summarize_team_game_panel(panel)))
+        return 0
+
+    if args.cmd == "nba-win-pipeline":
+        from sports_ds.pipelines.nba_win_model import format_nba_win_report, run_nba_win_pipeline
+
+        seasons = _parse_seasons(args.seasons)
+        result = run_nba_win_pipeline(seasons=seasons, min_train_seasons=args.min_train_seasons)
+        print(format_nba_win_report(result))
+        _maybe_json(args.json_out, result)
         return 0
 
     return 1
