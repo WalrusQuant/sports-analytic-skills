@@ -2,8 +2,8 @@
 name: calibration-check
 description: >
   Measure whether sports-model probabilities mean what they say. Use when
-  evaluating probability quality, reliability curves, or before strong
-  confidence / stake language.
+  evaluating probability quality, reliability curves, or probabilistic
+  prediction models.
 version: "0.1.0"
 license: MIT
 ---

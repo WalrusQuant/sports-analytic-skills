@@ -15,9 +15,9 @@ Related work and standards. Kept here so the main README can stay focused on thi
 
 ## Conceptual cousins
 
-- Model cards / claim cards
-- Walk-forward and purged validation practices in time-ordered ML
-- Closing-line value as a market-relative evaluation concept
+- Model cards
+- Walk-forward validation in time-ordered ML
+- Sports rating systems and predictive modeling practice
 
 ## Data ecosystems this repo teaches (not reimplements)
 
@@ -27,8 +27,6 @@ Related work and standards. Kept here so the main README can stay focused on thi
 
 ## How this project differs
 
-- Judgment layer + data-plane layer
-- Multi-sport modeling methodology as the analytic center of gravity
-- Smaller core first; inventory grows only when skills earn a slot
-- Market tools are an evaluation layer, not the whole identity
-- No tip service, autobet packaging, or product-funnel positioning
+- Sports data science center of gravity: EDA, stats, ML, ratings, simulation
+- Data plane for real loaders + scripts
+- Not a betting/odds product pack

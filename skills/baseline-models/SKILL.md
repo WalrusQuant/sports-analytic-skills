@@ -19,7 +19,7 @@ until it beats relevant simple baselines under the same validation design.
 - User jumps straight to ML/deep models
 - Reviewing a model with no reference comparisons
 - Deciding whether complexity is justified
-- Setting the minimum bar for `doctrine` paper claims
+- Setting the minimum bar before richer models
 
 ## When not to use
 
@@ -152,11 +152,11 @@ Done means:
 
 ## Handoffs
 
-- `doctrine` — claim level update after baseline results
+- `sports-modeling-doctrine` — update standards after baseline results
 - `feature-rules` — build cleaner simple features for Tier B/C
 - `validation-design` — formalize splits/walk-forward
 - `leakage-audit` — if baseline or candidate may be time-contaminated
-- `backtest-critique` — reviewing an existing no-baseline system
+- `results-reporting` — publish baseline comparisons
 - `model-card` — persist baseline comparisons
 - **Stop** on `reject-complexity` unless a new design/data plan exists
 

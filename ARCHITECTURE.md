@@ -1,335 +1,86 @@
 # Architecture — Sports Analytic Skills
 
-**Status:** v0 design (2026-08-24)  
-**Principle:** Portable judgment first. Small sharp core over encyclopedic skill dumps. Modeling engine first; market evaluation layered in where it earns a slot.
+**Status:** v0.5 reset (2026-08-24)  
+**Center of gravity:** sports data science for analysis, modeling, and prediction.
 
-### Locked decisions (2026-08-24)
+## 1. Product definition
 
-1. **Name:** `sports-analytic-skills` (keep).
-2. **L1 split:** separate `doctrine`, `ethics`, and `risk` skills — not one mega file.
-3. **Sport scope:** core is multi-sport data science for modeling across sports. Core stays sport-agnostic. Sport-specific modules (NFL, MLB, NBA, NHL, soccer, golf, etc.) come later as expansions — none is privileged.
-4. **Center of gravity:** modeling is the core engine; sports market dynamics layer in where they fit best (eval, data hygiene, claim checks) — not as the whole identity of every skill.
+Build an agent-usable skill library so a coding agent can:
 
----
+1. set up an environment
+2. load public sports data (nflverse, SportsDataverse, pybaseball, etc.)
+3. explore and visualize it
+4. engineer time-safe features
+5. fit baselines + statistical/ML models
+6. validate over time
+7. interpret, simulate, and report
 
-## 1. Problem
+**Out of scope as product identity:** odds cleaning, EV betting, arbitrage, tip services, bankroll products.
 
-General agents are fluent and sloppy at sports analytics:
-
-- leak future information into features
-- treat backtests as truth
-- confuse model fit with market edge
-- skip closing-line / calibration reality checks
-- invent “systems” without kill criteria
-
-The missing piece is **portable judgment**: when a method is valid, what evidence outranks what, and when to stop.
-
----
-
-## 2. Product definition
-
-**Name:** `sports-analytic-skills`  
-**Form:** open-source skill library (Agent Skills standard)  
-**User:** any analyst or agent host that loads `SKILL.md` packs  
-**Value:** consistent sharp methodology under automation  
-**Non-goals:** tips, bankroll product, paid SaaS, live betting bot
-
-This is a **global public library project**, not a single-runtime private skill pack.
-
----
-
-## 3. Layered architecture
-
-Three layers. Only layer 1 is required for v0.
+## 2. Layers
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│  L3  Harness (optional, later)                          │
-│      plan → execute → critique → kill/ship              │
-├─────────────────────────────────────────────────────────┤
-│  L2a Judgment workflows                                 │
-│      features, validation, leakage, baselines, claims   │
-├─────────────────────────────────────────────────────────┤
-│  L2b Data plane                                         │
-│      environment, source choice, package loaders, scripts│
-├─────────────────────────────────────────────────────────┤
-│  L1  Foundation triad                                   │
-│      doctrine | ethics | risk                           │
-└─────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────────┐
-│  Host runtime + Python/R env + public sports data APIs  │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│ Analysis & modeling skills                   │
+│ EDA, stats, ML, ratings, form, simulation    │
+├──────────────────────────────────────────────┤
+│ Data plane                                   │
+│ env setup, source choice, package loaders    │
+├──────────────────────────────────────────────┤
+│ Supporting validation / ops                  │
+│ walk-forward, leakage, calibration, logs     │
+└──────────────────────────────────────────────┘
 ```
 
-L1/L2a can be read without installing sports packages.  
-L2b is what makes the library operational like mature scientific skill packs: concrete loaders, deps, and scripts.
+Validation skills support good science. They are not the catalog headline.
 
-### L1 — Foundation triad (split on purpose)
+## 3. Domain map
 
-Three small skills every workflow skill assumes. Split so agents load only what the job needs.
-
-| Skill | Owns |
+| Domain | Skills |
 |---|---|
-| `doctrine` | What counts as analytic edge vs noise; evidence hierarchy; ship / paper-only / kill criteria; how work is judged |
-| `ethics` | Honesty bounds: no fake certainty, no guaranteed-+EV language, disclosure, refuse tip-shop / lock-of-day requests, not-advice posture |
-| `risk` | Uncertainty, calibration framing, stake/bankroll *discipline language* (not a bankroll product), ruin awareness, when not to size up |
+| Foundation | sports-modeling-doctrine |
+| Data | environment-setup, data-sources, nflreadpy, sportsdataverse-py, pybaseball |
+| EDA/Viz | eda-sports, sports-visualization, anti-slop-analytics |
+| Modeling | baseline-models, feature-rules, statistical-modeling, predictive-modeling, ratings-strength-models, time-series-sports |
+| Validation | validation-design, leakage-audit, calibration-check |
+| Simulation | simulation-sports |
+| Reporting | model-interpretation, model-card, results-reporting, experiment-log |
 
-This triad is the “taste dial” of the system. Without it, workflow skills become cookbook slop.
-
-### L2 — Workflow skills
-
-Narrow, composable procedures. Each skill:
-
-- triggers on a clear job (“evaluate this backtest”, “build walk-forward”)
-- states inputs, outputs, failure modes
-- includes checklists and anti-patterns
-- may ship optional scripts/templates later
-- never depends on a specific bookmaker UI if avoidable
-
-### L3 — Harness (deferred)
-
-Only after L1+L2 are sharp enough that a weak model still can’t easily cheat:
-
-- planner proposes analysis plan under doctrine
-- executor runs code/tools
-- critic checks leakage, CLV, calibration, stake claims
-- result is accept / revise / kill
-
-Harness is **not** the v0 deliverable. Skills must stand alone first.
-
----
-
-## 4. Skill unit design
-
-Each skill is a directory:
+## 4. Default workflow
 
 ```text
-skills/<skill-name>/
-├── SKILL.md              # required
-├── scripts/              # optional deterministic helpers
-├── references/           # optional deeper notes
-├── assets/               # optional templates, diagrams
-└── tests/                # optional if scripts exist
+environment-setup
+ → data-sources → loader skill
+ → eda-sports
+ → sports-modeling-doctrine
+ → feature-rules + baseline-models
+ → statistical-modeling | ratings-strength-models | predictive-modeling
+ → validation-design + leakage-audit
+ → model-interpretation + sports-visualization
+ → simulation-sports (optional)
+ → results-reporting / model-card / experiment-log
 ```
 
-### SKILL.md contract
+## 5. Package skill shape
 
-```yaml
----
-name: skill-name
-description: >
-  One/two sentences: what it does + WHEN to use it.
-  Written for agent discovery, not marketing.
-version: "0.1.0"
-license: MIT
----
-```
+Package skills may include:
 
-Body sections (standard for this repo):
+- `SKILL.md` workflow
+- `scripts/` smoke tests and loaders
+- pointers to upstream docs
 
-1. **When to use / when not to use**
-2. **Required inputs**
-3. **Procedure** (ordered steps an agent can follow)
-4. **Hard constraints** (non-negotiables)
-5. **Anti-patterns** (common failure modes)
-6. **Output contract** (what “done” looks like)
-7. **Handoffs** (which other skills to call next)
-8. **References** (methods, papers, prior art)
+They do not reimplement nflverse/SDV. They teach agents how to use them.
 
-### Design rules for every skill
+## 6. Non-goals
 
-| Rule | Why |
-|---|---|
-| Opinionated defaults | Vague skills reproduce slop |
-| Explicit refusals | Agents need permission to stop |
-| Sport-agnostic core, sport modules optional | Avoid 30 half-baked league packs |
-| No “guaranteed +EV” language | Integrity + honesty |
-| Scripts are helpers, not the skill | Judgment stays in markdown |
-| Small enough to load | Discovery dies if every skill is a novel |
+- Betting market microstructure as core content
+- Guaranteed prediction claims
+- Autobet integrations
+- One-sport favoritism in the core pack
 
----
+## 7. Later
 
-## 5. Proposed skill taxonomy (v0 map)
-
-Not all exist yet. This is the architecture map, not a promise to build 50 skills.
-
-### Center of gravity: modeling first
-
-The library’s spine is **how to model sports outcomes honestly**, not how to scrape books.
-
-```text
- modeling engine (core)
-   baselines → features → validation → leakage → backtest critique
-        │
-        └── market layer (where it earns a slot)
-              odds hygiene → vig → CLV / market eval → claim limits
-```
-
-Market skills are first-class, but they attach at the right joints (evaluation + data contracts), not as a wrapper that turns every skill into “betting content.”
-
-### Tier 0 — Foundation + modeling spine (build first)
-
-| ID | Skill | Job |
-|---|---|---|
-| `doctrine` | Analytic doctrine | Edge vs noise, evidence hierarchy, ship/kill |
-| `ethics` | Ethics & honesty | Claims, refusals, anti-snake-oil |
-| `risk` | Risk framing | Calibration language, uncertainty, stake discipline |
-| `baseline-models` | Strong baselines first | Beat dumb baselines before complexity |
-| `feature-rules` | Feature rules (sport-agnostic) | Legal features, time-safety, target leakage |
-| `leakage-audit` | Leakage & look-ahead audit | Feature/time integrity review |
-| `validation-design` | Validation design | Walk-forward, splits, regime awareness |
-| `backtest-critique` | Backtest critique | Tear apart a claimed edge |
-| `experiment-log` | Experiment logging | Reproducible run records |
-| `model-card` | Model / claim card | What the model is allowed to claim |
-
-### Tier 1 — Market layer (layer in where it fits)
-
-| ID | Skill | Job |
-|---|---|---|
-| `market-data-hygiene` | Odds/market data hygiene | Lines, open/close, vig, missingness |
-| `clv-evaluation` | Closing-line / market eval | Market-relative performance |
-| `calibration-check` | Calibration check | Prob quality vs outcomes (pairs with `risk`) |
-
-### Tier 2 — Sport modules (later only, multi-sport)
-
-This library is for **all sports modeling**, not one league’s pet project.
-
-Core pack stays sport-agnostic for its whole life. Sport modules are additive expansions later — same tier, no favorite child.
-
-Planned expansion surface (order undecided; none privileged):
-
-- NFL / college football
-- MLB / baseball
-- NBA / college basketball
-- NHL / hockey
-- soccer
-- golf
-- others as earned
-
-Example module *shapes* (not a build queue, not a priority list):
-
-- `nfl-team-strength-basics`
-- `mlb-run-expectancy-basics`
-- `nba-pace-adjusted-basics`
-- `nhl-goalie-separation-basics`
-- `soccer-xg-context`
-- `golf-stroke-gained-context`
-
-Rule: a sport module ships only if it encodes **domain constraints the core cannot express**, not wiki trivia or personal hobby bias.
-
-### Tier 3 — Communication
-
-| ID | Skill | Job |
-|---|---|---|
-| `edge-writeup` | Edge writeup | Honest public/post-ready summary |
-| `anti-slop-analytics` | Analytics anti-slop | Kill hype charts and fake certainty |
-
-### Explicitly out of scope (forever or long time)
-
-- Bet placement bots / book account automation
-- “Locks of the day”
-- Bankroll product / payments
-- Scraping that violates ToS as a taught default
-- Guaranteed profit systems
-
----
-
-## 6. Runtime & distribution architecture
-
-```text
-                    ┌──────────────────────┐
-                    │  this git repo       │
-                    │  (source of truth)   │
-                    └──────────┬───────────┘
-                               │ publish (later)
-                               ▼
-                    ┌──────────────────────┐
-                    │  GitHub public repo  │
-                    │  + plugin.json       │
-                    └──────────┬───────────┘
-                               │ install
-          ┌────────────────────┼────────────────────┐
-          ▼                    ▼                    ▼
-   Claude Code             Cursor              other hosts
-   ~/.agents/skills        project skills      host skill paths
-```
-
-**Important separation:**
-
-- **Library repo** (this project) = global artifact
-- **Any one agent install** = optional consumer
-- Publishing skills and enabling them on a specific machine are different acts
-
----
-
-## 7. Relationship to tools / MCP / data
-
-Skills are **procedure + judgment**. They are not the data plane.
-
-```text
-[User question]
-    → host discovers skill via description frontmatter
-    → agent reads SKILL.md
-    → agent uses whatever tools exist (code exec, DB, APIs, files…)
-    → skill constraints still bind the work
-```
-
-This repo may later include:
-
-- reference schemas for odds panels
-- example notebooks (synthetic data only by default)
-- validation scripts
-
-It should **not** require any author’s private pipelines to understand a skill.
-
----
-
-## 8. Quality bar (definition of done per skill)
-
-A skill is ready to merge when:
-
-1. Frontmatter description is discovery-grade (clear trigger)
-2. A junior agent can follow procedure without improvising forbidden steps
-3. Anti-patterns cover the top 5 real failure modes
-4. Output contract is checkable
-5. It does not assume live bankroll or paid APIs
-6. It has at least one worked example (synthetic OK)
-7. A stranger could use it as free, useful methodology without chat history
-
----
-
-## 9. Build order (architecture sequence)
-
-1. Freeze architecture + locked decisions (this doc) — done
-2. Skill template + contribution rules — mostly done
-3. Write L1 triad drafts: `doctrine`, `ethics`, `risk`
-4. Write modeling spine: `baseline-models`, `feature-rules`, `leakage-audit`, `validation-design`
-5. Write critique/output: `backtest-critique`, `model-card`, `experiment-log`
-6. Layer market skills: `market-data-hygiene`, `clv-evaluation`, `calibration-check`
-7. Dogfood on synthetic or public historical data
-8. Harden drafts to ready
-9. Multi-sport modules (NFL/MLB/NBA/NHL/soccer/golf/etc.) only after core is stable — no single-sport favoritism
-10. Optional harness only after public skills stabilize
-
----
-
-## 10. Remaining open questions
-
-Still open; do not block drafts on them.
-
-1. **Quant depth in v0:** frequentist-first vs light Bayesian defaults in `risk` / validation
-2. **How early to require CLV** in `backtest-critique` handoffs (hard gate vs optional when no market data)
-3. **Contribution model:** solo maintenance vs external PRs later
-
----
-
-## 11. Success metrics (project, not betting P&L)
-
-- Skills are installable by a stranger without private context
-- Agents following skills produce fewer leaked/overfit analyses in spot checks
-- Each published skill stands alone as a useful public artifact
-- Documentation stays honest about draft vs ready
-
-Betting P&L is **not** a success metric for this library.
+- deeper ML (sequence models, tracking) where earned
+- sport modules (NFL/MLB/NBA/NHL/soccer/golf/…) with domain constraints
+- more package skills (e.g. statsbombpy) when needed
+- optional workflow runner that composes skills end-to-end

@@ -19,7 +19,7 @@ lie softer than the text. This skill enforces honest presentation.
 - Preparing figures for README, posts, papers, or model cards
 - User asks to “make it look more impressive”
 - Suspected vanity metrics or cropped axes
-- Pairing with `edge-writeup` before publishing
+- Pairing with `results-reporting` before publishing
 
 ## When not to use
 
@@ -104,10 +104,9 @@ Done means:
 
 ## Handoffs
 
-- `edge-writeup` — final prose around cleaned visuals
-- `ethics` — if user demands deceptive impressiveness
-- `backtest-critique` — if visuals expose method failure
-- `calibration-check` / `clv-evaluation` — if figure type needs those metrics done first
+- `results-reporting` — final prose around cleaned visuals
+- `calibration-check` — if reliability figures are needed
+- `model-interpretation` — if driver plots are the point
 - `model-card` — store canonical figures/limits
 - **Stop** when presentation no longer outruns evidence
 

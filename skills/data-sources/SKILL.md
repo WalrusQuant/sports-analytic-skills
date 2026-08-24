@@ -31,7 +31,6 @@ for the question, then hands off to package skills.
 - Sport/league
 - Grain needed (game, team-game, player-game, pbp, pitch, possession)
 - Historical depth needed
-- Whether odds/market data is required
 - Language preference (Python default here)
 
 ## Decision guide (Python-first)
@@ -43,8 +42,7 @@ for the question, then hands off to package skills.
 | NBA / WNBA / NCAAB | `sportsdataverse.nba/.wnba/.mbb/.wbb` | league stats endpoints via SDV |
 | MLB pitch/statcast depth | `pybaseball` | `sportsdataverse.mlb` |
 | NHL | `sportsdataverse.nhl` | R fastRhockey |
-| Soccer events | `statsbombpy` (open data) + SDV soccer | FBref tools with ToS care |
-| Odds panels | user exports / Odds API / SDV odds | then `market-data-hygiene` |
+| Soccer events | SDV soccer; optional statsbombpy later | other open event data with ToS care |
 
 ## Procedure
 
@@ -87,7 +85,7 @@ Done means:
 
 - `environment-setup` if packages missing
 - `nflreadpy` / `sportsdataverse-py` / `pybaseball` for loads
-- `market-data-hygiene` for odds panels
+- `eda-sports` after load
 - `feature-rules` after data acquisition plan is set
 
 ## Worked example
