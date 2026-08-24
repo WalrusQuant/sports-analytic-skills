@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-0.5.0-blue.svg)](plugin.json)
-[![Skills](https://img.shields.io/badge/Skills-25_drafted-brightgreen.svg)](#available-skills)
+[![Skills](https://img.shields.io/badge/Skills-23_drafted-brightgreen.svg)](#available-skills)
 [![Status](https://img.shields.io/badge/Status-sports_data_science-orange.svg)](#project-status)
 [![Standard](https://img.shields.io/badge/Standard-Agent_Skills-blueviolet.svg)](https://agentskills.io/)
 [![Plugins](https://img.shields.io/badge/Standard-Agent_Plugins-0A7A72.svg)](https://agent-plugins.org/)
@@ -25,7 +25,7 @@ npx skills add WalrusQuant/sports-analytic-skills
 |---|---|
 | Version | 0.5.0 |
 | Focus | Sports data science (modeling, prediction, analysis) |
-| Skills drafted | **25** |
+| Skills drafted | **23** |
 | Skills ready | 0 (all still `draft`) |
 | Repo | https://github.com/WalrusQuant/sports-analytic-skills |
 
@@ -33,7 +33,7 @@ npx skills add WalrusQuant/sports-analytic-skills
 
 ## What this is
 
-A K-Dense-style skill pack, but for sports:
+Skills that help an AI agent do sports data science:
 
 - **Data I/O** — nflverse, SportsDataverse, pybaseball, environment setup
 - **EDA & visualization** — coverage, distributions, honest figures
@@ -42,7 +42,7 @@ A K-Dense-style skill pack, but for sports:
 - **Ratings & form** — strength models, rolling form, time series
 - **Simulation** — game/season projection from models
 - **Interpretation & reporting** — explain drivers, write results
-- **Validation hygiene for sports chronology** — leakage, walk-forward (supporting, not the product identity)
+- **Validation for sports chronology** — leakage checks, walk-forward evaluation
 
 ### What this is not
 
@@ -70,7 +70,7 @@ If a task is “get lines, clean vig, find +EV,” this pack is the wrong tool.
 | Simulation | 1 | simulation-sports |
 | Interpretation & reporting | 3 | model-interpretation, model-card, results-reporting |
 | Ops | 1 | experiment-log |
-| **Total** | **25** | |
+| **Total** | **23** | |
 
 ### Data plane
 
