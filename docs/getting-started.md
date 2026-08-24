@@ -1,6 +1,6 @@
 # Getting started
 
-**Status:** planned. This project is not published and has no drafted skills yet.
+**Status:** repo is public; skills are not drafted yet. Install-as-skills is still planned.
 
 This page exists so the install/use story is designed up front, K-Dense-style, instead of bolted on later.
 
@@ -34,7 +34,7 @@ There is nothing to install into an agent runtime yet.
 ### Option A — standards installer
 
 ```bash
-npx skills add <org>/sports-analytic-skills
+npx skills add WalrusQuant/sports-analytic-skills
 ```
 
 Confirm current host behavior in that host’s docs.
@@ -42,18 +42,18 @@ Confirm current host behavior in that host’s docs.
 ### Option B — GitHub CLI
 
 ```bash
-gh skill install <org>/sports-analytic-skills
-gh skill install <org>/sports-analytic-skills doctrine
+gh skill install WalrusQuant/sports-analytic-skills
+gh skill install WalrusQuant/sports-analytic-skills doctrine
 ```
 
 ### Option C — manual Agent Skills paths
 
 ```bash
 # user-level
-git clone <repo-url> ~/.agents/skills/sports-analytic-skills
+git clone https://github.com/WalrusQuant/sports-analytic-skills.git ~/.agents/skills/sports-analytic-skills
 
 # project-level
-git clone <repo-url> .agents/skills/sports-analytic-skills
+git clone https://github.com/WalrusQuant/sports-analytic-skills.git .agents/skills/sports-analytic-skills
 ```
 
 ### Option D — Agent Plugins clients

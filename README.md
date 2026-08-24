@@ -29,7 +29,7 @@ The goal is not another prompt dump. The goal is a **documented, installable met
 | Architecture | Locked (v0) |
 | Public docs shape | In progress (this README + supporting docs) |
 | Skills drafted | **0** (by design — docs/architecture first) |
-| Published GitHub repo | Not yet |
+| Published GitHub repo | Yes — https://github.com/WalrusQuant/sports-analytic-skills |
 | Installable package | Not yet |
 | Installed on this OpenClaw instance | **No** (intentional) |
 | Skill Workshop / live apply | **No** (intentional) |
@@ -288,19 +288,19 @@ sports-analytic-skills/
 
 ## Getting started (planned)
 
-Install paths will match the open ecosystem once skills exist and the repo is public. **Do not treat the commands below as live for this project yet.**
+Repo is public. Skill install is still **planned** until skills are drafted. **Do not treat skill-install commands as useful yet.**
 
-### Intended options (after publish)
+### Intended options (after skills exist)
 
 ```bash
 # standards-based installer (supported hosts)
-npx skills add <org>/sports-analytic-skills
+npx skills add WalrusQuant/sports-analytic-skills
 
 # GitHub CLI skill installer
-gh skill install <org>/sports-analytic-skills
+gh skill install WalrusQuant/sports-analytic-skills
 
 # manual / Agent Skills convention
-git clone <repo-url> ~/.agents/skills/sports-analytic-skills
+git clone https://github.com/WalrusQuant/sports-analytic-skills.git ~/.agents/skills/sports-analytic-skills
 ```
 
 ### Agent Plugins clients
@@ -429,10 +429,10 @@ Right now this is a private craft project. Contribution rules are still written 
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-Working rules while private:
+Working rules:
 
-1. Design in this repo only until explicitly published
-2. Do not apply skills to a live OpenClaw instance from this project
+1. Design in this repo; skills stay uninstalled on personal runtimes until explicitly enabled
+2. Do not apply skills to a live OpenClaw instance from this project unless asked
 3. Do not create Skill Workshop proposals until asked
 4. Prefer fewer sharp skills over many shallow ones
 5. Keep docs honest about planned vs shipped
@@ -495,7 +495,6 @@ If this library becomes public and useful, cite the repository:
 
 ```text
 Wickwire, A. (2026). Sports Analytic Skills.
-GitHub repository. Multi-sport data science Agent Skills library.
+https://github.com/WalrusQuant/sports-analytic-skills
+Multi-sport data science Agent Skills library.
 ```
-
-Update this section with a stable URL/DOI when published.
