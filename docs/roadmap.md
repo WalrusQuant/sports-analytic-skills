@@ -15,7 +15,7 @@ Living list. Not a commitment contract.
 - [x] Architecture draft + decisions locked
 - [x] Raise docs to public-library depth (README, contributing, getting started, authoring, doc standard)
 - [x] Init git + public GitHub remote: https://github.com/WalrusQuant/sports-analytic-skills
-- [ ] Draft L1 triad in `skills/` (not installed): `doctrine`, `ethics`, `risk`
+- [x] Draft L1 triad in `skills/` (not installed): `doctrine`, `ethics`, `risk`
 - [ ] Draft modeling spine: `baseline-models`, `feature-rules`, `leakage-audit`, `validation-design`
 
 ## Next

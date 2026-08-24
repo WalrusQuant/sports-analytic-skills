@@ -24,10 +24,10 @@ See also [ARCHITECTURE.md](../ARCHITECTURE.md) §5.
 
 ## Planned skill IDs
 
-### core (L1)
-- `doctrine`
-- `ethics`
-- `risk`
+### core (L1) — drafted
+- `doctrine` — draft
+- `ethics` — draft
+- `risk` — draft
 
 ### modeling (spine)
 - `baseline-models`
@@ -56,4 +56,4 @@ See also [ARCHITECTURE.md](../ARCHITECTURE.md) §5.
 - equal-class candidates: NFL, MLB, NBA, NHL, soccer, golf, others
 - no default “first sport”
 
-Folders under `skills/` stay empty until a skill is actually drafted.
+`skills/doctrine`, `skills/ethics`, and `skills/risk` are drafted. Other IDs remain planned until written.

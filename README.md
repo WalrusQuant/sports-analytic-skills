@@ -2,8 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-0.0.1-blue.svg)](plugin.json)
-[![Skills](https://img.shields.io/badge/Skills-0_drafted-lightgrey.svg)](#planned-skill-map)
-[![Status](https://img.shields.io/badge/Status-design_scaffold-orange.svg)](#project-status)
+[![Skills](https://img.shields.io/badge/Skills-3_drafted-brightgreen.svg)](#planned-skill-map)
+[![Status](https://img.shields.io/badge/Status-foundation_drafts-orange.svg)](#project-status)
 [![Standard](https://img.shields.io/badge/Standard-Agent_Skills-blueviolet.svg)](https://agentskills.io/)
 [![Plugins](https://img.shields.io/badge/Standard-Agent_Plugins-0A7A72.svg)](https://agent-plugins.org/)
 [![Works with](https://img.shields.io/badge/Target-Cursor_|_Claude_Code_|_Codex_|_OpenClaw-blue.svg)](#getting-started-planned)
@@ -27,10 +27,10 @@ The goal is not another prompt dump. The goal is a **documented, installable met
 | Item | State |
 |---|---|
 | Architecture | Locked (v0) |
-| Public docs shape | In progress (this README + supporting docs) |
-| Skills drafted | **0** (by design — docs/architecture first) |
+| Public docs shape | Solid v0 |
+| Skills drafted | **3** foundation drafts (`doctrine`, `ethics`, `risk`) |
 | Published GitHub repo | Yes — https://github.com/WalrusQuant/sports-analytic-skills |
-| Installable package | Not yet |
+| Installable package | Not yet (skills exist as files; no polished release) |
 | Installed on this OpenClaw instance | **No** (intentional) |
 | Skill Workshop / live apply | **No** (intentional) |
 
@@ -193,7 +193,7 @@ Even before skills are drafted, the repository is structured like a real public 
 | [docs/](./docs/) | Roadmap, taxonomy, authoring, getting started |
 | [templates/skill/](./templates/skill/) | Canonical `SKILL.md` template |
 | [references/](./references/) | Prior art and external standards |
-| `skills/` | One folder per skill (empty until drafted) |
+| `skills/` | Skill folders (`doctrine`, `ethics`, `risk` drafted) |
 
 Each future skill is expected to include:
 
@@ -211,13 +211,13 @@ Each future skill is expected to include:
 
 Nothing below is shipped yet. This is the architecture map, not a fake feature list.
 
-### Foundation (L1)
+### Foundation (L1) — drafted
 
-| Skill ID | Job |
-|---|---|
-| `doctrine` | Edge vs noise, evidence hierarchy, ship / paper-only / kill |
-| `ethics` | Honesty bounds, refusals, anti-snake-oil, not-advice posture |
-| `risk` | Uncertainty, calibration language, stake discipline framing |
+| Skill ID | Status | Job |
+|---|---|---|
+| [`doctrine`](./skills/doctrine/SKILL.md) | draft | Edge vs noise, evidence hierarchy, ship / paper-only / kill |
+| [`ethics`](./skills/ethics/SKILL.md) | draft | Honesty bounds, refusals, anti-snake-oil, not-advice posture |
+| [`risk`](./skills/risk/SKILL.md) | draft | Uncertainty, calibration language, stake discipline framing |
 
 ### Modeling spine
 

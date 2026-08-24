@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "sports-analytic-skills",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Agent Skills for sports betting and sports analytics judgment: doctrine, leakage control, validation, CLV, and honest evaluation.",
   "author": {
     "name": "Adam Wickwire",
