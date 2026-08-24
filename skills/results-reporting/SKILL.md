@@ -39,7 +39,6 @@ Communication skill for sports data science results.
 - Lead with the question and metric, not hype
 - Always include baselines
 - Always include period and sample size
-- No betting product language
 - Unknowns stay unknown
 
 ## Anti-patterns

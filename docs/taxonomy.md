@@ -12,5 +12,4 @@
 | simulation | simulation-sports |
 | reporting | model-interpretation, model-card, results-reporting, experiment-log |
 
-**Drafted:** 25  
-**Removed from core identity:** odds cleaning, CLV/EV betting, arbitrage, tip-service ethics pack
+**Drafted:** 23

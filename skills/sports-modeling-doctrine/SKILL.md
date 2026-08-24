@@ -11,7 +11,7 @@ license: MIT
 # Sports Modeling Doctrine
 
 Foundation skill for sports data science. Centers the work on analysis and
-prediction quality — not markets, odds, or betting products.
+prediction quality.
 
 ## When to use
 
@@ -59,7 +59,7 @@ prediction quality — not markets, odds, or betting products.
 - No same-event outcome fields as pre-event predictors
 - No “complex model wins” without baseline comparison
 - No results without a stated question and metric
-- Do not center the workflow on betting products or odds pipelines
+- Do not skip the question/metric/baseline step and jump straight to complex models
 
 ## Anti-patterns
 
