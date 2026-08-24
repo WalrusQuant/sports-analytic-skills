@@ -2,8 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-0.0.1-blue.svg)](plugin.json)
-[![Skills](https://img.shields.io/badge/Skills-3_drafted-brightgreen.svg)](#planned-skill-map)
-[![Status](https://img.shields.io/badge/Status-foundation_drafts-orange.svg)](#project-status)
+[![Skills](https://img.shields.io/badge/Skills-10_drafted-brightgreen.svg)](#planned-skill-map)
+[![Status](https://img.shields.io/badge/Status-core_drafts-orange.svg)](#project-status)
 [![Standard](https://img.shields.io/badge/Standard-Agent_Skills-blueviolet.svg)](https://agentskills.io/)
 [![Plugins](https://img.shields.io/badge/Standard-Agent_Plugins-0A7A72.svg)](https://agent-plugins.org/)
 [![Works with](https://img.shields.io/badge/Target-Cursor_|_Claude_Code_|_Codex_|_OpenClaw-blue.svg)](#getting-started-planned)
@@ -28,7 +28,7 @@ The goal is not another prompt dump. The goal is a **documented, installable met
 |---|---|
 | Architecture | Locked (v0) |
 | Public docs shape | Solid v0 |
-| Skills drafted | **3** foundation drafts (`doctrine`, `ethics`, `risk`) |
+| Skills drafted | **10** core drafts (foundation + modeling spine + critique/ops) |
 | Published GitHub repo | Yes — https://github.com/WalrusQuant/sports-analytic-skills |
 | Installable package | Not yet (skills exist as files; no polished release) |
 | Installed on this OpenClaw instance | **No** (intentional) |
@@ -181,7 +181,7 @@ Skills are **procedure + judgment**. They are not the data plane. Agents use wha
 
 ## What's included (repo)
 
-Even before skills are drafted, the repository is structured like a real public pack:
+The repository is structured like a real public pack:
 
 | Piece | Purpose |
 |---|---|
@@ -193,7 +193,7 @@ Even before skills are drafted, the repository is structured like a real public 
 | [docs/](./docs/) | Roadmap, taxonomy, authoring, getting started |
 | [templates/skill/](./templates/skill/) | Canonical `SKILL.md` template |
 | [references/](./references/) | Prior art and external standards |
-| `skills/` | Skill folders (`doctrine`, `ethics`, `risk` drafted) |
+| `skills/` | 10 drafted skill folders under `skills/` |
 
 Each future skill is expected to include:
 
@@ -219,19 +219,19 @@ Nothing below is shipped yet. This is the architecture map, not a fake feature l
 | [`ethics`](./skills/ethics/SKILL.md) | draft | Honesty bounds, refusals, anti-snake-oil, not-advice posture |
 | [`risk`](./skills/risk/SKILL.md) | draft | Uncertainty, calibration language, stake discipline framing |
 
-### Modeling spine
+### Modeling spine — drafted
 
-| Skill ID | Job |
-|---|---|
-| `baseline-models` | Strong baselines before complexity |
-| `feature-rules` | Time-safe, leakage-aware feature design |
-| `leakage-audit` | Look-ahead and target leakage review |
-| `validation-design` | Walk-forward, splits, regime awareness |
-| `backtest-critique` | Tear apart a claimed edge |
-| `model-card` | What a model is allowed to claim |
-| `experiment-log` | Reproducible run records |
+| Skill ID | Status | Job |
+|---|---|---|
+| [`baseline-models`](./skills/baseline-models/SKILL.md) | draft | Strong baselines before complexity |
+| [`feature-rules`](./skills/feature-rules/SKILL.md) | draft | Time-safe, leakage-aware feature design |
+| [`leakage-audit`](./skills/leakage-audit/SKILL.md) | draft | Look-ahead and target leakage review |
+| [`validation-design`](./skills/validation-design/SKILL.md) | draft | Walk-forward, splits, regime awareness |
+| [`backtest-critique`](./skills/backtest-critique/SKILL.md) | draft | Tear apart a claimed edge |
+| [`model-card`](./skills/model-card/SKILL.md) | draft | What a model is allowed to claim |
+| [`experiment-log`](./skills/experiment-log/SKILL.md) | draft | Reproducible run records |
 
-### Market layer
+### Market layer — planned next
 
 | Skill ID | Job |
 |---|---|

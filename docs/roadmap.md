@@ -15,22 +15,22 @@ Living list. Not a commitment contract.
 - [x] Architecture draft + decisions locked
 - [x] Raise docs to public-library depth (README, contributing, getting started, authoring, doc standard)
 - [x] Init git + public GitHub remote: https://github.com/WalrusQuant/sports-analytic-skills
-- [x] Draft L1 triad in `skills/` (not installed): `doctrine`, `ethics`, `risk`
-- [ ] Draft modeling spine: `baseline-models`, `feature-rules`, `leakage-audit`, `validation-design`
+- [x] Draft L1 triad: `doctrine`, `ethics`, `risk`
+- [x] Draft modeling spine: `baseline-models`, `feature-rules`, `leakage-audit`, `validation-design`
+- [x] Draft critique/ops: `backtest-critique`, `model-card`, `experiment-log`
 
 ## Next
 
-- [ ] `backtest-critique`, `model-card`, `experiment-log`
 - [ ] Market layer: `market-data-hygiene`, `clv-evaluation`, `calibration-check`
+- [ ] Comms skills: `edge-writeup`, `anti-slop-analytics`
 - [ ] Dogfood on synthetic/public data
-- [ ] Public GitHub repo when ≥5 skills are non-embarrassing
+- [ ] Harden drafts toward “ready” quality bar
 
 ## Later
 
-- [ ] Comms skills
 - [ ] Sport modules only after core is stable (NFL/MLB/NBA/NHL/soccer/golf/etc.; no favorite)
 - [ ] Optional harness (plan → run → critique)
-- [ ] Install docs for Claude Code / Cursor / OpenClaw consumers
+- [ ] Install docs polish for Claude Code / Cursor / OpenClaw consumers
 
 ## Never (default)
 

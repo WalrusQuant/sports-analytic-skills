@@ -22,30 +22,30 @@ See also [ARCHITECTURE.md](../ARCHITECTURE.md) §5.
 | `sport` | Per-sport modules later: NFL, MLB, NBA, NHL, soccer, golf, etc. |
 | `comms` | Honest writeups, anti-slop presentation |
 
-## Planned skill IDs
+## Skill IDs
 
 ### core (L1) — drafted
 - `doctrine` — draft
 - `ethics` — draft
 - `risk` — draft
 
-### modeling (spine)
-- `baseline-models`
-- `feature-rules`
-- `model-card`
+### modeling (spine) — drafted
+- `baseline-models` — draft
+- `feature-rules` — draft
+- `model-card` — draft
 
-### validation
-- `leakage-audit`
-- `validation-design`
-- `backtest-critique`
+### validation — drafted
+- `leakage-audit` — draft
+- `validation-design` — draft
+- `backtest-critique` — draft
 
-### markets (layered in)
+### ops — drafted
+- `experiment-log` — draft
+
+### markets (layered in) — planned
 - `market-data-hygiene`
 - `clv-evaluation`
 - `calibration-check`
-
-### ops
-- `experiment-log`
 
 ### comms (later)
 - `edge-writeup`
@@ -56,4 +56,5 @@ See also [ARCHITECTURE.md](../ARCHITECTURE.md) §5.
 - equal-class candidates: NFL, MLB, NBA, NHL, soccer, golf, others
 - no default “first sport”
 
-`skills/doctrine`, `skills/ethics`, and `skills/risk` are drafted. Other IDs remain planned until written.
+**Drafted count:** 10  
+Market layer and later domains remain planned until written.
