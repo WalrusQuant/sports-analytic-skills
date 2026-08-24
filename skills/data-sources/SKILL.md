@@ -123,6 +123,15 @@ Done means:
 - Primary: `nflreadpy` schedules via `sports_ds.data.nfl`
 - Fallback: none needed for this scope
 - Handoff: `nflreadpy` → `eda-sports` → `feature-rules` → `validation-design`
+- Package commands after load choice:
+  - `sports-ds nfl-eda --seasons 2018-2024`
+  - `sports-ds nfl-win-pipeline --seasons 2018-2024`
+
+**NBA second path (optional extra):**
+
+- Install: `pip install -e ".[multi]"`
+- Commands: `sports-ds nba-eda`, `sports-ds nba-win-pipeline`
+- Panel contract: `docs/panel-contract.md`
 
 ---
 

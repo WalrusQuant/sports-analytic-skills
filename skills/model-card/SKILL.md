@@ -110,8 +110,12 @@ Purpose: Estimate pre-kickoff P(team win) from home + form differentials
 Data: nflverse schedules via sports_ds, 2018–2024
 Validation: season walk-forward, primary metric log-loss
 Result: logistic mean log-loss beat constant baseline on most folds
-Leakage: CLEAN (shifted form features)
+Leakage: CLEAN (sports-ds leakage-audit / package audit_pregame_form_features)
 Kill conditions: two consecutive seasons failing baseline log-loss; major rule/regime break without revalidation
+Package paths:
+  sports-ds nfl-win-pipeline --seasons 2018-2024
+  sports-ds calibrate --seasons 2018-2024
+  sports-ds leakage-audit --seasons 2023-2024
 ```
 
 ---
@@ -142,4 +146,7 @@ Kill conditions: two consecutive seasons failing baseline log-loss; major rule/r
 
 ```bash
 python skills/model-card/scripts/write_card_stub.py --out data/model_card.md
+sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out data/nfl_win_pipeline.json
+sports-ds leakage-audit --seasons 2023-2024
+sports-ds calibrate --seasons 2018-2024
 ```

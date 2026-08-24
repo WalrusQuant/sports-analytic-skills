@@ -67,16 +67,18 @@ pip install "pingouin>=0.6" seaborn
 # 1. unit tests
 pytest -q
 
-# 2. package import + tiny load
+# 2. package import + tiny load + ratings/audit modules
 python skills/environment-setup/scripts/verify_install.py
 
-# 3. package CLI EDA
+# 3. package CLI happy path
 sports-ds nfl-eda --seasons 2024
+sports-ds leakage-audit --seasons 2024
+sports-ds nfl-win-pipeline --seasons 2023-2024 --min-train-seasons 1
 
 # 4. representative skill scripts
 python skills/predictive-modeling/scripts/leakage_smoke.py
 python skills/eda-sports/scripts/panel_report.py --seasons 2024
-python skills/leakage-audit/scripts/audit_pregame_features.py --seasons 2023-2024
+python skills/ratings-strength-models/scripts/eval_elo_baseline.py --seasons 2023-2024 --min-train-seasons 1
 ```
 
 Expected:
@@ -151,4 +153,6 @@ pip install -e .
 python skills/environment-setup/scripts/verify_install.py
 pytest -q
 sports-ds nfl-eda --seasons 2024
+sports-ds leakage-audit --seasons 2024
+sports-ds nfl-elo --seasons 2023-2024 --min-train-seasons 1
 ```

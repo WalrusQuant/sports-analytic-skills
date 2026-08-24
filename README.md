@@ -431,7 +431,10 @@ sports-analytic-skills/
 |---|---|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | How the skill pack and toolkit fit together |
 | [docs/product-charter.md](./docs/product-charter.md) | Product definition, scope, success criteria |
+| [docs/agent-runbook.md](./docs/agent-runbook.md) | Copy/paste agent prompts and command paths |
+| [docs/panel-contract.md](./docs/panel-contract.md) | Shared team-game panel schema |
 | [docs/getting-started.md](./docs/getting-started.md) | Install and first runs |
+| [CHANGELOG.md](./CHANGELOG.md) | Version history |
 | [docs/data-ecosystem.md](./docs/data-ecosystem.md) | Public sports data sources |
 | [docs/environment.md](./docs/environment.md) | Runtime dependencies |
 | [docs/skill-authoring.md](./docs/skill-authoring.md) | How to write skills in this repo |
