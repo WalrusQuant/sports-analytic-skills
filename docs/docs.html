@@ -1,313 +1,230 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Docs — Sports Analytic Skills</title>
-  <meta name="description" content="Getting started, boundaries, skill catalog, and optional toolkit notes for Sports Analytic Skills.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-    :root {
-      --bg: #0a0a0a;
-      --surface: #111;
-      --card: #161616;
-      --card-border: rgba(255,255,255,0.06);
-      --accent: #FF6B00;
-      --accent-dim: rgba(255,107,0,0.12);
-      --text: #EBEBEB;
-      --text-mid: #999;
-      --text-dim: #555;
-      --good: #3dd68c;
-      --display: 'Bebas Neue', sans-serif;
-      --body: 'DM Sans', sans-serif;
-      --mono: 'JetBrains Mono', monospace;
-    }
-    html { scroll-behavior: smooth; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--body);
-      line-height: 1.65;
-      -webkit-font-smoothing: antialiased;
-    }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { color: #ff8533; }
-    code, pre {
-      font-family: var(--mono);
-      font-size: 0.86rem;
-    }
-    code {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--card-border);
-      padding: 0.1rem 0.35rem;
-      border-radius: 4px;
-      color: var(--accent);
-    }
-    pre {
-      background: var(--card);
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
-      padding: 1.1rem 1.25rem;
-      overflow-x: auto;
-      color: var(--text);
-      line-height: 1.7;
-      margin: 1rem 0 1.5rem;
-    }
-    pre code {
-      background: none;
-      border: none;
-      padding: 0;
-      color: inherit;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 260px 1fr;
-      min-height: 100vh;
-    }
-    aside {
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow-y: auto;
-      border-right: 1px solid var(--card-border);
-      background: rgba(10,10,10,0.98);
-      padding: 1.5rem 1.25rem 2rem;
-    }
-    .brand {
-      font-family: var(--display);
-      letter-spacing: 2px;
-      font-size: 1.35rem;
-      margin-bottom: 0.25rem;
-    }
-    .brand span { color: var(--accent); }
-    .brand-sub {
-      color: var(--text-dim);
-      font-size: 0.75rem;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 1.75rem;
-    }
-    .nav-group { margin-bottom: 1.5rem; }
-    .nav-label {
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--text-dim);
-      margin-bottom: 0.55rem;
-      font-weight: 600;
-    }
-    aside a {
-      display: block;
-      color: var(--text-mid);
-      font-size: 0.9rem;
-      padding: 0.4rem 0.55rem;
-      border-radius: 6px;
-      margin-bottom: 0.15rem;
-    }
-    aside a:hover, aside a.active {
-      color: var(--text);
-      background: rgba(255,255,255,0.04);
-    }
-
-    main { padding: 2.5rem 3rem 5rem; max-width: 880px; }
-    .top-links {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 2rem;
-      flex-wrap: wrap;
-    }
-    .top-links a {
-      font-size: 0.85rem;
-      color: var(--text-mid);
-      border: 1px solid var(--card-border);
-      padding: 0.4rem 0.8rem;
-      border-radius: 6px;
-    }
-    .top-links a:hover {
-      color: var(--text);
-      border-color: rgba(255,255,255,0.18);
-    }
-
-    section { padding: 1.25rem 0 2.5rem; border-bottom: 1px solid var(--card-border); }
-    section:last-of-type { border-bottom: none; }
-    h1 {
-      font-family: var(--display);
-      font-size: clamp(2.6rem, 5vw, 3.6rem);
-      letter-spacing: 2px;
-      line-height: 1;
-      margin-bottom: 0.75rem;
-    }
-    h2 {
-      font-family: var(--display);
-      font-size: 2rem;
-      letter-spacing: 1.5px;
-      margin: 0 0 0.85rem;
-    }
-    h3 {
-      font-size: 1.05rem;
-      margin: 1.5rem 0 0.55rem;
-    }
-    p, li { color: var(--text-mid); }
-    p { margin-bottom: 0.9rem; }
-    ul, ol { padding-left: 1.2rem; margin: 0.5rem 0 1rem; }
-    li { margin-bottom: 0.4rem; }
-    .lead { font-size: 1.08rem; color: var(--text-mid); max-width: 62ch; }
-
-    .callout {
-      border: 1px solid rgba(255,107,0,0.25);
-      background: var(--accent-dim);
-      border-radius: 10px;
-      padding: 1rem 1.15rem;
-      margin: 1.25rem 0;
-      color: var(--text);
-      font-size: 0.95rem;
-    }
-    .callout strong { color: var(--accent); }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 1rem 0 1.5rem;
-      font-size: 0.92rem;
-    }
-    th, td {
-      text-align: left;
-      padding: 0.7rem 0.75rem;
-      border-bottom: 1px solid var(--card-border);
-      vertical-align: top;
-    }
-    th {
-      color: var(--text-dim);
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      font-weight: 600;
-    }
-    td:first-child {
-      font-family: var(--mono);
-      font-size: 0.8rem;
-      color: var(--accent);
-      white-space: nowrap;
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin: 1rem 0 1.5rem;
-    }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
-      padding: 1.15rem 1.2rem;
-    }
-    .card h3 { margin-top: 0; }
-    .yes { color: var(--good); }
-    .no { color: #ff5c5c; }
-
-    @media (max-width: 900px) {
-      .layout { grid-template-columns: 1fr; }
-      aside {
-        position: relative;
-        height: auto;
-        border-right: none;
-        border-bottom: 1px solid var(--card-border);
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f2eee3" />
+    <title>Docs — Sports Analytic Skills</title>
+    <meta name="description" content="Getting started, boundaries, skill catalog, and optional toolkit notes for Sports Analytic Skills." />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      .docs-layout {
+        width: min(1420px, calc(100% - 48px));
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 48px;
+        padding: 40px 0 100px;
       }
-      main { padding: 1.5rem 1.15rem 3rem; }
-      .grid-2 { grid-template-columns: 1fr; }
-      td:first-child { white-space: normal; }
-    }
-  </style>
-</head>
-<body>
-  <div class="layout">
-    <aside>
-      <div class="brand">SPORTS<span>SKILLS</span></div>
-      <div class="brand-sub">Documentation</div>
+      .docs-nav {
+        position: sticky;
+        top: 24px;
+        align-self: start;
+        border-right: 1px solid #b9ae9b;
+        padding-right: 20px;
+      }
+      .docs-nav .nav-label {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: #64665f;
+        margin: 18px 0 8px;
+      }
+      .docs-nav a {
+        display: block;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        color: #455154;
+        padding: 6px 0;
+      }
+      .docs-nav a:hover { color: #a34732; }
+      .docs-main { min-width: 0; }
+      .docs-main section {
+        width: auto;
+        margin: 0;
+        padding: 0 0 48px;
+        border-bottom: 1px solid #b9ae9b;
+        margin-bottom: 48px;
+      }
+      .docs-main section:last-child { border-bottom: 0; margin-bottom: 0; }
+      .docs-main h1 {
+        text-align: left;
+        margin: 12px 0 18px;
+        font-size: clamp(40px, 5vw, 64px);
+      }
+      .docs-main h2 {
+        margin-top: 0;
+      }
+      .docs-main h3 {
+        margin: 28px 0 10px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 24px;
+        font-weight: 500;
+      }
+      .docs-main p, .docs-main li {
+        color: #455154;
+        line-height: 1.65;
+      }
+      .docs-main ul { padding-left: 1.2rem; }
+      .docs-main li { margin-bottom: 0.4rem; }
+      .callout {
+        border: 1px solid #b9ae9b;
+        background: #f7f3e9;
+        padding: 16px 18px;
+        margin: 18px 0 8px;
+      }
+      .callout strong { color: #a34732; }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0 24px;
+        font-size: 14.5px;
+      }
+      th, td {
+        text-align: left;
+        padding: 12px 10px;
+        border-bottom: 1px solid #b9ae9b;
+        vertical-align: top;
+      }
+      th {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: #64665f;
+      }
+      td:first-child {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #a34732;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .code-block {
+        margin: 12px 0 20px;
+        padding: 18px 20px;
+        background: #172124;
+        color: #f7f3e9;
+        border: 1px solid #172124;
+        overflow-x: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .top-links {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+      .top-links a {
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        color: #455154;
+      }
+      .top-links a:hover { color: #a34732; }
+      @media (max-width: 900px) {
+        .docs-layout {
+          grid-template-columns: 1fr;
+          width: min(100% - 28px, 1420px);
+          gap: 24px;
+        }
+        .docs-nav {
+          position: relative;
+          top: 0;
+          border-right: 0;
+          border-bottom: 1px solid #b9ae9b;
+          padding: 0 0 16px;
+        }
+        td:first-child { white-space: normal; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="Sports Analytic Skills home">
+        <span class="brand-mark">SAS</span>
+        <span>Sports Analytic Skills</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="index.html">Home</a>
+        <a href="#skills">Skills</a>
+        <a class="button button-small" href="https://github.com/WalrusQuant/sports-analytic-skills">GitHub</a>
+      </nav>
+    </header>
 
-      <div class="nav-group">
+    <div class="docs-layout">
+      <aside class="docs-nav">
         <div class="nav-label">Start</div>
         <a href="#overview">Overview</a>
         <a href="#boundary">What this is / isn’t</a>
         <a href="#getting-started">Getting started</a>
         <a href="#prompts">Example prompts</a>
-      </div>
-      <div class="nav-group">
         <div class="nav-label">Catalog</div>
         <a href="#skills">Skill index</a>
         <a href="#path">Analysis path</a>
-      </div>
-      <div class="nav-group">
         <div class="nav-label">Optional</div>
         <a href="#sports-ds">sports_ds toolkit</a>
         <a href="#repo-docs">Repo markdown</a>
-      </div>
-      <div class="nav-group">
-        <div class="nav-label">Links</div>
-        <a href="index.html">Marketing home</a>
-        <a href="https://github.com/WalrusQuant/sports-analytic-skills" target="_blank" rel="noopener">GitHub</a>
-      </div>
-    </aside>
+      </aside>
 
-    <main>
-      <div class="top-links">
-        <a href="index.html">← Landing</a>
-        <a href="https://github.com/WalrusQuant/sports-analytic-skills" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/README.md" target="_blank" rel="noopener">README</a>
-      </div>
-
-      <section id="overview">
-        <h1>Docs</h1>
-        <p class="lead">
-          Human-facing guide for <strong style="color:var(--text)">Sports Analytic Skills</strong> —
-          standalone agent skills for sports analytics and modeling.
-          Agents still read each skill’s <code>SKILL.md</code>. This page is so you don’t have to dig through folders to get oriented.
-        </p>
-        <div class="callout">
-          <strong>No edge claimed.</strong>
-          This pack is a free jumpstart for learning a rigorous workflow.
-          Unexpected paper-trading results are normal. They usually mean your setup, market, or validation path needs scrutiny — not that the pack is a signal service.
+      <main class="docs-main">
+        <div class="top-links">
+          <a href="index.html">← Landing</a>
+          <a href="https://github.com/WalrusQuant/sports-analytic-skills">GitHub</a>
+          <a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/README.md">README</a>
         </div>
-      </section>
 
-      <section id="boundary">
-        <h2>What this is / isn’t</h2>
-        <div class="grid-2">
-          <div class="card">
-            <h3 class="yes">This is</h3>
-            <ul>
-              <li>Portable agent skills for sports analytics</li>
-              <li>Guidance for EDA, features, models, validation, calibration, reporting</li>
-              <li>A way to learn time-safety and honest evaluation</li>
-              <li>Optional helpers for public NFL / NBA / MLB data</li>
-            </ul>
+        <section id="overview">
+          <div class="eyebrow">DOCUMENTATION</div>
+          <h1>Docs</h1>
+          <p>
+            Human-facing guide for <strong>Sports Analytic Skills</strong> —
+            standalone agent skills for sports analytics and modeling.
+            Agents still read each skill’s <code>SKILL.md</code>. This page is so you don’t have to dig through folders to get oriented.
+          </p>
+          <div class="callout">
+            <strong>No edge claimed.</strong>
+            This pack is a free jumpstart for learning a rigorous workflow.
+            Unexpected paper-trading results are normal. They usually mean your setup, market, or validation path needs scrutiny — not that the pack is a signal service.
           </div>
-          <div class="card">
-            <h3 class="no">This is not</h3>
-            <ul>
-              <li>A betting tip product or guaranteed-profit system</li>
-              <li>A finished market model with claimed edge</li>
-              <li>Custom build-on-request support for every sport/market</li>
-              <li>A hosted dashboard or pick seller</li>
-            </ul>
-          </div>
-        </div>
-        <p>
-          If you want NCAAF totals, WNBA player props, or any other market model:
-          use the skills against <em>your</em> data and build it yourself.
-          That is the point.
-        </p>
-      </section>
+        </section>
 
-      <section id="getting-started">
-        <h2>Getting started</h2>
-        <h3>1. Install the skills</h3>
-        <pre><code># Interactive
+        <section id="boundary">
+          <h2>What this is / isn’t</h2>
+          <div class="boundary-grid">
+            <article class="yes">
+              <h3>This is</h3>
+              <ul>
+                <li>Portable agent skills for sports analytics</li>
+                <li>Guidance for EDA, features, models, validation, calibration, reporting</li>
+                <li>A way to learn time-safety and honest evaluation</li>
+                <li>Optional helpers for public NFL / NBA / MLB data</li>
+              </ul>
+            </article>
+            <article class="no">
+              <h3>This is not</h3>
+              <ul>
+                <li>A betting tip product or guaranteed-profit system</li>
+                <li>A finished market model with claimed edge</li>
+                <li>Custom build-on-request support for every sport/market</li>
+                <li>A hosted dashboard or pick seller</li>
+              </ul>
+            </article>
+          </div>
+          <p style="margin-top:18px">
+            If you want NCAAF totals, WNBA player props, or any other market model:
+            use the skills against <em>your</em> data and build it yourself. That is the point.
+          </p>
+        </section>
+
+        <section id="getting-started">
+          <h2>Getting started</h2>
+          <h3>1. Install the skills</h3>
+          <pre class="code-block"><code># Interactive
 npx skills add WalrusQuant/sports-analytic-skills
 
 # One skill
@@ -315,105 +232,100 @@ npx skills add WalrusQuant/sports-analytic-skills --skill eda-sports -y
 
 # Entire pack for every detected agent
 npx skills add WalrusQuant/sports-analytic-skills --all</code></pre>
-        <p>No repository clone and no <code>sports_ds</code> install are required for skill-only use.</p>
+          <p>No repository clone and no <code>sports_ds</code> install are required for skill-only use.</p>
 
-        <h3>2. Start from the task</h3>
-        <p>Give the agent:</p>
-        <ul>
-          <li>the question</li>
-          <li>the decision time (for predictive work)</li>
-          <li>the path to your CSV / Parquet / JSON</li>
-        </ul>
-        <pre><code>Use eda-sports on data/team_games.parquet. Confirm the grain, coverage,
+          <h3>2. Start from the task</h3>
+          <p>Give the agent the question, the decision time for predictive work, and the path to your CSV / Parquet / JSON.</p>
+          <pre class="code-block"><code>Use eda-sports on data/team_games.parquet. Confirm the grain, coverage,
 missingness, target balance, and any leakage risks before modeling.</code></pre>
-        <pre><code>Use validation-design on data/features.parquet. The prediction is made at
+          <pre class="code-block"><code>Use validation-design on data/features.parquet. The prediction is made at
 kickoff; create season walk-forward folds and lock the primary metric.</code></pre>
 
-        <h3>3. Let the skill enforce contracts</h3>
-        <p>
-          Each skill documents required fields. If the artifact is missing columns,
-          the agent should report that instead of silently inventing them.
-        </p>
+          <h3>3. Let the skill enforce contracts</h3>
+          <p>
+            Each skill documents required fields. If the artifact is missing columns,
+            the agent should report that instead of silently inventing them.
+          </p>
 
-        <h3>4. Optional helpers</h3>
-        <p>
-          Some skills ship scripts. Resolve helper paths relative to the installed
-          skill’s <code>SKILL.md</code>, not your current working directory:
-        </p>
-        <pre><code>python <path-to-installed-skill>/scripts/<helper>.py --help</code></pre>
-      </section>
+          <h3>4. Optional helpers</h3>
+          <p>
+            Some skills ship scripts. Resolve helper paths relative to the installed
+            skill’s <code>SKILL.md</code>, not your current working directory:
+          </p>
+          <pre class="code-block"><code>python <path-to-installed-skill>/scripts/<helper>.py --help</code></pre>
+        </section>
 
-      <section id="prompts">
-        <h2>Example prompts</h2>
-        <pre><code>Use sports-modeling-doctrine. I want to predict NFL game winners at kickoff
+        <section id="prompts">
+          <h2>Example prompts</h2>
+          <pre class="code-block"><code>Use sports-modeling-doctrine. I want to predict NFL game winners at kickoff
 using team-game data. Lock target, decision time, baseline, and success criteria.</code></pre>
-        <pre><code>Use feature-rules and leakage-audit on this feature table. Decision time is
+          <pre class="code-block"><code>Use feature-rules and leakage-audit on this feature table. Decision time is
 tipoff. Flag every column that would not have been knowable then.</code></pre>
-        <pre><code>Use baseline-models, predictive-modeling, and validation-design to compare a
+          <pre class="code-block"><code>Use baseline-models, predictive-modeling, and validation-design to compare a
 constant baseline with logistic regression under season walk-forward folds.</code></pre>
-        <pre><code>Use calibration-check on these predicted probabilities and outcomes.
+          <pre class="code-block"><code>Use calibration-check on these predicted probabilities and outcomes.
 Report Brier, log loss, and reliability by bin.</code></pre>
-      </section>
+        </section>
 
-      <section id="skills">
-        <h2>Skill index</h2>
+        <section id="skills">
+          <h2>Skill index</h2>
 
-        <h3>Foundation and data</h3>
-        <table>
-          <thead><tr><th>Skill</th><th>Purpose</th></tr></thead>
-          <tbody>
-            <tr><td>sports-modeling-doctrine</td><td>Lock question, target, decision time, baseline, success criteria</td></tr>
-            <tr><td>environment-setup</td><td>Portable analysis environment for the user’s project</td></tr>
-            <tr><td>data-sources</td><td>Choose a public data source and grain</td></tr>
-            <tr><td>nflreadpy</td><td>Load NFL data from nflverse</td></tr>
-            <tr><td>sportsdataverse-py</td><td>Load supported multi-sport public data</td></tr>
-            <tr><td>pybaseball</td><td>Load Statcast / MLB season data</td></tr>
-            <tr><td>sports-ds-bridge</td><td>Optional bridge to the sports_ds toolkit</td></tr>
-          </tbody>
-        </table>
+          <h3>Foundation and data</h3>
+          <table>
+            <thead><tr><th>Skill</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td>sports-modeling-doctrine</td><td>Lock question, target, decision time, baseline, success criteria</td></tr>
+              <tr><td>environment-setup</td><td>Portable analysis environment for the user’s project</td></tr>
+              <tr><td>data-sources</td><td>Choose a public data source and grain</td></tr>
+              <tr><td>nflreadpy</td><td>Load NFL data from nflverse</td></tr>
+              <tr><td>sportsdataverse-py</td><td>Load supported multi-sport public data</td></tr>
+              <tr><td>pybaseball</td><td>Load Statcast / MLB season data</td></tr>
+              <tr><td>sports-ds-bridge</td><td>Optional bridge to the sports_ds toolkit</td></tr>
+            </tbody>
+          </table>
 
-        <h3>Exploration and features</h3>
-        <table>
-          <thead><tr><th>Skill</th><th>Purpose</th></tr></thead>
-          <tbody>
-            <tr><td>eda-sports</td><td>Coverage, grain, missingness, targets, red flags</td></tr>
-            <tr><td>sports-visualization</td><td>Honest charts with context and uncertainty</td></tr>
-            <tr><td>anti-slop-analytics</td><td>Remove chartjunk and unsupported claims</td></tr>
-            <tr><td>feature-rules</td><td>Decision-time-legal feature design</td></tr>
-            <tr><td>time-series-sports</td><td>Shifted rolling / EWMA form features</td></tr>
-            <tr><td>ratings-strength-models</td><td>As-of Elo and strength ratings</td></tr>
-          </tbody>
-        </table>
+          <h3>Exploration and features</h3>
+          <table>
+            <thead><tr><th>Skill</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td>eda-sports</td><td>Coverage, grain, missingness, targets, red flags</td></tr>
+              <tr><td>sports-visualization</td><td>Honest charts with context and uncertainty</td></tr>
+              <tr><td>anti-slop-analytics</td><td>Remove chartjunk and unsupported claims</td></tr>
+              <tr><td>feature-rules</td><td>Decision-time-legal feature design</td></tr>
+              <tr><td>time-series-sports</td><td>Shifted rolling / EWMA form features</td></tr>
+              <tr><td>ratings-strength-models</td><td>As-of Elo and strength ratings</td></tr>
+            </tbody>
+          </table>
 
-        <h3>Modeling and validation</h3>
-        <table>
-          <thead><tr><th>Skill</th><th>Purpose</th></tr></thead>
-          <tbody>
-            <tr><td>baseline-models</td><td>Constant, home, simple statistical baselines</td></tr>
-            <tr><td>statistical-modeling</td><td>GLMs, diagnostics, effects, uncertainty</td></tr>
-            <tr><td>predictive-modeling</td><td>Predictive models under honest time splits</td></tr>
-            <tr><td>validation-design</td><td>Walk-forward folds and locked metrics</td></tr>
-            <tr><td>leakage-audit</td><td>Look-ahead, target, join, preprocessing leakage</td></tr>
-            <tr><td>calibration-check</td><td>Probability reliability / recalibration</td></tr>
-            <tr><td>simulation-sports</td><td>Season / matchup simulation from probabilities</td></tr>
-          </tbody>
-        </table>
+          <h3>Modeling and validation</h3>
+          <table>
+            <thead><tr><th>Skill</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td>baseline-models</td><td>Constant, home, simple statistical baselines</td></tr>
+              <tr><td>statistical-modeling</td><td>GLMs, diagnostics, effects, uncertainty</td></tr>
+              <tr><td>predictive-modeling</td><td>Predictive models under honest time splits</td></tr>
+              <tr><td>validation-design</td><td>Walk-forward folds and locked metrics</td></tr>
+              <tr><td>leakage-audit</td><td>Look-ahead, target, join, preprocessing leakage</td></tr>
+              <tr><td>calibration-check</td><td>Probability reliability / recalibration</td></tr>
+              <tr><td>simulation-sports</td><td>Season / matchup simulation from probabilities</td></tr>
+            </tbody>
+          </table>
 
-        <h3>Interpretation and reporting</h3>
-        <table>
-          <thead><tr><th>Skill</th><th>Purpose</th></tr></thead>
-          <tbody>
-            <tr><td>model-interpretation</td><td>Drivers, slices, largest misses</td></tr>
-            <tr><td>results-reporting</td><td>Reproducible results with baselines and limits</td></tr>
-            <tr><td>model-card</td><td>Durable model contract</td></tr>
-            <tr><td>experiment-log</td><td>Reproducible experiment history</td></tr>
-          </tbody>
-        </table>
-      </section>
+          <h3>Interpretation and reporting</h3>
+          <table>
+            <thead><tr><th>Skill</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td>model-interpretation</td><td>Drivers, slices, largest misses</td></tr>
+              <tr><td>results-reporting</td><td>Reproducible results with baselines and limits</td></tr>
+              <tr><td>model-card</td><td>Durable model contract</td></tr>
+              <tr><td>experiment-log</td><td>Reproducible experiment history</td></tr>
+            </tbody>
+          </table>
+        </section>
 
-      <section id="path">
-        <h2>Analysis path</h2>
-        <pre><code>question and decision time
+        <section id="path">
+          <h2>Analysis path</h2>
+          <pre class="code-block"><code>question and decision time
   -> data acquisition
   -> EDA
   -> time-safe features / ratings
@@ -421,17 +333,17 @@ Report Brier, log loss, and reliability by bin.</code></pre>
   -> time-ordered validation
   -> leakage and calibration checks
   -> interpretation, simulation, and reporting</code></pre>
-        <p>Combine only the skills the task needs. Do not force a full pipeline when EDA is the whole job.</p>
-      </section>
+          <p>Combine only the skills the task needs. Do not force a full pipeline when EDA is the whole job.</p>
+        </section>
 
-      <section id="sports-ds">
-        <h2>Optional sports_ds toolkit</h2>
-        <p>
-          The skills work without this repository’s Python package.
-          Use <code>sports-ds-bridge</code> only if you want prebuilt public-data adapters,
-          normalized panels, or reference CLI pipelines.
-        </p>
-        <pre><code>git clone https://github.com/WalrusQuant/sports-analytic-skills.git
+        <section id="sports-ds">
+          <h2>Optional sports_ds toolkit</h2>
+          <p>
+            The skills work without this repository’s Python package.
+            Use <code>sports-ds-bridge</code> only if you want prebuilt public-data adapters,
+            normalized panels, or reference CLI pipelines.
+          </p>
+          <pre class="code-block"><code>git clone https://github.com/WalrusQuant/sports-analytic-skills.git
 cd sports-analytic-skills
 python3 -m venv .venv
 source .venv/bin/activate
@@ -443,24 +355,29 @@ pip install -e ".[multi]"
 
 sports-ds --help
 sports-ds feature-registry</code></pre>
-        <p>
-          On macOS only, XGBoost (pulled by sportsdataverse) may need OpenMP:
-          <code>brew install libomp</code>. Not required for skill-only installs.
-        </p>
-      </section>
+          <p>
+            On macOS only, XGBoost (pulled by sportsdataverse) may need OpenMP:
+            <code>brew install libomp</code>. Not required for skill-only installs.
+          </p>
+        </section>
 
-      <section id="repo-docs">
-        <h2>Deeper repo markdown</h2>
-        <p>Still in the repository for contributors and deep dives:</p>
-        <ul>
-          <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/ARCHITECTURE.md" target="_blank" rel="noopener">ARCHITECTURE.md</a></li>
-          <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/product-charter.md" target="_blank" rel="noopener">product-charter.md</a></li>
-          <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/getting-started.md" target="_blank" rel="noopener">getting-started.md</a></li>
-          <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/skill-authoring.md" target="_blank" rel="noopener">skill-authoring.md</a></li>
-          <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/panel-contract.md" target="_blank" rel="noopener">panel-contract.md</a></li>
-        </ul>
-      </section>
-    </main>
-  </div>
-</body>
+        <section id="repo-docs">
+          <h2>Deeper repo markdown</h2>
+          <p>Still in the repository for contributors and deep dives:</p>
+          <ul>
+            <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a></li>
+            <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/product-charter.md">product-charter.md</a></li>
+            <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/getting-started.md">getting-started.md</a></li>
+            <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/skill-authoring.md">skill-authoring.md</a></li>
+            <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/panel-contract.md">panel-contract.md</a></li>
+          </ul>
+        </section>
+      </main>
+    </div>
+
+    <footer>
+      <span>Sports Analytic Skills Docs</span>
+      <span><a href="index.html" style="color:inherit;text-decoration:none">Home</a> · MIT</span>
+    </footer>
+  </body>
 </html>
