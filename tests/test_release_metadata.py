@@ -78,3 +78,16 @@ def test_public_plugin_manifest_uses_the_closed_v1_shape() -> None:
     assert set(manifest) <= ALLOWED_MANIFEST_FIELDS
     assert (ROOT / "skills").is_dir()
     assert list((ROOT / "skills").glob("*/SKILL.md"))
+
+
+def test_readme_badges_match_public_release_metadata() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    skill_count = len(list((ROOT / "skills").glob("*/SKILL.md")))
+
+    assert "actions/workflows/ci.yml/badge.svg" in readme
+    assert "img.shields.io/github/v/release/" in readme
+    assert "img.shields.io/badge/license-MIT-yellow.svg" in readme
+    assert f"img.shields.io/badge/skills-{skill_count}-" in readme
+    assert "standard-Agent_Skills" in readme
+    assert "standard-Agent_Plugins" in readme
+    assert "skills.sh/b/" not in readme

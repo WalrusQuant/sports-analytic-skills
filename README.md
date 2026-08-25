@@ -1,7 +1,11 @@
 # Sports Analytic Skills
 
 [![CI](https://github.com/WalrusQuant/sports-analytic-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/WalrusQuant/sports-analytic-skills/actions/workflows/ci.yml)
-[![skills.sh](https://skills.sh/b/WalrusQuant/sports-analytic-skills)](https://skills.sh/WalrusQuant/sports-analytic-skills)
+[![Release](https://img.shields.io/github/v/release/WalrusQuant/sports-analytic-skills?display_name=tag)](https://github.com/WalrusQuant/sports-analytic-skills/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+[![Skills](https://img.shields.io/badge/skills-24-brightgreen.svg)](#skills)
+[![Agent Skills](https://img.shields.io/badge/standard-Agent_Skills-blueviolet.svg)](https://agentskills.io/)
+[![Agent Plugins](https://img.shields.io/badge/standard-Agent_Plugins-0A7A72.svg)](https://agent-plugins.org/)
 
 Standalone agent skills for sports analytics and modeling.
 
