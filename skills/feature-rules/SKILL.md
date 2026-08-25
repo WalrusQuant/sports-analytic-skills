@@ -14,6 +14,27 @@ declared prediction decision time T. Every feature needs its source, grain,
 availability rule, transform, lookback, shift, null policy, legality verdict,
 and evidence. Both raw inputs and every transformation must be legal at T.
 
+## When to Use This Skill
+
+Use when:
+
+- designing or reviewing predictors for a pre-event sports model;
+- building rolling form, rest, matchup, rating, roster, injury, or context features;
+- the user asks whether a column is legal at decision time T;
+- turning EDA findings into a documented feature inventory.
+
+Do **not** use this skill as a substitute for:
+
+- formal leakage verdict after features exist → `leakage-audit`;
+- rolling/EWMA implementation detail only → `time-series-sports`;
+- Elo/strength systems as the primary object → `ratings-strength-models`.
+
+| Need | Go instead |
+|---|---|
+| Leakage audit | `leakage-audit` |
+| Form feature recipes | `time-series-sports` |
+| Ratings detail | `ratings-strength-models` |
+
 ## Prediction contract and legality test
 
 Before construction, write the target, row grain, exact T (kickoff, lineup

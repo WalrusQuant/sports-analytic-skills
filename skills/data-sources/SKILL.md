@@ -11,6 +11,29 @@ metadata:
 
 # Data Sources
 
+## When to Use This Skill
+
+Use when:
+
+- the user needs a public sports data source and is not sure which one;
+- choosing grain (game, team-game, player-game, play/event) before loading;
+- comparing nflverse / sportsdataverse / pybaseball / other public options;
+- writing a source plan with provenance, snapshot, and first-load checks.
+
+Do **not** use this skill when:
+
+- the user already has a usable table and wants EDA or modeling;
+- they explicitly want the optional repository toolkit panels/CLI → `sports-ds-bridge`;
+- they already chose a loader and just need that loader skill.
+
+| Need | Go instead |
+|---|---|
+| NFL loader details | `nflreadpy` |
+| Multi-sport SDV details | `sportsdataverse-py` |
+| MLB / Statcast details | `pybaseball` |
+| Optional toolkit bridge | `sports-ds-bridge` |
+| EDA after load | `eda-sports` |
+
 ## Outcome
 
 Produce a source plan naming the required grain, decision-time fields, primary

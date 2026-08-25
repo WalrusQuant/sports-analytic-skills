@@ -21,6 +21,28 @@ structural breaks, and fields unavailable at prediction time T.
 Finish with a written **go**, **repair**, or **stop** decision. A clean EDA
 report does not certify that engineered features are time-safe.
 
+## When to Use This Skill
+
+Use when:
+
+- a sports table is new, freshly loaded, or not yet trusted;
+- grain, keys, coverage, missingness, or base rates need an honest audit;
+- before feature engineering or first model fit;
+- a weird model result might just be bad data structure.
+
+Do **not** use this skill as a substitute for:
+
+- formal leakage verdicts → `leakage-audit`;
+- feature construction → `feature-rules` / `time-series-sports`;
+- source selection → `data-sources`.
+
+| Need | Go instead |
+|---|---|
+| Choose a public source | `data-sources` |
+| Build legal features | `feature-rules` |
+| Prove time-safety | `leakage-audit` |
+| Charts only | `sports-visualization` |
+
 ## Required context
 
 Before calculating summaries, record the question, target, prediction time T,

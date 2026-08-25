@@ -11,6 +11,27 @@ metadata:
 
 # Experiment Log
 
+## When to Use This Skill
+
+Use when:
+
+- starting a modeling experiment that should be comparable later;
+- the user asks “what did we try?” or needs a decision history;
+- promoting/rejecting candidates under a locked validation design;
+- recording failures, deviations, and why a model was or was not shipped.
+
+Do **not** use this skill as a substitute for:
+
+- locking metrics and folds → `validation-design`;
+- writing the public-facing results narrative → `results-reporting`;
+- the durable model contract → `model-card`.
+
+| Need | Go instead |
+|---|---|
+| Validation charter | `validation-design` |
+| Results writeup | `results-reporting` |
+| Model contract | `model-card` |
+
 ## Outcome
 
 Create one immutable record per executed experiment so another analyst can

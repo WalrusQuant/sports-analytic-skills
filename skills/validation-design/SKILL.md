@@ -19,6 +19,28 @@ geometry, [the metric-lock guide](references/metrics_lock.md) before freezing
 metrics, and [the anti-patterns](references/anti_patterns.md) during the final
 design review.
 
+## When to Use This Skill
+
+Use when:
+
+- locking folds, metrics, baselines, and go/no-go rules before fitting;
+- replacing random K-fold with season or rolling-origin walk-forward;
+- defining embargo/grouping for team-game panels or repeated events;
+- the user asks how to validate a sports model honestly.
+
+Do **not** use this skill as a substitute for:
+
+- leakage review of the feature matrix → `leakage-audit`;
+- fitting candidates after the charter is locked → `baseline-models` /
+  `predictive-modeling`;
+- probability reliability diagnostics → `calibration-check`.
+
+| Need | Go instead |
+|---|---|
+| Feature legality | `feature-rules` |
+| Leakage verdict | `leakage-audit` |
+| Baseline ladder | `baseline-models` |
+
 ## Charter: lock before fitting
 
 Record:

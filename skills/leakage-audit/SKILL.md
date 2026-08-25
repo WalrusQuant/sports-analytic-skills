@@ -14,6 +14,27 @@ evidence-backed verdict: `CLEAN`, `REVIEW REQUIRED`, or `NOT CLEAN`, with
 contaminated fields, affected claims, required repairs, and retest conditions.
 A strong metric is never evidence of cleanliness.
 
+## When to Use This Skill
+
+Use when:
+
+- trusting a backtest or “good” metric for the first time;
+- reviewing a feature table before modeling or after a suspiciously strong result;
+- auditing target aliases, joins, shifts, preprocessing, or split design;
+- the user says the model looks too good / results are unexpected.
+
+Do **not** use this skill as a substitute for:
+
+- designing legal features from scratch → `feature-rules`;
+- designing folds and metrics → `validation-design`;
+- first-pass panel EDA → `eda-sports`.
+
+| Need | Go instead |
+|---|---|
+| Feature construction rules | `feature-rules` |
+| Fold / metric charter | `validation-design` |
+| Probability reliability after clean design | `calibration-check` |
+
 ## Lock the audit contract
 
 Before inspecting correlations or metrics, write the target, row grain, exact

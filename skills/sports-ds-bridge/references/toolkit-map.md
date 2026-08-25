@@ -1,8 +1,9 @@
 # sports_ds toolkit map
 
-Use the narrowest reusable surface that satisfies the request.
+Use the narrowest reusable surface that satisfies the request. Discover the live
+CLI with `sports-ds --help` rather than assuming this file is exhaustive.
 
-## Data
+## Data loaders
 
 ```python
 from sports_ds.data.nfl import load_team_game_panel
@@ -13,11 +14,18 @@ from sports_ds.data.mlb import load_mlb_team_game_panel
 NFL is included in the base toolkit dependency set. NBA and MLB loaders require
 the toolkit's `multi` optional dependencies.
 
-Player loaders live in:
+Player loaders:
+
+```python
+from sports_ds.data import nfl_players, nba_players, mlb_players
+```
 
 - `sports_ds.data.nfl_players`
 - `sports_ds.data.nba_players`
 - `sports_ds.data.mlb_players`
+
+NHL team loaders exist but historical sportsdataverse coverage has been
+unreliable. Treat NHL as explicit opt-in only.
 
 ## Reusable analysis components
 
@@ -37,17 +45,60 @@ handing work to a standalone skill.
 
 ## CLI reference workflows
 
-Discover the current command surface rather than assuming it:
-
 ```bash
 sports-ds --help
 sports-ds feature-registry
 ```
 
-The CLI includes EDA, team win/margin/Elo, player, calibration, and leakage
-commands for supported sports. Pipeline commands are reference benchmarks, not
-dependencies of the standalone skills. When a command supports `--json-out`,
-write the artifact explicitly and validate its schema before downstream use.
+### Team EDA
+
+```bash
+sports-ds nfl-eda --seasons 2023-2024
+sports-ds nba-eda --seasons 2023-2024
+sports-ds mlb-eda --seasons 2023-2024
+# nhl-eda exists; data quality caveats apply
+```
+
+### Team benchmarks
+
+```bash
+sports-ds nfl-win-pipeline --seasons 2018-2024 --json-out artifacts/nfl_win.json
+sports-ds nfl-margin-pipeline --seasons 2018-2024 --json-out artifacts/nfl_margin.json
+sports-ds nfl-elo --seasons 2018-2024 --json-out artifacts/nfl_elo.json
+sports-ds nfl-win-rich --seasons 2018-2024 --json-out artifacts/nfl_win_rich.json
+
+sports-ds nba-win-pipeline --seasons 2023-2024 --json-out artifacts/nba_win.json
+sports-ds nba-margin-pipeline --seasons 2023-2024 --json-out artifacts/nba_margin.json
+sports-ds nba-elo --seasons 2023-2024 --json-out artifacts/nba_elo.json
+
+sports-ds mlb-win-pipeline --seasons 2023-2024 --json-out artifacts/mlb_win.json
+sports-ds mlb-margin-pipeline --seasons 2023-2024 --json-out artifacts/mlb_margin.json
+sports-ds mlb-elo --seasons 2023-2024 --json-out artifacts/mlb_elo.json
+```
+
+### Player paths
+
+```bash
+sports-ds nfl-player-eda --seasons 2023-2024 --positions QB,RB,WR,TE
+sports-ds nfl-player-pipeline --seasons 2022-2024 --target fantasy_points_ppr --json-out artifacts/nfl_player.json
+
+sports-ds nba-player-eda --seasons 2023-2024
+sports-ds nba-player-pipeline --seasons 2023-2024 --target fantasy_points --json-out artifacts/nba_player.json
+
+sports-ds mlb-player-eda --seasons 2024
+sports-ds mlb-player-pipeline --seasons 2023-2024 --max-games 50 --json-out artifacts/mlb_player.json
+```
+
+### Trust checks
+
+```bash
+sports-ds calibrate --sport nfl --seasons 2018-2024 --json-out artifacts/cal.json
+sports-ds leakage-audit --sport nfl --seasons 2023-2024 --json-out artifacts/leak.json
+```
+
+Pipeline commands are reference benchmarks, not dependencies of the standalone
+skills. When a command supports `--json-out`, write the artifact explicitly and
+validate or translate its schema before downstream use.
 
 ## Handoff example
 

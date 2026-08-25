@@ -21,6 +21,27 @@ verifying a new environment and
 [the troubleshooting guide](references/troubleshooting.md) when an install,
 import, output, or loader probe fails.
 
+## When to Use This Skill
+
+Use when:
+
+- onboarding a new machine or project for sports analysis;
+- diagnosing broken imports, wrong interpreters, or conflicting packages;
+- locking a reproducible environment before serious modeling;
+- verifying that selected skill helpers and loaders work offline at `--help`.
+
+Do **not** use this skill to:
+
+- install the optional repository toolkit / bridge path → `sports-ds-bridge`;
+- choose a public data source → `data-sources`;
+- run EDA or modeling once the environment already works.
+
+| Need | Go instead |
+|---|---|
+| Optional toolkit bridge | `sports-ds-bridge` |
+| Source selection | `data-sources` |
+| Analysis after setup | the relevant modeling skill |
+
 ## Plan before installing
 
 Record operating system/architecture, Python version and executable, analysis
