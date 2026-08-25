@@ -72,7 +72,11 @@ def main() -> int:
 
     duplicate_rate = float(df.duplicated().mean())
     findings.append(
-        finding("duplicate_rows", "FAIL" if duplicate_rate > 0.01 else "PASS", f"duplicate_rate={duplicate_rate:.6f}")
+        finding(
+            "duplicate_rows",
+            "REVIEW" if duplicate_rate > 0.01 else "PASS",
+            f"duplicate_rate={duplicate_rate:.6f}",
+        )
     )
 
     suspicious_corr = {}
@@ -87,7 +91,7 @@ def main() -> int:
     findings.append(
         finding(
             "near_perfect_target_correlation",
-            "FAIL" if suspicious_corr else "PASS",
+            "REVIEW" if suspicious_corr else "PASS",
             suspicious_corr or "none",
         )
     )
@@ -98,9 +102,21 @@ def main() -> int:
         first_null_rates = {c: float(first[c].isna().mean()) for c in features}
         findings.append(finding("first_event_history_review", "REVIEW", first_null_rates))
 
+    findings.append(
+        finding(
+            "manual_pipeline_review",
+            "REVIEW",
+            (
+                "Required: verify point-in-time source availability, transform ordering, "
+                "join direction/cardinality, and fold-local preprocessing from lineage and code."
+            ),
+        )
+    )
+
     failed = [item for item in findings if item["status"] == "FAIL"]
-    needs_review = [item for item in findings if item["status"] == "REVIEW"]
-    verdict = "NOT CLEAN" if failed else "REVIEW REQUIRED" if needs_review else "CLEAN"
+    # Matrix heuristics can find evidence of contamination, but cannot prove the
+    # end-to-end pipeline clean. CLEAN is reserved for the completed manual audit.
+    verdict = "NOT CLEAN" if failed else "REVIEW REQUIRED"
     report = {
         "n_rows": int(len(df)),
         "features": features,
@@ -120,7 +136,7 @@ def main() -> int:
         print(f"wrote {out}")
     if failed:
         return 2
-    return 1 if needs_review else 0
+    return 1
 
 
 if __name__ == "__main__":

@@ -48,5 +48,7 @@ It should **not** include:
 
 ## Skill doc minimum
 
-See `docs/skill-authoring.md`. Include only the guidance and resources that
-materially improve the task; depth is not measured by length.
+See `docs/skill-authoring.md`. Each installed skill must preserve the complete
+decision-changing operator guidance for its job, whether that guidance lives in
+`SKILL.md` or explicitly routed references. Length alone does not prove quality,
+but a large unexplained deletion is a review failure, not an optimization.

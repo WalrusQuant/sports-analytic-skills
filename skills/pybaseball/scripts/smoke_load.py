@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 
 
 def main() -> int:
@@ -19,7 +20,11 @@ def main() -> int:
         print("Install: pip install pybaseball")
         return 1
 
-    print("pybaseball import ok")
+    try:
+        version = importlib.metadata.version("pybaseball")
+    except importlib.metadata.PackageNotFoundError:
+        version = "unknown"
+    print(f"pybaseball import ok; version={version}; probe=FanGraphs batting_stats")
     try:
         df = batting_stats(args.season)
     except Exception as exc:
@@ -27,6 +32,15 @@ def main() -> int:
         return 2
 
     n = len(df)
+    if n == 0:
+        print(
+            f"FAIL: batting_stats({args.season}) returned zero rows; "
+            "an empty provider response is not success"
+        )
+        return 3
+    if not hasattr(df, "columns") or len(df.columns) == 0:
+        print(f"FAIL: batting_stats({args.season}) returned no columns")
+        return 4
     cols = list(df.columns)[:8]
     print(f"OK: batting_stats({args.season}) rows={n} sample_cols={cols}")
     return 0

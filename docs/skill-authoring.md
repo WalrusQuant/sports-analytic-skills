@@ -46,19 +46,50 @@ generic skill must not:
 The sole exception is `sports-ds-bridge`, whose job is explicit optional
 integration with the toolkit.
 
-## Entrypoint content
+## Entrypoint content and instructional depth
 
-Keep `SKILL.md` as short as the task permits. Include:
+Keep `SKILL.md` focused, but never shorten it by deleting guidance that changes
+an agent's decisions. Portability and instructional depth are independent
+requirements. A deep skill may distribute material across `SKILL.md` and
+`references/`; the installed skill as a whole must remain a usable operator
+manual.
+
+Include or explicitly route all of the following when they are part of the job:
 
 1. discriminating use and non-use boundaries;
-2. required inputs, including grain and minimum fields;
-3. the workflow and non-obvious sports-specific decisions;
-4. hard constraints such as decision-time legality;
-5. an observable output contract;
-6. links to references and helpers only where relevant.
+2. required inputs, grain, timing, keys, and minimum fields;
+3. the end-to-end workflow and non-obvious sports-specific decisions;
+4. decision tables for choosing methods, metrics, or modes;
+5. diagnostics, failure modes, anti-patterns, and remediation;
+6. a worked path that shows how the parts fit together;
+7. interpretation and reporting requirements;
+8. hard constraints such as decision-time legality;
+9. an observable output contract;
+10. bundled references and helpers, with precise routing instructions.
 
-Move detailed schemas, mode-specific methods, and substantial examples into
-`references/`. Do not duplicate the same guidance across files.
+Use progressive disclosure for genuinely conditional detail. Move a substantial
+example, schema, or mode-specific procedure only after creating the destination
+reference, and link it from the point where the agent needs it with wording such
+as “read this before fitting a count model.” A bare `references/` directory is
+not a substitute for routing. Do not duplicate the same guidance across files.
+
+### Migration preservation review
+
+For any broad rewrite or portability migration:
+
+1. inventory the existing headings, decision tables, examples, diagnostics,
+   templates, integrity rules, references, and helper contracts;
+2. classify each removal as obsolete, package-coupled, duplicated, or still
+   generally useful;
+3. preserve generally useful material in place or move it to an explicitly
+   routed reference;
+4. compare the before/after instructional inventory and investigate every large
+   unexplained deletion;
+5. test execution and portability separately from content completeness.
+
+Passing a validator or smoke test does not prove that the skill retained its
+methodology. A migration with unexplained wholesale documentation deletion fails
+review even when all executable tests pass.
 
 ## Input and output artifacts
 
@@ -114,4 +145,5 @@ pytest -q
 ```
 
 Also verify behavior on realistic synthetic input. Structural validation does
-not prove that the skill makes good decisions.
+not prove that the skill makes good decisions. Review reference routing and the
+migration preservation inventory whenever documentation changes materially.

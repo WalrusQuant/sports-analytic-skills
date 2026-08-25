@@ -60,7 +60,12 @@ def main() -> int:
     home = panel[panel[args.home_col] == 1]
     game_sizes = panel.groupby(args.game_col).size()
     unpaired_games = int((game_sizes != 2).sum())
+    distinct_teams = panel.groupby(args.game_col)[args.team_col].nunique(dropna=True)
+    games_not_two_distinct_teams = int((distinct_teams != 2).sum())
+    home_counts = panel.groupby(args.game_col)[args.home_col].sum(min_count=1)
+    games_not_one_home_team = int((home_counts != 1).sum())
     key_nulls = int(panel[[args.season_col, args.game_col, args.team_col]].isna().sum().sum())
+    missing_outcomes = int(panel[args.outcome_col].isna().sum())
     by_season = {}
     for season, group in panel.groupby(args.season_col, dropna=False, sort=True):
         season_home = group[group[args.home_col] == 1]
@@ -74,11 +79,15 @@ def main() -> int:
             ),
             "missing_cells": int(group.isna().sum().sum()),
         }
-    status = (
-        "REPAIR"
-        if key_duplicates or unpaired_games or key_nulls
-        else "GO_WITH_TIME_AND_LEAKAGE_REVIEW"
-    )
+    structural_failures = {
+        "duplicate_game_team_keys": key_duplicates,
+        "games_not_exactly_two_rows": unpaired_games,
+        "games_not_two_distinct_teams": games_not_two_distinct_teams,
+        "games_not_exactly_one_home_team": games_not_one_home_team,
+        "null_natural_key_cells": key_nulls,
+        "missing_home_flags": int(panel[args.home_col].isna().sum()),
+    }
+    status = "STOP" if any(structural_failures.values()) else "REPAIR" if missing_outcomes else "GO"
     report = {
         "source": str(args.input),
         "grain": "team-game",
@@ -89,7 +98,11 @@ def main() -> int:
         "n_teams": int(panel[args.team_col].nunique()),
         "duplicate_game_team_keys": key_duplicates,
         "games_not_exactly_two_rows": unpaired_games,
+        "games_not_two_distinct_teams": games_not_two_distinct_teams,
+        "games_not_exactly_one_home_team": games_not_one_home_team,
         "null_natural_key_cells": key_nulls,
+        "missing_home_flags": structural_failures["missing_home_flags"],
+        "missing_outcomes": missing_outcomes,
         "missing_by_column": {k: int(v) for k, v in panel.isna().sum().items()},
         "outcome_rate": float(panel[args.outcome_col].mean()),
         "home_outcome_rate": float(home[args.outcome_col].mean()) if len(home) else None,
@@ -99,9 +112,12 @@ def main() -> int:
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
-    print(f"rows={report['rows']} games={report['n_games']} teams={report['n_teams']} duplicate_keys={key_duplicates}")
+    print(
+        f"rows={report['rows']} games={report['n_games']} "
+        f"teams={report['n_teams']} duplicate_keys={key_duplicates}"
+    )
     print(f"wrote {args.out}")
-    return 0
+    return 2 if status == "STOP" else 1 if status == "REPAIR" else 0
 
 
 if __name__ == "__main__":

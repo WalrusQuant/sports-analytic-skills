@@ -63,6 +63,10 @@ def main() -> int:
     except (TypeError, ValueError) as exc:
         raise SystemExit("all predictors must be numeric") from exc
     y = model_rows[args.outcome_col].to_numpy(dtype=float)
+    if not np.isfinite(raw_x).all():
+        raise SystemExit("all predictors must contain finite values")
+    if not np.isfinite(y).all():
+        raise SystemExit(f"{args.outcome_col} must contain finite binary outcomes")
     x = np.column_stack([np.ones(len(raw_x)), raw_x])
     names = ["Intercept", *predictors]
     beta = np.zeros(x.shape[1])
@@ -106,6 +110,11 @@ def main() -> int:
     log_likelihood = float(np.sum(y * np.log(probability) + (1 - y) * np.log(1 - probability)))
     report = {
         "source": str(args.input), "n": int(len(y)), "formula": args.formula,
+        "row_accounting": {
+            "input_rows": int(len(frame)),
+            "complete_model_rows": int(len(model_rows)),
+            "rows_dropped_missing_outcome_or_predictor": int(len(frame) - len(model_rows)),
+        },
         "aic": float(2 * len(beta) - 2 * log_likelihood), "log_likelihood": log_likelihood,
         "covariance": "HC3 sandwich", "odds_ratios": odds, "calibration_bins": calibration,
     }

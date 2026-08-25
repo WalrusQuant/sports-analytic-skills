@@ -6,23 +6,27 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-TEMPLATE = """Question:
-Sport/league:
-Population:
-Grain:
-Analysis type:
-Predictive (yes/no):
-Decision time T:
-Target:
+TEMPLATE = """# Sports modeling charter
+
+Question:
+Sport / competition:
+Population / era / exclusions:
+Grain / natural key:
+Analysis type: descriptive | explanatory | predictive | causal | ranking | simulation
+Decision time T / forecast horizon (if prospective):
+Target or estimand / units / label rules:
+Paired or dependent rows:
 Base rate / null:
-Baselines:
-Primary metric:
+Naive and strong simple baselines:
+Primary metric / direction:
 Secondary metrics:
+Validation design / fold construction:
+Uncertainty plan:
+Data requirements / provenance / minimum coverage:
 Acceptance rule:
-Failure conditions:
-Validation:
-Data sources:
-Out of scope:
+Failure / revision / stop conditions:
+Out of scope / prohibited uses:
+Required artifacts:
 """
 
 

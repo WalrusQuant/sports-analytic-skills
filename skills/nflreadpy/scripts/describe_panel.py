@@ -10,6 +10,9 @@ from pathlib import Path
 REQUIRED = [
     "game_id",
     "season",
+    "week",
+    "gameday",
+    "game_type",
     "team",
     "opponent",
     "is_home",
@@ -17,6 +20,7 @@ REQUIRED = [
     "points_against",
     "won",
     "point_diff",
+    "tied",
 ]
 
 
@@ -56,26 +60,32 @@ def summarize_panel(panel) -> dict:
         raise SystemExit("panel contains no rows")
     if panel.select(["game_id", "team"]).is_duplicated().any():
         raise SystemExit("(game_id, team) must be unique")
-
     counts = panel.group_by("game_id").len()
     paired = bool(counts["len"].min() == 2 and counts["len"].max() == 2)
-    complements = panel.group_by("game_id").agg(
-        pl.col("is_home").sum().alias("is_home_sum"),
-        pl.col("is_home").null_count().alias("is_home_nulls"),
-        pl.col("point_diff").sum().alias("point_diff_sum"),
-        pl.col("point_diff").null_count().alias("point_diff_nulls"),
-        pl.col("points_for").sum().alias("points_for_sum"),
-        pl.col("points_against").sum().alias("points_against_sum"),
+    shared = ["season", "week", "gameday", "game_type"]
+    value_columns = [
+        "team", "opponent", "points_for", "points_against", "point_diff", "won", "tied"
+    ]
+    home = panel.filter(pl.col("is_home") == 1).select(
+        "game_id", *[pl.col(c).alias(f"home_{c}") for c in [*shared, *value_columns]]
     )
+    away = panel.filter(pl.col("is_home") == 0).select(
+        "game_id", *[pl.col(c).alias(f"away_{c}") for c in [*shared, *value_columns]]
+    )
+    pairs = home.join(away, on="game_id", how="inner")
     complementary = bool(
         paired
-        and (complements["is_home_nulls"] == 0).all()
-        and (complements["point_diff_nulls"] == 0).all()
-        and (complements["is_home_sum"] == 1).all()
-        and (complements["point_diff_sum"].abs() < 1e-9).all()
+        and pairs.height == counts.height
+        and all((pairs[f"home_{c}"] == pairs[f"away_{c}"]).all() for c in shared)
+        and (pairs["home_team"] == pairs["away_opponent"]).all()
+        and (pairs["home_opponent"] == pairs["away_team"]).all()
+        and (pairs["home_points_for"] == pairs["away_points_against"]).all()
+        and (pairs["home_points_against"] == pairs["away_points_for"]).all()
+        and ((pairs["home_point_diff"] + pairs["away_point_diff"]).abs() < 1e-9).all()
+        and (pairs["home_tied"] == pairs["away_tied"]).all()
         and (
-            (complements["points_for_sum"] - complements["points_against_sum"]).abs()
-            < 1e-9
+            ((pairs["home_tied"] == 1) & (pairs["home_point_diff"].abs() < 1e-9))
+            | ((pairs["home_tied"] == 0) & ((pairs["home_won"] + pairs["away_won"]) == 1))
         ).all()
     )
     row_logic = panel.select(
@@ -86,6 +96,11 @@ def summarize_panel(panel) -> dict:
                 pl.col("won")
                 == (pl.col("points_for") > pl.col("points_against")).cast(pl.Int8)
             )
+            & pl.col("tied").is_in([0, 1])
+            & (
+                pl.col("tied")
+                == (pl.col("points_for") == pl.col("points_against")).cast(pl.Int8)
+            )
         ).fill_null(False).all().alias("valid")
     ).item()
     return {
@@ -93,6 +108,7 @@ def summarize_panel(panel) -> dict:
         "games": panel["game_id"].n_unique(),
         "teams": panel["team"].n_unique(),
         "seasons": sorted(panel["season"].unique().to_list()),
+        "game_types": sorted(panel["game_type"].unique().to_list()),
         "two_rows_per_game": paired,
         "complementary_rows": complementary,
         "valid_row_logic": bool(row_logic),

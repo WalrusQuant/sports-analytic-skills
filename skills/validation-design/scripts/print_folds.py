@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import math
+import sys
 from pathlib import Path
 
 
@@ -41,11 +43,32 @@ def ordered_groups(series, split_col: str) -> list:
             raise SystemExit(f"{split_col!r} contains non-finite split values")
         order = numeric
     else:
-        order = pd.to_datetime(unique, errors="coerce", utc=True, format="mixed")
-        if order.isna().any():
+        labels = unique.astype(str).str.strip()
+        season_matches = labels.str.extract(
+            r"^(?P<start>\d{4})\s*[-/\N{EN DASH}\N{EM DASH}]\s*(?P<end>\d{2}|\d{4})$"
+        )
+        if season_matches.notna().to_numpy().all():
+            starts = season_matches["start"].astype(int)
+            raw_ends = season_matches["end"].astype(int)
+            ends = raw_ends.where(raw_ends.ge(1000), (starts // 100) * 100 + raw_ends)
+            ends = ends.where(ends.gt(starts), ends + 100)
+            if not ends.eq(starts + 1).all():
+                raise SystemExit(
+                    f"{split_col!r} season ranges must span consecutive years"
+                )
+            order = starts
+        elif labels.str.match(r"^\d{4}-\d{2}-\d{2}(?:[T ].*)?$").all():
+            # Parse one value at a time so mixed ISO date/timestamp precision works
+            # consistently across supported pandas versions.
+            order = labels.map(lambda value: pd.to_datetime(value, errors="coerce", utc=True))
+        else:
             raise SystemExit(
-                f"{split_col!r} must contain numeric or parseable chronological values"
+                f"{split_col!r} must contain numeric values, ISO dates/timestamps, "
+                "or consecutive season ranges such as 2022-23 or 2022/2023; "
+                "use an explicit numeric ordinal for other labels"
             )
+        if order.isna().any():
+            raise SystemExit(f"{split_col!r} contains an invalid date or season label")
     ranked = pd.DataFrame({"group": unique.to_list(), "order": order.to_list()})
     if ranked["order"].duplicated().any():
         raise SystemExit(f"{split_col!r} contains ambiguous values with the same ordering key")
@@ -65,13 +88,14 @@ def main() -> int:
     groups = ordered_groups(df[args.split_col], args.split_col)
     if len(groups) <= args.min_train_groups:
         raise SystemExit("not enough ordered groups to create a test fold")
-    print("test_group,n_train,n_test,train_groups")
+    writer = csv.writer(sys.stdout, lineterminator="\n")
+    writer.writerow(["test_group", "n_train", "n_test", "train_groups"])
     for index in range(args.min_train_groups, len(groups)):
         test_group = groups[index]
         train_groups = groups[:index]
         n_train = int(df[args.split_col].isin(train_groups).sum())
         n_test = int((df[args.split_col] == test_group).sum())
-        print(f"{test_group},{n_train},{n_test},{'|'.join(map(str, train_groups))}")
+        writer.writerow([test_group, n_train, n_test, "|".join(map(str, train_groups))])
     return 0
 
 

@@ -29,6 +29,9 @@ def main() -> int:
         return 2
 
     n = schedules.height if hasattr(schedules, "height") else len(schedules)
+    if n == 0:
+        print(f"FAIL: load_schedules({season}) returned zero rows")
+        return 3
     print(f"OK: load_schedules({season}) rows={n}")
     return 0
 

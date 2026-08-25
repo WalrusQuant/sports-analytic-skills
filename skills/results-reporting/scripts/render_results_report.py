@@ -42,7 +42,6 @@ def validate(doc: Any) -> dict[str, Any]:
             "question",
             "data",
             "methods",
-            "validation",
             "results",
             "limits",
             "reproduction",
@@ -52,19 +51,91 @@ def validate(doc: Any) -> dict[str, Any]:
     if "title" in artifact:
         _require_string(artifact["title"], "title")
 
+    # Preserve the original renderer contract for existing artifacts. New
+    # artifacts should set analysis_type and receive the stronger mode-specific
+    # evidence checks documented by this skill.
+    if "analysis_type" not in artifact:
+        data = _require_mapping(artifact["data"], "data")
+        _require_fields(data, "data", ("grain", "n"))
+        _require_string(data["grain"], "data.grain")
+        _require_positive_integer(data["n"], "data.n")
+        methods = _require_mapping(artifact["methods"], "methods")
+        _require_fields(methods, "methods", ("baseline",))
+        _require_string(methods["baseline"], "methods.baseline")
+        validation = _require_mapping(artifact.get("validation"), "validation")
+        _require_fields(validation, "validation", ("design", "primary_metric"))
+        for field in ("design", "primary_metric"):
+            _require_string(validation[field], f"validation.{field}")
+        _require_mapping(artifact["results"], "results")
+        limits = artifact["limits"]
+        if not isinstance(limits, list) or not limits:
+            raise ValueError("limits must be a non-empty array of strings")
+        for index, item in enumerate(limits):
+            _require_string(item, f"limits[{index}]")
+        _require_mapping(artifact["reproduction"], "reproduction")
+        if "interpretation" in artifact:
+            _require_string(artifact["interpretation"], "interpretation")
+        artifact["analysis_type"] = (
+            "simulation" if "simulation" in methods else "predictive"
+        )
+        return artifact
+
+    analysis_type = _require_string(
+        artifact["analysis_type"], "analysis_type"
+    ).lower()
+    allowed = {
+        "descriptive", "explanatory", "predictive",
+        "causal", "ranking", "simulation",
+    }
+    if analysis_type not in allowed:
+        raise ValueError(
+            "analysis_type must be descriptive, explanatory, predictive, "
+            "causal, ranking, or simulation"
+        )
+    artifact["analysis_type"] = analysis_type
     data = _require_mapping(artifact["data"], "data")
-    _require_fields(data, "data", ("grain", "n"))
-    _require_string(data["grain"], "data.grain")
+    _require_fields(data, "data", ("source", "sport", "grain", "period", "n"))
+    for field in ("source", "sport", "grain", "period"):
+        _require_string(data[field], f"data.{field}")
     _require_positive_integer(data["n"], "data.n")
 
     methods = _require_mapping(artifact["methods"], "methods")
-    _require_fields(methods, "methods", ("baseline",))
-    _require_string(methods["baseline"], "methods.baseline")
+    mode_fields = {
+        "descriptive": ("summary",),
+        "explanatory": ("estimand", "design"),
+        "predictive": ("target", "decision_time", "baseline", "candidate"),
+        "causal": ("treatment", "outcome", "identification"),
+        "ranking": ("as_of", "baseline", "candidate"),
+        "simulation": ("simulation", "assumptions"),
+    }
+    _require_fields(methods, "methods", mode_fields[analysis_type])
+    for field in mode_fields[analysis_type]:
+        value = methods[field]
+        if field == "assumptions":
+            if not isinstance(value, list) or not value:
+                raise ValueError("methods.assumptions must be a non-empty array")
+            for index, item in enumerate(value):
+                _require_string(item, f"methods.assumptions[{index}]")
+        else:
+            _require_string(value, f"methods.{field}")
 
-    validation = _require_mapping(artifact["validation"], "validation")
-    _require_fields(validation, "validation", ("design", "primary_metric"))
-    for field in ("design", "primary_metric"):
-        _require_string(validation[field], f"validation.{field}")
+    validation = artifact.get("validation")
+    if analysis_type in {"predictive", "ranking"}:
+        validation = _require_mapping(validation, "validation")
+        _require_fields(
+            validation,
+            "validation",
+            ("design", "primary_metric", "metric_direction", "comparison_population"),
+        )
+        for field in ("design", "primary_metric", "comparison_population"):
+            _require_string(validation[field], f"validation.{field}")
+        direction = _require_string(
+            validation["metric_direction"], "validation.metric_direction"
+        ).lower()
+        if direction not in {"lower", "higher"}:
+            raise ValueError("validation.metric_direction must be lower or higher")
+    elif validation is not None:
+        _require_mapping(validation, "validation")
 
     _require_mapping(artifact["results"], "results")
 
@@ -76,7 +147,9 @@ def validate(doc: Any) -> dict[str, Any]:
     for index, item in enumerate(limits):
         _require_string(item, f"limits[{index}]")
 
-    _require_mapping(artifact["reproduction"], "reproduction")
+    reproduction = _require_mapping(artifact["reproduction"], "reproduction")
+    if not any(key in reproduction for key in ("artifact", "artifacts")):
+        raise ValueError("reproduction must identify artifact or artifacts")
     return artifact
 
 
@@ -86,16 +159,22 @@ def _json_block(value: Any) -> list[str]:
 
 def render(doc: dict[str, Any]) -> str:
     title = str(doc.get("title") or "Sports analysis results")
-    lines = [f"# {title}", "", "## Question", doc["question"].strip(), ""]
+    lines = [
+        f"# {title}", "", f"Analysis type: {doc['analysis_type']}", "",
+        "## Question", doc["question"].strip(), "",
+    ]
 
     for heading, field in (
         ("Data", "data"),
         ("Methods", "methods"),
-        ("Validation", "validation"),
         ("Results", "results"),
     ):
         lines.extend([f"## {heading}", ""])
         lines.extend(_json_block(doc[field]))
+
+    if "validation" in doc:
+        lines.extend(["## Validation", ""])
+        lines.extend(_json_block(doc["validation"]))
 
     interpretation = doc.get("interpretation", "State what changed relative to the named baseline.")
     lines.extend(["## Interpretation", interpretation, "", "## Limits", ""])

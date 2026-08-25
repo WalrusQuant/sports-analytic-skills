@@ -9,19 +9,43 @@ from pathlib import Path
 TEMPLATE = """# Data source plan
 
 Question:
-Sport/league:
-Grain needed:
-Decision time:
-Historical depth:
-Primary source/package:
-Fallback:
-Fields required at T:
+Sport / competition / target:
+Analytical population:
+Analytical grain and natural key:
+Decision time T:
+Required fields and stable IDs:
+Historical depth / coverage window / status handling:
+Refresh cadence / completion latency:
+
+## Primary source
+
+Source / release / endpoint:
+Rationale:
+Native grain and natural key:
+Aggregation or join contract to analytical grain:
+Event / publication / update / revision semantics:
+Coverage evidence to collect:
+Authentication / rate / volume constraints:
+License / terms / attribution / redistribution:
+
+## Fallback
+
+Source and trigger:
+Native grain / key / semantic compatibility:
+Known differences requiring a new experiment or caveat:
+
+## Acquisition and verification
+
+Bounded sample query and estimated full volume:
+Representative eras / entities / completion states:
+Natural-key and row-count checks:
+Timestamp / timezone checks:
+Cross-source join / crosswalk checks:
 Raw snapshot location:
-Retrieval timestamp:
-Sanity checks:
-Known coverage gaps:
-License/ToS notes:
-Next skill: nflreadpy | sportsdataverse-py | pybaseball
+Checksum / schema fingerprint / retrieved_at UTC:
+Known gaps and claim limitations:
+Fallback activation decision:
+EDA handoff:
 """
 
 

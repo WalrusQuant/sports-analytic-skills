@@ -33,6 +33,7 @@ def load_frame(path: str):
 def main() -> int:
     args = parse_args()
     df = load_frame(args.input)
+    input_rows = int(len(df))
     missing = [c for c in (args.target, args.home_col) if c not in df.columns]
     if missing:
         raise SystemExit(f"missing required columns: {', '.join(missing)}")
@@ -61,6 +62,7 @@ def main() -> int:
     print(f"away,{len(away)},{away.mean():.6f}")
     print(f"home,{len(home)},{home.mean():.6f}")
     print(f"home odds ratio (0.5 correction): {odds_ratio:.3f} CI95=[{ci[0]:.3f}, {ci[1]:.3f}]")
+    print(f"row accounting: input={input_rows} complete={len(clean)} excluded_missing={input_rows - len(clean)}")
     print("note: the Wald interval is descriptive; pooled inference is not walk-forward validation")
     return 0
 

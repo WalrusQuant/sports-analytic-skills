@@ -70,8 +70,23 @@ def main() -> int:
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise SystemExit(f"missing required columns: {', '.join(missing)}")
-    df = df[required].dropna().copy()
-    if not set(df[args.target].unique()) <= {0, 1, False, True}:
+    df = df[required].copy()
+    import pandas as pd
+
+    numeric = df[[*a, *b]].apply(lambda column: pd.to_numeric(column, errors="coerce"))
+    invalid = df[[*a, *b]].notna() & numeric.isna()
+    if invalid.any().any():
+        bad = [column for column in [*a, *b] if invalid[column].any()]
+        raise SystemExit(f"feature columns contain non-numeric values: {', '.join(dict.fromkeys(bad))}")
+    df[[*a, *b]] = numeric.astype(float)
+    target = pd.to_numeric(df[args.target], errors="coerce")
+    if (df[args.target].notna() & target.isna()).any():
+        raise SystemExit(f"{args.target!r} must be numeric binary 0/1")
+    df[args.target] = target
+    df = df.dropna().copy()
+    if df.empty:
+        raise SystemExit("no complete rows remain for the matched feature-set comparison")
+    if not set(df[args.target].unique()) <= {0, 1}:
         raise SystemExit(f"{args.target!r} must contain only 0/1 values")
     try:
         import numpy as np
@@ -81,6 +96,8 @@ def main() -> int:
             "numpy and scikit-learn are required; install them with: "
             "python -m pip install numpy scikit-learn"
         ) from exc
+    if not np.isfinite(df[[*a, *b]].to_numpy(dtype=float)).all():
+        raise SystemExit("feature columns must contain only finite values")
     groups = ordered_groups(df[args.split_col], args.split_col)
     if len(groups) <= args.min_train_groups:
         raise SystemExit("not enough ordered groups to create a test fold")

@@ -13,6 +13,7 @@ def main() -> int:
     p.add_argument("--fold-col", default="fold", help="fold-label field in each row")
     p.add_argument("--metric", required=True, help="candidate metric field")
     p.add_argument("--baseline", required=True, help="baseline metric field")
+    p.add_argument("--n-col", default="n_test", help="held-out denominator field in each row")
     p.add_argument("--title", help="optional chart title")
     p.add_argument("--out", required=True, help="destination image path")
     args = p.parse_args()
@@ -37,7 +38,7 @@ def main() -> int:
     folds = doc["folds"]
     if not folds or not all(isinstance(row, dict) for row in folds):
         raise SystemExit("folds must contain at least one object")
-    required = [args.fold_col, args.metric, args.baseline]
+    required = [args.fold_col, args.metric, args.baseline, args.n_col]
     for index, row in enumerate(folds):
         missing = [field for field in required if field not in row]
         if missing:
@@ -53,16 +54,29 @@ def main() -> int:
     import math
     if not all(math.isfinite(value) for value in [*metric_vals, *base_vals]):
         raise SystemExit("metric and baseline fields must be finite")
+    raw_denominators = [row[args.n_col] for row in folds]
+    if any(
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+        or value != int(value)
+        or value <= 0
+        for value in raw_denominators
+    ):
+        raise SystemExit(f"{args.n_col} fields must be positive integers")
+    denominators = [int(value) for value in raw_denominators]
+    if len(set(seasons)) != len(seasons):
+        raise SystemExit(f"{args.fold_col} labels must be unique")
 
     x = range(len(seasons))
     width = 0.38
     fig, ax = plt.subplots(figsize=(10, 5.2))
     ax.bar([i - width / 2 for i in x], metric_vals, width=width, label=args.metric, color="steelblue")
     ax.bar([i + width / 2 for i in x], base_vals, width=width, label=args.baseline, color="salmon")
-    ax.set_xticks(list(x), seasons)
+    ax.set_xticks(list(x), [f"{fold}\nn={n}" for fold, n in zip(seasons, denominators)])
     title = args.title or (
         f"Walk-forward {args.metric} vs {args.baseline} "
-        f"(n_folds={len(seasons)})"
+        f"(n_folds={len(seasons)}; held-out rows={sum(denominators)}; uncertainty unavailable)"
     )
     ax.set_title(title, wrap=True, pad=14)
     ax.set_xlabel(args.fold_col)

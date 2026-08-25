@@ -17,6 +17,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--filter-col", help="Optional column used to select one evaluation perspective")
     parser.add_argument("--filter-value", help="String value required in --filter-col")
     parser.add_argument("--bins", type=int, default=10)
+    parser.add_argument("--min-bin-n", type=int, default=20)
     return parser.parse_args()
 
 
@@ -34,25 +35,27 @@ def main() -> int:
     args = parse_args()
     if args.bins < 2:
         raise SystemExit("--bins must be at least 2")
+    if args.min_bin_n < 1:
+        raise SystemExit("--min-bin-n must be at least 1")
     if bool(args.filter_col) != bool(args.filter_value):
         raise SystemExit("--filter-col and --filter-value must be provided together")
+    if args.target == args.probability:
+        raise SystemExit("--target and --probability must name different columns")
     helper = load_report_module()
     df = helper.load_frame(args.input)
     required = [args.target, args.probability]
     required += [args.segment_col] if args.segment_col else []
     required += [args.filter_col] if args.filter_col else []
+    required = list(dict.fromkeys(required))
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise SystemExit(f"missing required columns: {', '.join(missing)}")
-    clean = df[required].dropna().copy()
+    clean = helper.validate_numeric_inputs(df[required], args.target, args.probability)
+    clean = clean.dropna().copy()
     if args.filter_col:
         clean = clean[clean[args.filter_col].astype(str) == args.filter_value].copy()
     if clean.empty:
         raise SystemExit("no complete rows to evaluate")
-    if not set(clean[args.target].unique()) <= {0, 1, False, True}:
-        raise SystemExit(f"{args.target!r} must contain only 0/1 values")
-    if not clean[args.probability].between(0, 1).all():
-        raise SystemExit(f"{args.probability!r} must be between 0 and 1")
     segments = [("all", clean)]
     if args.segment_col:
         segments.extend((f"{args.segment_col}={value}", part) for value, part in clean.groupby(args.segment_col, sort=True))
@@ -60,13 +63,14 @@ def main() -> int:
         ("tail_low", clean[clean[args.probability] < 0.2]),
         ("tail_high", clean[clean[args.probability] > 0.8]),
     ])
-    print("segment,n,brier,log_loss,ece")
+    print("segment,n,brier,log_loss,ece,sparse_bins")
     for name, part in segments:
         if part.empty:
-            print(f"{name},0,,,")
+            print(f"{name},0,,,,")
             continue
         result = helper.metrics(part, args.target, args.probability, args.bins)
-        print(f"{name},{result['n']},{result['brier']:.6f},{result['log_loss']:.6f},{result['ece']:.6f}")
+        sparse = sum(row["n"] < args.min_bin_n for row in result["calibration_table"])
+        print(f"{name},{result['n']},{result['brier']:.6f},{result['log_loss']:.6f},{result['ece']:.6f},{sparse}")
     return 0
 
 

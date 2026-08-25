@@ -6,6 +6,10 @@
 train seasons < S → test S
 ```
 
+Order by an explicit numeric season ordinal. Consecutive labels such as
+`2022-23` may be ordered by their start year; arbitrary labels need a separate
+ordinal and must never be sorted lexically by accident.
+
 ## Sliding window
 
 ```text

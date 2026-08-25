@@ -41,8 +41,13 @@ def main() -> int:
     if not panel[args.outcome_col].dropna().isin([0.0, 1.0]).all():
         raise SystemExit(f"{args.outcome_col} must contain binary 0/1 outcomes")
     home = panel[panel[args.home_col] == 1]
-    rates = home.groupby(args.season_col)[args.outcome_col].mean().sort_index()
-    if rates.empty: raise SystemExit("no home rows found")
+    home = home.dropna(subset=[args.season_col, args.outcome_col])
+    summary = home.groupby(args.season_col)[args.outcome_col].agg(["sum", "count"]).sort_index()
+    if summary.empty: raise SystemExit("no home rows with observed season and outcome")
+    rates = summary["sum"] / summary["count"]
+    z = 1.959963984540054
+    center = (rates + z * z / (2 * summary["count"])) / (1 + z * z / summary["count"])
+    half = z * ((rates * (1 - rates) / summary["count"] + z * z / (4 * summary["count"] ** 2)) ** 0.5) / (1 + z * z / summary["count"])
     try:
         import matplotlib
 
@@ -51,9 +56,19 @@ def main() -> int:
     except ImportError as exc:
         raise SystemExit("This command requires matplotlib. Install it with: pip install matplotlib") from exc
     fig, ax = plt.subplots(figsize=(8, 4.5))
-    ax.bar(rates.index.astype(str), rates.values, color="steelblue", edgecolor="black")
+    ax.bar(
+        rates.index.astype(str), rates.values, color="steelblue", edgecolor="black",
+        yerr=[rates - (center - half), (center + half) - rates], capsize=3,
+    )
     ax.axhline(0.5, color="red", linestyle="--", linewidth=1)
-    ax.set(title=f"{args.title} (n={len(home)})", xlabel=args.season_col, ylabel="home win rate")
+    labels = [f"{season}\nn={int(n)}" for season, n in summary["count"].items()]
+    ax.set_xticks(range(len(labels)), labels)
+    ax.set(
+        title=f"{args.title} (eligible home rows n={len(home)}; 95% Wilson intervals)",
+        xlabel=args.season_col,
+        ylabel="home win rate",
+        ylim=(0, 1),
+    )
     ax.grid(alpha=0.25, axis="y")
     args.out.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout(); fig.savefig(args.out, dpi=140); plt.close(fig)

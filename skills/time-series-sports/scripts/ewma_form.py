@@ -7,6 +7,27 @@ import argparse
 from pathlib import Path
 
 
+def normalized_order_values(series, column: str):
+    """Return finite numeric or UTC timestamp sort keys for a required column."""
+    import numpy as np
+    import pandas as pd
+
+    if series.isna().any():
+        raise SystemExit(f"{column!r} must not contain null values")
+    if pd.api.types.is_bool_dtype(series.dtype):
+        raise SystemExit(f"{column!r} must not use boolean values")
+    numeric = pd.to_numeric(series, errors="coerce")
+    if numeric.notna().all():
+        values = numeric.to_numpy(dtype=float)
+        if not np.isfinite(values).all():
+            raise SystemExit(f"{column!r} must contain finite ordering values")
+        return pd.Series(values, index=series.index)
+    timestamps = pd.to_datetime(series, errors="coerce", utc=True, format="mixed")
+    if timestamps.isna().any():
+        raise SystemExit(f"{column!r} must contain numeric or parseable timestamp values")
+    return pd.Series(timestamps.astype("int64"), index=series.index)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", required=True, help="CSV, Parquet, or JSON records file")
@@ -46,14 +67,19 @@ def add_shifted_ewma(
 ):
     keys = [*group_cols, entity_col]
     order = order_col or time_col
-    out = df.sort_values([*keys, order], kind="stable").copy()
+    out = df.copy()
+    sort_key = "__ewma_sort_key"
+    while sort_key in out.columns:
+        sort_key += "_"
+    out[sort_key] = normalized_order_values(out[order], order)
+    out = out.sort_values([*keys, sort_key], kind="stable").copy()
     grouped = out.groupby(keys, sort=False, group_keys=False)
     for col in values:
         prior = grouped[col].shift(1)
         out[f"pre_ewma_{col}"] = prior.groupby([out[k] for k in keys], sort=False).transform(
             lambda series: series.ewm(span=span, adjust=False).mean()
         )
-    return out
+    return out.drop(columns=[sort_key])
 
 
 def main() -> int:
@@ -64,6 +90,10 @@ def main() -> int:
     group_cols = [c.strip() for c in args.group_cols.split(",") if c.strip()]
     if not values:
         raise SystemExit("--values must name at least one column")
+    named_roles = [args.entity_col, args.time_col, *group_cols, *values]
+    named_roles += [args.order_col] if args.order_col else []
+    if len(set(named_roles)) != len(named_roles):
+        raise SystemExit("entity, time, order, reset-group, and value columns must not overlap")
     df = load_frame(args.input)
     required = [
         args.entity_col,
@@ -75,18 +105,42 @@ def main() -> int:
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise SystemExit(f"missing required columns: {', '.join(missing)}")
-    nonnumeric = [c for c in values if not str(df[c].dtype).startswith(("int", "float"))]
+    import numpy as np
+    import pandas as pd
+
+    key_columns = [*group_cols, args.entity_col]
+    if df[key_columns].isna().any().any():
+        raise SystemExit("entity and reset-group columns must not contain null values")
+    nonnumeric = [
+        c
+        for c in values
+        if not pd.api.types.is_numeric_dtype(df[c].dtype)
+    ]
     if nonnumeric:
-        raise SystemExit(f"value columns must be numeric: {', '.join(nonnumeric)}")
+        raise SystemExit(f"value columns must use numeric or boolean dtypes: {', '.join(nonnumeric)}")
+    numeric_values = df[values].to_numpy(dtype=float, na_value=np.nan)
+    if np.isinf(numeric_values).any():
+        raise SystemExit("value columns must not contain infinite values")
     keys = [*group_cols, args.entity_col]
     sequence_col = args.order_col or args.time_col
-    if df.duplicated([*keys, sequence_col]).any():
+    sequence_values = normalized_order_values(df[sequence_col], sequence_col)
+    time_values = normalized_order_values(df[args.time_col], args.time_col)
+    ordering = df[keys].copy()
+    ordering["__sequence"] = sequence_values
+    ordering["__time"] = time_values
+    if ordering.duplicated([*keys, "__sequence"]).any():
         hint = (
             "provide a strictly ordered --order-col"
             if not args.order_col
             else f"{args.order_col!r} must be unique within each entity/reset group"
         )
         raise SystemExit(f"ambiguous event order: {hint}")
+    ordered = ordering.sort_values([*keys, "__sequence"], kind="stable")
+    time_reverses = ordered.groupby(keys, sort=False)["__time"].diff().lt(0)
+    if time_reverses.any():
+        raise SystemExit(
+            f"{sequence_col!r} orders at least one event before an earlier {args.time_col!r} value"
+        )
     out_df = add_shifted_ewma(
         df,
         args.entity_col,

@@ -77,13 +77,36 @@ def main() -> int:
     required = [args.value_col] + ([args.group_col] if args.group_col else [])
     missing = [column for column in required if column not in frame.columns]
     if missing: raise SystemExit(f"missing required columns: {', '.join(missing)}")
+    import numpy as np
+    import pandas as pd
+
+    numeric = pd.to_numeric(frame[args.value_col], errors="coerce")
+    invalid = frame[args.value_col].notna() & numeric.isna()
+    if invalid.any():
+        raise SystemExit(f"{args.value_col!r} must contain numeric values")
+    if np.isinf(numeric.dropna().to_numpy(dtype=float)).any():
+        raise SystemExit(f"{args.value_col!r} must not contain infinite values")
+    frame[args.value_col] = numeric
+    analyzed_rows = int(frame[args.value_col].notna().sum())
+    if analyzed_rows < 3:
+        raise SystemExit("normality check requires at least three finite non-null values")
     report = {
         "source": str(args.input), "value_column": args.value_col, "alpha": args.alpha,
+        "row_accounting": {
+            "input_rows": int(len(frame)),
+            "analyzed_value_rows": analyzed_rows,
+            "rows_missing_value": int(frame[args.value_col].isna().sum()),
+        },
         "normality": check_normality(frame[args.value_col].dropna(), args.alpha),
         "outliers": detect_outliers(frame[args.value_col].dropna(), args.outlier_threshold),
     }
     if args.group_col:
-        report["homogeneity"] = check_homogeneity_of_variance(frame, args.value_col, args.group_col, args.alpha)
+        try:
+            report["homogeneity"] = check_homogeneity_of_variance(
+                frame, args.value_col, args.group_col, args.alpha
+            )
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps(report, indent=2)); print(f"wrote {args.out}")

@@ -24,14 +24,16 @@ def load_table(path: Path):
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True, help="held-out predictions in CSV, Parquet, or JSON")
-    parser.add_argument("--actual-col", default="actual", help="binary outcome column")
-    parser.add_argument("--prob-col", default="probability", help="predicted probability column")
+    parser.add_argument("--actual-col", default="y_true", help="binary outcome column")
+    parser.add_argument("--prob-col", default="logistic_probability", help="predicted probability column")
     parser.add_argument("--top", type=int, default=20)
     parser.add_argument("--columns", default="", help="comma-separated identifier/context columns to print")
     parser.add_argument("--filter-col", help="Optional column used to select one evaluation perspective")
     parser.add_argument("--filter-value", help="String value required in --filter-col")
     args = parser.parse_args()
 
+    if args.top < 1:
+        raise SystemExit("--top must be at least 1")
     if bool(args.filter_col) != bool(args.filter_value):
         raise SystemExit("--filter-col and --filter-value must be provided together")
     frame = load_table(args.input)
@@ -45,12 +47,19 @@ def main() -> int:
         numeric = numeric[numeric[args.filter_col].astype(str) == args.filter_value].copy()
     if numeric.empty:
         raise SystemExit("no complete rows remain after filtering")
-    numeric[args.actual_col] = numeric[args.actual_col].astype(float)
-    numeric[args.prob_col] = numeric[args.prob_col].astype(float)
+    import pandas as pd
+
+    for column in (args.actual_col, args.prob_col):
+        converted = pd.to_numeric(numeric[column], errors="coerce")
+        if converted.isna().any():
+            raise SystemExit(f"{column} must contain numeric values")
+        numeric[column] = converted.astype(float)
     if not numeric[args.actual_col].isin([0.0, 1.0]).all():
         raise SystemExit(f"{args.actual_col} must contain binary 0/1 outcomes")
-    if not numeric[args.prob_col].between(0, 1).all():
-        raise SystemExit(f"{args.prob_col} must contain probabilities in [0, 1]")
+    import numpy as np
+
+    if not np.isfinite(numeric[args.prob_col].to_numpy()).all() or not numeric[args.prob_col].between(0, 1).all():
+        raise SystemExit(f"{args.prob_col} must contain finite probabilities in [0, 1]")
     numeric["absolute_error"] = (numeric[args.actual_col] - numeric[args.prob_col]).abs()
     context = [c.strip() for c in args.columns.split(",") if c.strip()]
     unknown = [column for column in context if column not in numeric.columns]

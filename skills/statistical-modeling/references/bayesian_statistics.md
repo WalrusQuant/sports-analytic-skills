@@ -660,11 +660,14 @@ p_value = np.mean(pred_means >= obs_mean)  # Bayesian (posterior predictive) p-v
 
 ## Key Python Packages
 
-Install with uv (see SKILL.md). ArviZ requires Python >= 3.10. ArviZ 1.x is the current line and is a breaking rewrite: `az.summary` defaults to 89% intervals and takes `ci_prob=` (the old `hdi_prob=` keyword is gone), `az.hdi` takes `prob=`, `az.plot_posterior`/`az.plot_ppc` were replaced by `az.plot_dist`/`az.plot_ppc_dist`, and `az.waic` was removed (use `az.loo`).
+Install the packages needed for the selected workflow with `python -m pip` in
+the project's environment. Bayesian APIs change across releases, so pin and
+record the versions used and consult the installed package documentation rather
+than relying on version-specific signatures in this reference.
 
 - **PyMC** (`pymc>=5`): Full Bayesian modeling framework
 - **ArviZ** (`arviz>=1.0`): Visualization and diagnostics ([docs](https://python.arviz.org))
-- **Bambi**: High-level interface for regression models (`uv pip install bambi`)
+- **Bambi**: High-level interface for regression models (`python -m pip install bambi`)
 - **cmdstanpy**: Python interface to Stan (use instead of the discontinued PyStan)
 - **TensorFlow Probability**: Bayesian inference with TensorFlow
 

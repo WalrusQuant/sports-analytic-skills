@@ -118,15 +118,17 @@ def main() -> int:
         raise SystemExit("--out must end in .json")
 
     df = load_frame(args.input)
+    input_rows = int(len(df))
     required = all_named_columns
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise SystemExit(f"missing required columns: {', '.join(missing)}")
     df = df[required].copy()
     df["source_row"] = df.index
-    df = df.dropna(subset=[args.target, args.split_col, *features]).copy()
+    rows_missing_target_or_split = int(df[[args.target, args.split_col]].isna().any(axis=1).sum())
+    df = df.dropna(subset=[args.target, args.split_col]).copy()
     if df.empty:
-        raise SystemExit("no complete modeling rows remain")
+        raise SystemExit("no rows with a non-null target and split value remain")
     if id_cols and (df[id_cols].isna().any().any() or df.duplicated(id_cols).any()):
         raise SystemExit("--id-cols must be non-null and jointly unique")
     if not set(df[args.target].unique()) <= {0, 1, False, True}:
@@ -135,16 +137,25 @@ def main() -> int:
         import numpy as np
         import pandas as pd
         from sklearn.ensemble import HistGradientBoostingClassifier
+        from sklearn.impute import SimpleImputer
         from sklearn.linear_model import LogisticRegression
+        from sklearn.pipeline import make_pipeline
     except ImportError as exc:
         raise SystemExit(
             "numpy and scikit-learn are required; install them with: "
             "python -m pip install numpy scikit-learn"
         ) from exc
     numeric_features = df[features].apply(lambda column: pd.to_numeric(column, errors="coerce"))
-    if numeric_features.isna().any().any() or not np.isfinite(numeric_features.to_numpy()).all():
-        raise SystemExit("feature columns must contain only finite numeric values")
+    invalid_numeric = df[features].notna() & numeric_features.isna()
+    if invalid_numeric.any().any():
+        bad = [column for column in features if invalid_numeric[column].any()]
+        raise SystemExit(f"feature columns contain non-numeric values: {', '.join(bad)}")
+    numeric_features = numeric_features.astype(float)
+    finite_values = numeric_features.to_numpy(dtype=float)
+    if np.isinf(finite_values).any():
+        raise SystemExit("feature columns must not contain infinite values")
     df[features] = numeric_features
+    rows_with_missing_features = int(df[features].isna().any(axis=1).sum())
 
     groups = ordered_groups(df[args.split_col], args.split_col)
     if len(groups) <= args.min_train_groups:
@@ -160,9 +171,21 @@ def main() -> int:
         y_test = test[args.target].astype(int).to_numpy()
         if len(np.unique(y_train)) < 2:
             raise SystemExit(f"training fold before {test_group!r} has only one target class")
+        all_missing = [column for column in features if train[column].notna().sum() == 0]
+        if all_missing:
+            raise SystemExit(
+                f"training fold before {test_group!r} has all-missing features: "
+                f"{', '.join(all_missing)}"
+            )
         constant = np.full(len(test), y_train.mean())
-        logistic = LogisticRegression(max_iter=2000, random_state=0).fit(train[features], y_train)
-        gbm = HistGradientBoostingClassifier(random_state=0).fit(train[features], y_train)
+        logistic = make_pipeline(
+            SimpleImputer(strategy="median"),
+            LogisticRegression(max_iter=2000, random_state=0),
+        ).fit(train[features], y_train)
+        gbm = make_pipeline(
+            SimpleImputer(strategy="median"),
+            HistGradientBoostingClassifier(random_state=0),
+        ).fit(train[features], y_train)
         log_p = logistic.predict_proba(test[features])[:, 1]
         gbm_p = gbm.predict_proba(test[features])[:, 1]
         folds.append(
@@ -209,6 +232,16 @@ def main() -> int:
                 "design": "expanding_window",
                 "min_train_groups": args.min_train_groups,
                 "primary_metric": "log_loss",
+            },
+            "row_accounting": {
+                "input_rows": input_rows,
+                "rows_dropped_missing_target_or_split": rows_missing_target_or_split,
+                "modeling_rows": int(len(df)),
+                "rows_with_missing_features_imputed_within_folds": rows_with_missing_features,
+            },
+            "preprocessing": {
+                "numeric_features": "validated before folding",
+                "missing_features": "training-fold median imputation per candidate",
             },
             "models": [
                 "training_rate_constant",

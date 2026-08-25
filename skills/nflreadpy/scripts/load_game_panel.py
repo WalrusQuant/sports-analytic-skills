@@ -19,6 +19,13 @@ SOURCE_COLUMNS = [
 ]
 
 
+def parse_game_types(raw: str) -> list[str]:
+    values = sorted({item.strip().upper() for item in raw.split(",") if item.strip()})
+    if not values:
+        raise ValueError("at least one game type is required")
+    return values
+
+
 def parse_seasons(raw: str) -> list[int]:
     seasons: list[int] = []
     for chunk in raw.split(","):
@@ -40,7 +47,7 @@ def require_parquet_path(parser: argparse.ArgumentParser, value: str, flag: str)
     return path
 
 
-def build_panel(schedule):
+def build_panel(schedule, game_types: list[str] | None = None):
     try:
         import polars as pl
     except ImportError as exc:
@@ -60,6 +67,16 @@ def build_panel(schedule):
         )
     if schedule["game_id"].is_duplicated().any():
         raise SystemExit("raw schedule contains duplicate game_id values")
+    if game_types is not None:
+        if "game_type" not in schedule.columns:
+            raise SystemExit(
+                "schedule release is missing game_type; requested scope cannot be verified"
+            )
+        schedule = schedule.filter(pl.col("game_type").cast(pl.String).is_in(game_types))
+        if schedule.is_empty():
+            raise SystemExit("no schedule rows matched requested game types")
+    if "game_type" not in schedule.columns:
+        schedule = schedule.with_columns(pl.lit("unknown").alias("game_type"))
 
     completed = schedule.filter(
         pl.col("home_score").is_not_null() & pl.col("away_score").is_not_null()
@@ -80,12 +97,17 @@ def build_panel(schedule):
         and completed["away_score"].is_finite().all()
     ):
         raise SystemExit("completed game scores must be finite")
+    if ((completed["home_score"] < 0) | (completed["away_score"] < 0)).any():
+        raise SystemExit("completed game scores must be non-negative")
+    if (completed["home_team"] == completed["away_team"]).any():
+        raise SystemExit("completed schedule contains a self-opponent game")
 
     common = [
         pl.col("game_id"),
         pl.col("season"),
         pl.col("week"),
         pl.col("gameday"),
+        pl.col("game_type").cast(pl.String),
     ]
     home = completed.select(
         *common,
@@ -125,6 +147,11 @@ def build_panel(schedule):
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seasons", required=True, help="e.g. 2023,2024 or 2020-2024")
+    parser.add_argument(
+        "--game-types",
+        default="REG",
+        help="comma-separated nflverse game_type values to retain (default: REG)",
+    )
     parser.add_argument("--out", required=True, help="team-game Parquet output")
     parser.add_argument(
         "--raw-out", help="optional raw schedule Parquet snapshot for provenance"
@@ -142,6 +169,10 @@ def main() -> int:
         parser.error("--seasons must contain at least one season")
     if any(season < 1999 or season > 2100 for season in seasons):
         parser.error("--seasons contains an implausible NFL season")
+    try:
+        game_types = parse_game_types(args.game_types)
+    except ValueError as exc:
+        parser.error(f"invalid --game-types value: {exc}")
     out = require_parquet_path(parser, args.out, "--out")
     raw_out = (
         require_parquet_path(parser, args.raw_out, "--raw-out")
@@ -163,7 +194,7 @@ def main() -> int:
         ) from exc
 
     schedule = nfl.load_schedules(seasons)
-    panel = build_panel(schedule)
+    panel = build_panel(schedule, game_types=game_types)
     out.parent.mkdir(parents=True, exist_ok=True)
     panel.write_parquet(out)
     if raw_out:
@@ -174,7 +205,8 @@ def main() -> int:
             schedule.to_parquet(raw_out, index=False)
     print(
         f"OK: wrote {panel.height} team-game rows "
-        f"({panel['game_id'].n_unique()} games) for seasons={seasons} -> {out}"
+        f"({panel['game_id'].n_unique()} games) for seasons={seasons} "
+        f"game_types={game_types} -> {out}"
     )
     if raw_out:
         print(f"raw schedule -> {raw_out}")

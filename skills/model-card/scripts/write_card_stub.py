@@ -12,63 +12,83 @@ TEMPLATE = """# Model card: {name} ({version})
 
 - Name: {name}
 - Version: {version}
-- Date:
 - Sport:
 - Owner:
+- Reviewers:
+- Status: experimental | evaluated | approved | retired
+- Created:
+- Next review:
 
 ## Intended use
 
 - In scope:
+- Intended users and decisions:
 - Out of scope:
+- Prohibited uses:
 
 ## Target and timing
 
 - Target:
 - Grain: {grain}
 - Prediction decision time:
+- Forecast horizon:
+- Output semantics:
 
 ## Data
 
 - Sources:
+- Sport / competition / population:
+- Source provenance:
 - Window:
-- Population and exclusions:
+- Filters, exclusions, and missingness:
 - Sample size:
-- Snapshot or artifact:
+- Immutable snapshot or artifact:
 
 ## Features
 
 - Set / registry names:
+- Transformations:
 - Time-safety:
 - Feature provenance and timing notes:
 
 ## Baselines
 
 - Constant / home / Elo / form:
+- Candidate family:
 - Comparison rule:
 
 ## Validation
 
 - Design:
+- Fold boundaries and held-out population:
 - Primary metric:
+- Metric direction:
 - Secondary metrics:
 
 ## Results
 
 - Mean walk-forward:
 - Per-season / per-fold:
+- Uncertainty and slices:
 - Calibration:
 - Leakage and stability findings:
 
-## Limits
+## Limitations and failure modes
 
 - Known limitation or misuse risk:
 
 ## Maintenance
 
-- Retrain:
-- Kill conditions:
+- Monitoring owner and cadence:
+- Retrain triggers and actions:
+- Kill conditions, minimum evidence, and actions:
+- Review and approval history:
 - Experiments:
-- Artifact manifest:
+
+## Artifact manifest
+
+- Data / features / configuration / model / metrics / predictions:
+- Dependencies and environment:
 
 ## Reproduction
 

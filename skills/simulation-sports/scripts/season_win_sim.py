@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Monte Carlo season win totals from a one-row-per-game probability table."""
+"""Monte Carlo win counts across supplied one-row-per-game schedule rows."""
 
 from __future__ import annotations
 
@@ -70,19 +70,35 @@ def simulate_season(
         wins[:, home_idx[game_index]] += home_wins
         wins[:, away_idx[game_index]] += ~home_wins
 
-    standings = []
+    schedule_win_summaries = []
     for team in teams:
         values = wins[:, team_index[team]]
         row = {
             "team": team,
-            "mean_wins": float(values.mean()),
-            "p05": float(np.quantile(values, 0.05)),
-            "p50": float(np.quantile(values, 0.50)),
-            "p95": float(np.quantile(values, 0.95)),
+            "mean_wins_in_supplied_games": float(values.mean()),
+            "p05_wins_in_supplied_games": float(np.quantile(values, 0.05)),
+            "p50_wins_in_supplied_games": float(np.quantile(values, 0.50)),
+            "p95_wins_in_supplied_games": float(np.quantile(values, 0.95)),
         }
         if threshold is not None:
-            row["prob_wins_at_least_threshold"] = float((values >= threshold).mean())
-        standings.append(row)
+            row["prob_wins_in_supplied_games_at_least_threshold"] = float(
+                (values >= threshold).mean()
+            )
+        row["mean_wins"] = row["mean_wins_in_supplied_games"]
+        row["p05"] = row["p05_wins_in_supplied_games"]
+        row["p50"] = row["p50_wins_in_supplied_games"]
+        row["p95"] = row["p95_wins_in_supplied_games"]
+        if threshold is not None:
+            row["prob_wins_at_least_threshold"] = row[
+                "prob_wins_in_supplied_games_at_least_threshold"
+            ]
+        schedule_win_summaries.append(row)
+
+    ordered_summaries = sorted(
+        schedule_win_summaries,
+        key=lambda row: row["mean_wins_in_supplied_games"],
+        reverse=True,
+    )
 
     return {
         "n_sims": n_sims,
@@ -91,12 +107,20 @@ def simulate_season(
         "n_teams": len(teams),
         "probability_column": probability_col,
         "win_threshold": threshold,
+        "win_count_scope": "wins in supplied game rows after CLI filters",
+        "includes_completed_wins_outside_supplied_rows": False,
+        "is_full_season_total": False,
+        "scope_note": (
+            "These counts are full-season totals only when the supplied rows cover "
+            "every game in the season; the helper does not add prior completed wins."
+        ),
         "assumptions": [
             "independent games conditional on supplied pre-event probabilities",
             "one row per game",
             "the focal team wins with the supplied probability",
         ],
-        "standings": sorted(standings, key=lambda row: row["mean_wins"], reverse=True),
+        "schedule_win_summaries": ordered_summaries,
+        "standings": ordered_summaries,
     }
 
 
@@ -115,7 +139,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n-sims", type=int, default=5000)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument(
-        "--threshold", type=float, help="Optional win-total threshold to estimate"
+        "--threshold",
+        type=float,
+        help="Optional threshold for wins across the supplied game rows",
     )
     parser.add_argument("--out", type=Path, required=True)
     return parser.parse_args()
@@ -125,6 +151,10 @@ def main() -> int:
     args = parse_args()
     if args.n_sims < 1:
         raise SystemExit("--n-sims must be at least 1")
+    if args.threshold is not None and args.threshold < 0:
+        raise SystemExit("--threshold must not be negative")
+    if args.input.resolve() == args.out.resolve():
+        raise SystemExit("--out must differ from --input")
     frame = load_table(args.input)
     required = [
         args.season_col,
@@ -138,8 +168,14 @@ def main() -> int:
     if missing:
         raise SystemExit(f"missing required columns: {', '.join(missing)}")
 
+    import pandas as pd
+
+    home = pd.to_numeric(frame[args.home_col], errors="coerce")
+    invalid_home = frame[args.home_col].notna() & home.isna()
+    if home.isna().any() or invalid_home.any() or not set(home.unique()) <= {0, 1}:
+        raise SystemExit(f"{args.home_col!r} must contain non-null 0/1 values")
     selected = frame[frame[args.season_col].astype(str) == str(args.season)].copy()
-    selected = selected[selected[args.home_col] == 1].copy()
+    selected = selected[home.loc[selected.index] == 1].copy()
     if selected.empty:
         raise SystemExit(f"no one-row-per-game records for season {args.season!r}")
     if selected[args.game_col].isna().any() or selected[args.game_col].duplicated().any():
@@ -175,10 +211,12 @@ def main() -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(f"season={args.season} games={report['n_games']} sims={args.n_sims}")
-    for row in report["standings"][:5]:
+    print("win counts cover supplied game rows only; prior completed wins are not added")
+    for row in report["schedule_win_summaries"][:5]:
         print(
-            f"  {row['team']}: mean={row['mean_wins']:.1f} "
-            f"p05={row['p05']:.0f} p95={row['p95']:.0f}"
+            f"  {row['team']}: mean_supplied={row['mean_wins_in_supplied_games']:.1f} "
+            f"p05_supplied={row['p05_wins_in_supplied_games']:.0f} "
+            f"p95_supplied={row['p95_wins_in_supplied_games']:.0f}"
         )
     print(f"wrote {args.out}")
     return 0

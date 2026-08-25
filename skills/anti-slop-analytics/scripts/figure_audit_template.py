@@ -9,8 +9,12 @@ from pathlib import Path
 TEMPLATE = """# Figure audit
 
 ## Context
-- sport/grain:
-- analysis command or notebook:
+- sport / competition:
+- population / grain:
+- source data or metrics artifact:
+- plotting script, command, or notebook cell:
+- code / environment version:
+- retrieval or artifact timestamp:
 - reviewer:
 - date:
 
@@ -20,14 +24,19 @@ For each figure/table:
 - filename/title: {title}
 - claim it supports: {claim}
 - period:
-- n:\n- baseline present (yes/no):
+- denominator definition and n:
+- filters / exclusions / missingness:
+- metric / units / aggregation:
+- baseline or null (name and value):
 - axis range honest (yes/no):
-- uncertainty shown or explicitly unknown:
+- uncertainty method, value, or explicitly unknown:
 - in-sample vs walk-forward labeled (yes/no):
-- repro path:
+- source table / fields:
+- reproduction path:
 - verdict: keep | fix | kill
 - issues:
 - replacement:
+- remaining misread risk:
 """
 
 

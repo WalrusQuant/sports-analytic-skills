@@ -9,4 +9,6 @@
 - [ ] one bounded loader sample succeeds, or network check is explicitly skipped
 - [ ] Parquet, JSON, and image outputs can be written where required
 - [ ] package versions saved to a lock file
-- [ ] environment verification saved as JSON
+- [ ] verifier stdout parses as one JSON document
+- [ ] when `--out` is used, the saved report parses as JSON and matches stdout
+- [ ] verifier `checks_not_run` items are completed separately or explicitly waived

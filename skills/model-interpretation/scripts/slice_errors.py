@@ -40,15 +40,17 @@ def metrics(group, actual_col: str, prob_col: str) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True, help="held-out predictions in CSV, Parquet, or JSON")
-    parser.add_argument("--actual-col", default="actual")
-    parser.add_argument("--prob-col", default="probability")
-    parser.add_argument("--slice-cols", default="season,is_home", help="comma-separated categorical columns")
+    parser.add_argument("--actual-col", default="y_true")
+    parser.add_argument("--prob-col", default="logistic_probability")
+    parser.add_argument("--slice-cols", default="fold", help="comma-separated categorical columns")
     parser.add_argument("--filter-col", help="Optional column used to select one evaluation perspective")
     parser.add_argument("--filter-value", help="String value required in --filter-col")
     parser.add_argument("--min-n", type=int, default=20)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
 
+    if args.min_n < 1:
+        raise SystemExit("--min-n must be at least 1")
     if bool(args.filter_col) != bool(args.filter_value):
         raise SystemExit("--filter-col and --filter-value must be provided together")
     frame = load_table(args.input)
@@ -63,10 +65,19 @@ def main() -> int:
         frame = frame[frame[args.filter_col].astype(str) == args.filter_value].copy()
     if frame.empty:
         raise SystemExit("no complete rows remain after filtering")
-    if not frame[args.actual_col].astype(float).isin([0.0, 1.0]).all():
+    import pandas as pd
+
+    for column in (args.actual_col, args.prob_col):
+        converted = pd.to_numeric(frame[column], errors="coerce")
+        if converted.isna().any():
+            raise SystemExit(f"{column} must contain numeric values")
+        frame[column] = converted.astype(float)
+    if not frame[args.actual_col].isin([0.0, 1.0]).all():
         raise SystemExit(f"{args.actual_col} must contain binary 0/1 outcomes")
-    if not frame[args.prob_col].astype(float).between(0, 1).all():
-        raise SystemExit(f"{args.prob_col} must contain probabilities in [0, 1]")
+    import numpy as np
+
+    if not np.isfinite(frame[args.prob_col].to_numpy()).all() or not frame[args.prob_col].between(0, 1).all():
+        raise SystemExit(f"{args.prob_col} must contain finite probabilities in [0, 1]")
 
     rows = [{"slice_column": "all", "slice_value": "all", **metrics(frame, args.actual_col, args.prob_col)}]
     for column in slice_cols:

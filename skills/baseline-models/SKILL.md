@@ -5,24 +5,96 @@ metadata:
   version: "0.12.0"
 ---
 
-# Baseline Models
+# Baseline Models for Sports
 
-Establish the weakest credible alternatives before evaluating a complex model. Work directly from data the user supplies; do not make obtaining data a prerequisite for the analysis.
+## Overview
 
-## Baseline ladder
+If a fancy model cannot beat simple baselines under time-safe validation, it is
+not progress.
 
-For binary outcomes, compare at least:
+This skill defines the **baseline ladder** and standardizes matched, chronological comparison before ML.
 
-1. Training-fold event rate, carried forward unchanged.
-2. A domain prior such as home advantage, seed, or rating difference.
-3. A regularized logistic model on the same legal features as the candidate.
-4. A strong domain reference, such as Elo or consensus market probability, when it is available in the user's table.
+Baselines are not disposable. Often they are the ship candidate.
 
-Use exactly the same chronological folds, eligible rows, target, and scoring rules for every candidate. Fit rates, encoders, scalers, and model parameters on training rows only. Report fold-level sample sizes and metrics, then summarize mean and dispersion. Read [references/baseline_ladder.md](references/baseline_ladder.md) when selecting domain baselines and [references/interpretation.md](references/interpretation.md) when explaining results.
+---
 
-## Bundled helpers
+## When to Use This Skill
 
-The helpers accept user-owned CSV, Parquet, JSON, JSONL, or NDJSON records. Parquet needs a pandas-compatible Parquet engine. They validate named columns before fitting. Replace `/path/to/baseline-models` below with the installed skill's path.
+Use when:
+
+- Starting a predictive sports project
+- Auditing an ML result that looks shiny
+- Building the first model you might actually keep
+- User says “what’s the baseline?” or “does this beat home field?”
+- Comparing form vs Elo vs constant on NFL/NBA/MLB
+
+Do **not** skip this skill and jump to trees.
+
+| Need | Go instead |
+|---|---|
+| Validation folds | `validation-design` |
+| Features | `feature-rules` |
+| ML candidates after baselines | `predictive-modeling` |
+| GLM inference writeup | `statistical-modeling` |
+| Ratings baseline detail | `ratings-strength-models` |
+
+---
+
+## Installation
+
+`run_baselines.py` requires pandas, NumPy, and scikit-learn;
+`home_only_baseline.py` requires pandas:
+
+```bash
+python -m pip install pandas numpy scikit-learn
+```
+
+Parquet input also needs `pyarrow` or `fastparquet`. Both scripts expose
+`--help` before optional libraries are imported.
+
+---
+
+## Baseline Ladder
+
+| Tier | Baseline | Implemented here |
+|---|---|---|
+| A | Constant training-fold win rate / mean target | required |
+| B | Home-only logistic / mean home margin | pattern + script |
+| C | Logistic/linear on home + legal form differentials | bundled fold helper |
+| D | Rating differential logistic/linear | ratings skill or supplied rating column |
+
+Climb to ML only after Tier A–C (or A–D) exist under walk-forward evaluation.
+
+The bundled fold helper implements binary Tier A and a numeric-feature Tier C
+logistic model. Tier B descriptive summaries have a separate helper; Elo,
+market, regression, and other ladder entries are methodology that require
+their own matched prediction artifacts.
+
+Read [references/baseline_ladder.md](references/baseline_ladder.md) when selecting the minimum credible ladder
+and promotion rule. Read [references/interpretation.md](references/interpretation.md) when deciding whether a
+candidate's delta is stable and practically meaningful.
+
+---
+
+## Workflow
+
+1. Define target + primary metric.
+2. Build legal features (`feature-rules`).
+3. Create walk-forward folds (`validation-design`).
+4. Fit Tier A constant baseline each fold.
+5. Fit Tier C logistic/linear baseline each fold.
+6. Optional: rating-difference or market-reference baseline.
+7. Compare per-fold and mean metrics.
+8. Only then try ML (`predictive-modeling`).
+9. Keep the simplest model that wins.
+10. Log the experiment.
+
+---
+
+## Run Baselines
+
+Work from a user-owned table and use identical rows, folds, target, and scoring
+rules for every candidate.
 
 ```bash
 python /path/to/baseline-models/scripts/run_baselines.py \
@@ -35,26 +107,150 @@ python /path/to/baseline-models/scripts/home_only_baseline.py \
   --input games.csv --target won --home-col is_home
 ```
 
-`run_baselines.py` requires pandas, NumPy, and scikit-learn. Its JSON fold
-artifact is directly consumable by the visualization skill, while its held-out
-prediction table can be passed to calibration and interpretation skills.
-`home_only_baseline.py` requires pandas and reports group rates plus a
-continuity-corrected odds ratio and Wald interval. Both expose `--help` before
-optional libraries are imported.
+`run_baselines.py` evaluates a training-rate constant and regularized logistic
+baseline on expanding chronological folds. Its JSON artifact records the
+modeling contract, validation design, model names, per-fold metrics, means, and
+complete-case row accounting. It performs no imputation: rows missing target,
+split, or any named feature are excluded from both candidates and counted.
+The prediction table writes identifiers, split/fold, `y_true`,
+`constant_probability`, and `logistic_probability`.
 
-Treat the home-only fit as pooled inference, not predictive validation. Do not promote a model merely for beating the constant baseline; require improvement over the strongest relevant simple baseline and inspect stability across folds.
+The home-only helper reports group rates and a continuity-corrected odds ratio
+with a Wald interval. Treat it as pooled descriptive inference unless it is
+embedded in a chronological evaluation; it does not by itself establish
+predictive generalization.
 
-## Hard constraints
+---
 
-- Never estimate a baseline on test rows.
-- Never compare candidates on different folds or eligible populations.
-- Never omit a credible domain baseline merely because it is harder to beat.
+## Tier Details
 
-## Output contract
+### Tier A — Constant rate
+The constant baseline predicts the training-fold mean of the target for every test row.
+On balanced team-game panels this is near 0.5 and log-loss near ~0.693.
 
-`run_baselines.py --out` writes a JSON object with the modeling contract,
-validation design, model names, fold metrics, and mean metrics.
-`--predictions-out` writes one row per held-out observation with identifiers,
-split/fold, `y_true`, `constant_probability`, and `logistic_probability`.
-Report candidate deltas and a keep/reject conclusion tied to the predeclared
-success rule alongside these machine-readable artifacts.
+### Tier B — Home only
+```bash
+python /path/to/baseline-models/scripts/home_only_baseline.py \
+  --input games.csv --target won --home-col is_home
+```
+
+### Tier C — Form logistic
+Uses a small declared set of legal pre-event form differentials.
+
+### Tier D — Rating differential
+Use a pre-event rating-difference column supplied in the modeling table and
+evaluate it on the same rows and folds as the other baselines.
+
+---
+
+## What “Good” Looks Like
+
+- Logistic log-loss < constant on **most** folds
+- Coefficients point the right way (home effect positive in log-odds)
+- Gains are not from one freak season only
+- If trees barely beat logistic, **prefer logistic**
+
+### Decision table
+
+| Result | Action |
+|---|---|
+| C beats A on most folds | strong baseline; ML must beat C |
+| C fails to beat A | debug features/leakage before ML |
+| D beats C | consider ratings as primary features |
+| ML ≈ C | ship C |
+
+---
+
+## Hard Constraints
+
+1. No predictive project without Tier A.
+2. Walk-forward only for claims of generalization.
+3. Do not hide folds where baseline wins.
+4. Simplest winning model is the default ship candidate.
+5. Cross-sport claims require sport-specific evaluation; do not assume transportability.
+
+---
+
+## Anti-Patterns
+
+- Jumping to GBM with no constant baseline
+- Reporting accuracy without log-loss/MAE
+- One-season hero baselines
+- Calling home-rate on the full doubled panel “home advantage”
+- Hiding folds where ML loses to logistic
+
+---
+
+## Reporting Template
+
+```text
+Baseline report
+Sport/target/T:
+Features:
+Validation: season walk-forward
+Tier A mean metric:
+Tier C mean metric:
+Tier D mean metric (if any):
+Per-season table:
+Decision: promote to ML | keep logistic | debug features
+Reproduce:
+```
+
+---
+
+## Output Contract
+
+Done means:
+
+- [ ] Tier A present
+- [ ] At least one stronger baseline (B/C/D) present
+- [ ] Walk-forward comparison table present
+- [ ] Decision stated
+- [ ] Repro commands present
+
+---
+
+## Bundled Resources
+
+### references/
+| File | Contents |
+|---|---|
+| [baseline_ladder.md](references/baseline_ladder.md) | ladder and promotion rules |
+| [interpretation.md](references/interpretation.md) | how to read baseline comparisons |
+
+### scripts/
+| File | Contents |
+|---|---|
+| `run_baselines.py` | const vs logistic walk-forward table |
+| `home_only_baseline.py` | pooled home/away rates and a continuity-corrected descriptive odds ratio; not a fitted walk-forward predictor |
+
+
+---
+
+## Related Skills
+
+| Need | Skill |
+|---|---|
+| Features | `feature-rules` |
+| Validation | `validation-design` |
+| ML | `predictive-modeling` |
+| GLM writeup | `statistical-modeling` |
+| Ratings | `ratings-strength-models` |
+| Calibration | `calibration-check` |
+
+---
+
+## Quick Command Card
+
+```bash
+python /path/to/baseline-models/scripts/run_baselines.py \
+  --input games.csv --target won --split-col season \
+  --features is_home,rating_diff,rest_diff \
+  --id-cols game_id,team --out baseline-folds.json \
+  --predictions-out baseline-predictions.csv
+
+python /path/to/baseline-models/scripts/home_only_baseline.py \
+  --input games.csv --target won --home-col is_home
+```
+
+---

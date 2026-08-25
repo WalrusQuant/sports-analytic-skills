@@ -49,7 +49,11 @@ def main() -> int:
     fig, ax = plt.subplots(figsize=(8, 4.5))
     ax.hist(home, bins=args.bins, color="steelblue", edgecolor="black", alpha=0.85)
     ax.axvline(0, color="red", linestyle="--", linewidth=1.5)
-    ax.set(title=f"{args.title} (n={len(home)})", xlabel=args.margin_col, ylabel="games")
+    ax.set(
+        title=f"{args.title} (eligible home rows n={len(home)}; uncertainty not shown)",
+        xlabel=args.margin_col,
+        ylabel="eligible home rows",
+    )
     ax.grid(alpha=0.25, axis="y")
     args.out.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout(); fig.savefig(args.out, dpi=140); plt.close(fig)

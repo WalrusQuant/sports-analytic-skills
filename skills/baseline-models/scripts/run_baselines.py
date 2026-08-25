@@ -120,6 +120,7 @@ def main() -> int:
         raise SystemExit("--out must end in .json")
 
     df = load_frame(args.input)
+    input_rows = int(len(df))
     required = all_named_columns
     missing = [c for c in required if c not in df.columns]
     if missing:
@@ -127,6 +128,7 @@ def main() -> int:
     df = df[required].copy()
     df["source_row"] = df.index
     df = df.dropna(subset=[args.target, args.split_col, *features]).copy()
+    rows_dropped_missing_required = input_rows - int(len(df))
     if df.empty:
         raise SystemExit("no complete modeling rows remain")
     if id_cols and (df[id_cols].isna().any().any() or df.duplicated(id_cols).any()):
@@ -199,6 +201,15 @@ def main() -> int:
                 "design": "expanding_window",
                 "min_train_groups": args.min_train_groups,
                 "primary_metric": "log_loss",
+            },
+            "row_accounting": {
+                "input_rows": input_rows,
+                "modeling_rows": int(len(df)),
+                "rows_dropped_missing_target_split_or_feature": rows_dropped_missing_required,
+            },
+            "preprocessing": {
+                "missing_values": "complete-case rows shared by both baselines",
+                "imputation": "none",
             },
             "models": ["training_rate_constant", "logistic_regression"],
             "folds": folds,

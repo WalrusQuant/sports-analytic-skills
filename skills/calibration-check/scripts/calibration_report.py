@@ -15,6 +15,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target", required=True, help="Binary 0/1 outcome column")
     parser.add_argument("--probability", required=True, help="Predicted probability column")
     parser.add_argument("--bins", type=int, default=10)
+    parser.add_argument(
+        "--min-bin-n",
+        type=int,
+        default=20,
+        help="Minimum populated-bin count used only to flag sparse summaries",
+    )
     parser.add_argument("--group-col", help="Optional fold or season column for group metrics")
     parser.add_argument("--filter-col", help="Optional column used to select one evaluation perspective")
     parser.add_argument("--filter-value", help="String value required in --filter-col")
@@ -59,29 +65,74 @@ def metrics(rows, target: str, probability: str, bins: int) -> dict:
     return {"n": n, "brier": brier, "log_loss": log_loss, "ece": ece, "calibration_table": table}
 
 
+def validate_numeric_inputs(frame, target: str, probability: str):
+    """Return a copy with validated numeric target and probability columns."""
+    import pandas as pd
+
+    clean = frame.copy()
+    for column in (target, probability):
+        converted = pd.to_numeric(clean[column], errors="coerce")
+        invalid = clean[column].notna() & converted.isna()
+        if invalid.any():
+            raise SystemExit(f"{column!r} must contain numeric values")
+        clean[column] = converted
+    if not set(clean[target].dropna().unique()) <= {0, 1}:
+        raise SystemExit(f"{target!r} must contain only 0/1 values")
+    finite_probability = clean[probability].dropna().map(math.isfinite)
+    if not finite_probability.all() or not clean[probability].dropna().between(0, 1).all():
+        raise SystemExit(f"{probability!r} must contain finite values between 0 and 1")
+    return clean
+
+
+def add_conservative_assessment(report: dict, min_bin_n: int, has_groups: bool) -> None:
+    sparse_bins = [row["bin"] for row in report["calibration_table"] if row["n"] < min_bin_n]
+    flags = ["held_out_and_walk_forward_provenance_not_verified_by_helper"]
+    if report["n"] < 100:
+        flags.append("small_overall_sample")
+    if sparse_bins:
+        flags.append("sparse_populated_bins")
+    if has_groups:
+        flags.append("group_stability_requires_manual_review")
+    report["helper_assessment"] = {
+        "status": "descriptive-summary-only",
+        "min_bin_n": min_bin_n,
+        "sparse_populated_bins": sparse_bins,
+        "flags": flags,
+    }
+    report["verdict"] = "manual-review-required"
+
+
 def main() -> int:
     args = parse_args()
     if args.bins < 2:
         raise SystemExit("--bins must be at least 2")
+    if args.min_bin_n < 1:
+        raise SystemExit("--min-bin-n must be at least 1")
     if bool(args.filter_col) != bool(args.filter_value):
         raise SystemExit("--filter-col and --filter-value must be provided together")
+    if args.target == args.probability:
+        raise SystemExit("--target and --probability must name different columns")
     df = load_frame(args.input)
     required = [args.target, args.probability]
     required += [args.group_col] if args.group_col else []
     required += [args.filter_col] if args.filter_col else []
+    required = list(dict.fromkeys(required))
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise SystemExit(f"missing required columns: {', '.join(missing)}")
-    clean = df[required].dropna().copy()
+    input_rows = int(len(df))
+    clean = validate_numeric_inputs(df[required], args.target, args.probability)
+    clean = clean.dropna().copy()
     if args.filter_col:
         clean = clean[clean[args.filter_col].astype(str) == args.filter_value].copy()
     if clean.empty:
         raise SystemExit("no complete rows to evaluate")
-    if not set(clean[args.target].unique()) <= {0, 1, False, True}:
-        raise SystemExit(f"{args.target!r} must contain only 0/1 values")
-    if not clean[args.probability].between(0, 1).all():
-        raise SystemExit(f"{args.probability!r} must be between 0 and 1")
     report = metrics(clean, args.target, args.probability, args.bins)
+    report["row_accounting"] = {
+        "input_rows": input_rows,
+        "evaluated_rows": int(len(clean)),
+        "rows_excluded_by_missing_values_or_filter": input_rows - int(len(clean)),
+    }
     if args.filter_col:
         report["filter"] = {"column": args.filter_col, "value": args.filter_value}
     if args.group_col:
@@ -89,7 +140,7 @@ def main() -> int:
             str(group): metrics(part, args.target, args.probability, args.bins)
             for group, part in clean.groupby(args.group_col, sort=True)
         }
-    report["verdict"] = "inspect-sample-size" if report["n"] < 100 else ("well-calibrated" if report["ece"] <= 0.05 else "recalibration-candidate")
+    add_conservative_assessment(report, args.min_bin_n, bool(args.group_col))
     text = json.dumps(report, indent=2)
     print(text)
     if args.out:

@@ -448,7 +448,7 @@ print(pg.tost(group_a, group_b, bound=0.5))  # significant pval -> equivalence
 - Institutional repository
 
 **In paper**:
-> "Data, analysis code, and materials are available at https://osf.io/xxxxx/"
+> "Data, analysis code, and materials are available at [persistent repository URL]."
 
 ---
 

@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import importlib
+import io
 import json
 import platform
+import subprocess
 import sys
 from pathlib import Path
 
@@ -39,27 +42,68 @@ def main() -> int:
     checked: list[dict[str, str | bool]] = []
     failed = False
     for name in packages:
+        import_stdout = io.StringIO()
+        import_stderr = io.StringIO()
         try:
-            module = importlib.import_module(name)
+            with contextlib.redirect_stdout(import_stdout), contextlib.redirect_stderr(
+                import_stderr
+            ):
+                module = importlib.import_module(name)
             version = str(getattr(module, "__version__", "unknown"))
-            checked.append({"package": name, "available": True, "version": version})
+            item = {"package": name, "available": True, "version": version}
         except Exception as exc:  # import errors can include missing native libraries
             failed = True
-            checked.append({"package": name, "available": False, "error": str(exc)})
+            item = {"package": name, "available": False, "error": str(exc)}
+        if import_stdout.getvalue():
+            item["import_stdout"] = import_stdout.getvalue()
+        if import_stderr.getvalue():
+            item["import_stderr"] = import_stderr.getvalue()
+        checked.append(item)
+
+    try:
+        pip_probe = subprocess.run(
+            [sys.executable, "-m", "pip", "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        pip_available = pip_probe.returncode == 0
+        pip_detail = (pip_probe.stdout if pip_available else pip_probe.stderr).strip()
+    except (OSError, subprocess.SubprocessError) as exc:
+        pip_available = False
+        pip_detail = str(exc)
+    failed = failed or not pip_available
 
     report = {
         "python": platform.python_version(),
         "executable": sys.executable,
         "platform": platform.platform(),
+        "prefix": sys.prefix,
+        "base_prefix": sys.base_prefix,
+        "standard_venv_detected": sys.prefix != sys.base_prefix,
+        "pip": {"available": pip_available, "detail": pip_detail},
+        "requested_imports": packages,
         "packages": checked,
         "status": "FAIL" if failed else "OK",
+        "checks_not_run": [
+            "helper_help",
+            "file_round_trips",
+            "loader_network_sample",
+            "lock_recreation",
+        ],
+        "limitations": (
+            "OK covers this interpreter, python -m pip, and requested imports only; "
+            "standard_venv_detected does not recognize every environment manager."
+        ),
     }
-    print(json.dumps(report, indent=2))
+    text = json.dumps(report, indent=2)
 
     if out is not None:
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-        print(f"wrote {out}")
+        out.write_text(text + "\n", encoding="utf-8")
+    # Stdout is always exactly one JSON document, including when --out is used.
+    print(text)
     return 1 if failed else 0
 
 
