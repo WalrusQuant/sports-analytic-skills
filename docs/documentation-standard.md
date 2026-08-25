@@ -3,9 +3,11 @@
 Public docs help a stranger use the standalone sports modeling skills. The
 optional toolkit is a secondary integration path.
 
-## Public front door (README)
+## Public front door
 
-The README is a **product page**, not a project tracker.
+- **GitHub Pages marketing site:** `docs/index.html` + `docs/docs.html`
+  served at https://walrusquant.github.io/sports-analytic-skills/
+- **README** remains the repo product page, not a project tracker.
 
 It should include:
 

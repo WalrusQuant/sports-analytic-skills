@@ -6,6 +6,9 @@
 [![Skills](https://img.shields.io/badge/skills-24-brightgreen.svg)](#skills)
 [![Agent Skills](https://img.shields.io/badge/standard-Agent_Skills-blueviolet.svg)](https://agentskills.io/)
 [![Agent Plugins](https://img.shields.io/badge/standard-Agent_Plugins-0A7A72.svg)](https://agent-plugins.org/)
+[![Site](https://img.shields.io/badge/site-GitHub%20Pages-111111.svg)](https://walrusquant.github.io/sports-analytic-skills/)
+
+**Site:** [walrusquant.github.io/sports-analytic-skills](https://walrusquant.github.io/sports-analytic-skills/) · **Docs:** [Getting started](https://walrusquant.github.io/sports-analytic-skills/docs.html)
 
 Standalone agent skills for sports analytics and modeling.
 
