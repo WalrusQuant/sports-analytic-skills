@@ -148,6 +148,17 @@ returns `REVIEW REQUIRED` and status 1: heuristics alone never return `CLEAN`.
 Only a completed manual audit of lineage, transforms, joins, splits, and
 fold-local preprocessing can issue the `CLEAN` verdict.
 
+### Exit codes (not crashes)
+
+| Exit | Verdict | Agent action |
+|---|---|---|
+| 1 | `REVIEW REQUIRED` | **Continue.** Read the JSON. Complete the manual audit. Do not treat this as a hard failure. |
+| 2 | `NOT CLEAN` | **Stop** predictive claims until repaired and retested. |
+| 0 | unused | Heuristics never auto-CLEAN. |
+
+Stderr also prints `exit=1 REVIEW REQUIRED...` or `exit=2 NOT CLEAN...` so a
+cold agent does not mistake a review signal for a broken script.
+
 Automated checks cannot prove source availability, transform correctness, join
 direction, or fold scope. They supplement—not replace—lineage and code review.
 

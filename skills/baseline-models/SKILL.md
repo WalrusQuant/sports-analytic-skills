@@ -112,8 +112,22 @@ baseline on expanding chronological folds. Its JSON artifact records the
 modeling contract, validation design, model names, per-fold metrics, means, and
 complete-case row accounting. It performs no imputation: rows missing target,
 split, or any named feature are excluded from both candidates and counted.
+
+**`--min-train-groups` default is 2.** With seasons `[2022, 2023, 2024]`, only
+2024 is tested (train on 2022+2023). Use `--min-train-groups 1` to also test
+2023. The helper prints the planned test folds on stderr before scoring.
+
 The prediction table writes identifiers, split/fold, `y_true`,
-`constant_probability`, and `logistic_probability`.
+`constant_probability`, `logistic_probability`, and portable `p_pred`
+(alias of the logistic probability for handoff).
+
+Direct handoff to calibration:
+
+```bash
+python /path/to/calibration-check/scripts/calibration_report.py \
+  --input baseline-predictions.csv --target y_true --probability p_pred \
+  --group-col season --out calibration.json
+```
 
 The home-only helper reports group rates and a continuity-corrected odds ratio
 with a Wald interval. Treat it as pooled descriptive inference unless it is

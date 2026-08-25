@@ -488,3 +488,129 @@ def test_model_artifacts_flow_to_calibration_and_visualization(tmp_path: Path) -
         cwd=tmp_path,
     )
     assert chart.stat().st_size > 0
+
+def test_team_game_feature_builder_and_baseline_calibration_handoff(tmp_path: Path) -> None:
+    panel = tmp_path / "team_games.csv"
+    rows = []
+    # three seasons, two games each season, two team rows per game
+    for season, week, gid, home, away, hs, as_ in [
+        (2022, 1, "2022_1", "A", "B", 20, 10),
+        (2022, 2, "2022_2", "B", "A", 14, 17),
+        (2023, 1, "2023_1", "A", "B", 24, 21),
+        (2023, 2, "2023_2", "B", "A", 10, 13),
+        (2024, 1, "2024_1", "A", "B", 27, 20),
+        (2024, 2, "2024_2", "B", "A", 16, 19),
+    ]:
+        rows.append(
+            {
+                "season": season,
+                "week": week,
+                "game_id": gid,
+                "gameday": f"{season}-09-0{week}",
+                "team": home,
+                "opponent": away,
+                "is_home": 1,
+                "points_for": hs,
+                "points_against": as_,
+                "point_diff": hs - as_,
+                "won": int(hs > as_),
+            }
+        )
+        rows.append(
+            {
+                "season": season,
+                "week": week,
+                "game_id": gid,
+                "gameday": f"{season}-09-0{week}",
+                "team": away,
+                "opponent": home,
+                "is_home": 0,
+                "points_for": as_,
+                "points_against": hs,
+                "point_diff": as_ - hs,
+                "won": int(as_ > hs),
+            }
+        )
+    write_csv(panel, rows)
+
+    features = tmp_path / "features.csv"
+    manifest = tmp_path / "manifest.json"
+    run_helper(
+        "skills/feature-rules/scripts/build_team_game_features.py",
+        "--input",
+        str(panel),
+        "--out",
+        str(features),
+        "--manifest-out",
+        str(manifest),
+        cwd=tmp_path,
+    )
+    man = json.loads(manifest.read_text(encoding="utf-8"))
+    assert man["rows_out"] == 12
+    assert "feature_win_pct_diff" in man["modeling_feature_defaults"]
+
+    leak = tmp_path / "leak.json"
+    leak_proc = run_helper(
+        "skills/leakage-audit/scripts/audit_pregame_features.py",
+        "--input",
+        str(features),
+        "--target",
+        "won",
+        "--features",
+        "is_home,feature_win_pct_diff,feature_diff_diff",
+        "--entity-col",
+        "team",
+        "--time-col",
+        "gameday",
+        "--out",
+        str(leak),
+        cwd=tmp_path,
+        check=False,
+    )
+    assert leak_proc.returncode == 1
+    assert "REVIEW REQUIRED" in leak_proc.stderr
+    assert json.loads(leak.read_text(encoding="utf-8"))["verdict"] == "REVIEW REQUIRED"
+
+    folds = tmp_path / "folds.json"
+    preds = tmp_path / "preds.csv"
+    base_proc = run_helper(
+        "skills/baseline-models/scripts/run_baselines.py",
+        "--input",
+        str(features),
+        "--target",
+        "won",
+        "--split-col",
+        "season",
+        "--features",
+        "is_home,feature_win_pct_diff,feature_diff_diff",
+        "--min-train-groups",
+        "1",
+        "--out",
+        str(folds),
+        "--predictions-out",
+        str(preds),
+        cwd=tmp_path,
+    )
+    assert "min_train_groups=1" in base_proc.stderr
+    with preds.open(newline="", encoding="utf-8") as handle:
+        pred_rows = list(csv.DictReader(handle))
+    assert {"y_true", "p_pred", "logistic_probability"} <= set(pred_rows[0])
+    assert all(row["p_pred"] == row["logistic_probability"] for row in pred_rows)
+
+    cal = tmp_path / "cal.json"
+    run_helper(
+        "skills/calibration-check/scripts/calibration_report.py",
+        "--input",
+        str(preds),
+        "--target",
+        "y_true",
+        "--probability",
+        "p_pred",
+        "--group-col",
+        "season",
+        "--out",
+        str(cal),
+        cwd=tmp_path,
+    )
+    assert json.loads(cal.read_text(encoding="utf-8"))["n"] == len(pred_rows)
+

@@ -107,7 +107,17 @@ No universal ECE cutoff establishes that probabilities are trustworthy.
 The input must contain one row per evaluated decision, a binary outcome, and a
 probability in `[0, 1]`.
 
+Preferred portable names from this pack's baseline helper:
+
+- outcome: `y_true`
+- probability: `p_pred` (also emitted as `logistic_probability`)
+
 ```bash
+# After baseline-models/scripts/run_baselines.py --predictions-out ...
+python /path/to/calibration-check/scripts/calibration_report.py \
+  --input baseline-predictions.csv --target y_true --probability p_pred \
+  --group-col season --bins 10 --out calibration.json
+
 python /path/to/calibration-check/scripts/calibration_report.py \
   --input predictions.csv --target won --probability win_probability \
   --group-col season --bins 10 --out calibration.json

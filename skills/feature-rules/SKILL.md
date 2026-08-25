@@ -200,6 +200,49 @@ assert all feature values at or before the cutoff remain unchanged.
 The helpers read user-owned CSV, Parquet, JSON, JSONL, or NDJSON and require
 `pandas`. Candidate features are explicit; there is no hidden feature list.
 
+### Build a portable team-game feature table
+
+From a doubled team-game panel (exactly two rows per `game_id`), build shifted
+pre-game form features and opponent differentials without freehand pandas:
+
+```bash
+python /path/to/feature-rules/scripts/build_team_game_features.py \
+  --input team_games.parquet \
+  --out features.csv \
+  --manifest-out feature_manifest.json
+```
+
+Defaults expect columns `game_id`, `team`, `opponent`, `is_home`, `won`,
+`point_diff`, and sortable `gameday` (plus `season` when present). Generated
+modeling defaults:
+
+- `is_home`
+- `feature_win_pct_diff`
+- `feature_diff_diff`
+- `feature_rest_diff` (when dates parse)
+
+All form fields use `shift(1)` before aggregation. Opponent values come from the
+opponent's own pre-event row joined on `game_id`. Current outcomes remain labels
+only. This does **not** replace `leakage-audit`.
+
+Hand off next:
+
+```bash
+python /path/to/leakage-audit/scripts/audit_pregame_features.py \
+  --input features.csv --target won \
+  --features is_home,feature_win_pct_diff,feature_diff_diff \
+  --entity-col team --time-col gameday --out leakage.json
+
+python /path/to/baseline-models/scripts/run_baselines.py \
+  --input features.csv --target won --split-col season \
+  --features is_home,feature_win_pct_diff,feature_diff_diff \
+  --min-train-groups 1 \
+  --out baseline-folds.json \
+  --predictions-out baseline-predictions.csv
+```
+
+### Preview and catalog helpers
+
 ```bash
 python /path/to/feature-rules/scripts/feature_preview.py \
   --input features.csv --features pre_win_rate,rest_days,rating_diff \

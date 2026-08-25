@@ -176,6 +176,17 @@ python /path/to/validation-design/scripts/write_charter.py \
   --out data/validation_charter.md
 ```
 
+**`--min-train-groups` default is 2.** That means the first N groups are
+training-only history and never appear as a test fold. Example with seasons
+`2022, 2023, 2024`:
+
+- default `2` → one test fold: 2024 (train 2022+2023)
+- `1` → test folds: 2023 and 2024
+
+The helper prints the planned test folds on stderr before the CSV table. Match
+this setting when calling `baseline-models` / `predictive-modeling` helpers so
+evaluation rows stay identical.
+
 The helper exposes row counts for expanding group folds; it does not verify T,
 dependency grouping, embargo, transform fitting, or tuning isolation. Verify
 those manually before calling the design valid. Supported ordering values are

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 
 
 DEFAULT_BANNED = "won,win,loss,result,score,points_for,points_against,point_diff,target,label"
@@ -134,8 +135,21 @@ def main() -> int:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text + "\n", encoding="utf-8")
         print(f"wrote {out}")
+    # Exit codes are intentional signals, not crashes:
+    #   0 reserved (unused) — heuristics never auto-CLEAN
+    #   1 REVIEW REQUIRED — continue; complete manual audit before trusting metrics
+    #   2 NOT CLEAN — stop predictive claims until repaired and retested
     if failed:
+        print(
+            "exit=2 NOT CLEAN: stop predictive claims until repaired and retested",
+            file=sys.stderr,
+        )
         return 2
+    print(
+        "exit=1 REVIEW REQUIRED: not a hard failure; complete the manual audit "
+        "before treating the matrix as CLEAN",
+        file=sys.stderr,
+    )
     return 1
 
 

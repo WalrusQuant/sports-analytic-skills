@@ -18,7 +18,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--features", required=True, help="Comma-separated numeric feature columns")
     parser.add_argument("--split-col", required=True, help="Ordered season/date/group column")
     parser.add_argument("--id-cols", default="", help="Comma-separated identifiers to preserve")
-    parser.add_argument("--min-train-groups", type=int, default=2)
+    parser.add_argument(
+        "--min-train-groups",
+        type=int,
+        default=2,
+        help=(
+            "Minimum ordered groups used only for training before the first test "
+            "fold (default: 2). With seasons [2022,2023,2024] and default 2, only "
+            "2024 is tested (train on 2022+2023). Use 1 to also test 2023."
+        ),
+    )
     parser.add_argument("--out", help="Optional fold artifact (.json)")
     parser.add_argument(
         "--predictions-out",
@@ -151,7 +160,22 @@ def main() -> int:
 
     groups = ordered_groups(df[args.split_col], args.split_col)
     if len(groups) <= args.min_train_groups:
-        raise SystemExit("not enough ordered groups to create a test fold")
+        raise SystemExit(
+            "not enough ordered groups to create a test fold: "
+            f"have {len(groups)} group(s) {groups!r}, need more than "
+            f"--min-train-groups={args.min_train_groups}"
+        )
+
+    n_test_folds = len(groups) - args.min_train_groups
+    print(
+        (
+            f"# walk-forward: {len(groups)} ordered groups; "
+            f"min_train_groups={args.min_train_groups}; "
+            f"test_folds={n_test_folds} "
+            f"({[json_value(g) for g in groups[args.min_train_groups:]]})"
+        ),
+        file=sys.stderr,
+    )
 
     folds: list[dict] = []
     prediction_frames = []
@@ -181,6 +205,8 @@ def main() -> int:
         predictions["y_true"] = y_test
         predictions["constant_probability"] = constant
         predictions["logistic_probability"] = pred
+        # Portable handoff alias for calibration-check / reporting skills.
+        predictions["p_pred"] = pred
         prediction_frames.append(predictions)
 
     fieldnames = list(folds[0])

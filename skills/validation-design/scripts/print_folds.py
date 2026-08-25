@@ -14,7 +14,16 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", required=True, help="CSV, Parquet, or JSON records file")
     parser.add_argument("--split-col", required=True, help="Ordered season/date/group column")
-    parser.add_argument("--min-train-groups", type=int, default=2)
+    parser.add_argument(
+        "--min-train-groups",
+        type=int,
+        default=2,
+        help=(
+            "Minimum ordered groups used only for training before the first test "
+            "fold (default: 2). Example: seasons 2022-2024 with default 2 yields "
+            "one test fold (2024). Use 1 to test 2023 and 2024."
+        ),
+    )
     parser.add_argument("--required-cols", default="", help="Comma-separated columns that must be non-null")
     return parser.parse_args()
 
@@ -87,7 +96,21 @@ def main() -> int:
     df = df.dropna(subset=[args.split_col, *required])
     groups = ordered_groups(df[args.split_col], args.split_col)
     if len(groups) <= args.min_train_groups:
-        raise SystemExit("not enough ordered groups to create a test fold")
+        raise SystemExit(
+            "not enough ordered groups to create a test fold: "
+            f"have {len(groups)} group(s) {groups!r}, need more than "
+            f"--min-train-groups={args.min_train_groups}"
+        )
+    n_test_folds = len(groups) - args.min_train_groups
+    print(
+        (
+            f"# walk-forward: {len(groups)} ordered groups; "
+            f"min_train_groups={args.min_train_groups}; "
+            f"test_folds={n_test_folds} "
+            f"({list(map(str, groups[args.min_train_groups:]))})"
+        ),
+        file=sys.stderr,
+    )
     writer = csv.writer(sys.stdout, lineterminator="\n")
     writer.writerow(["test_group", "n_train", "n_test", "train_groups"])
     for index in range(args.min_train_groups, len(groups)):
