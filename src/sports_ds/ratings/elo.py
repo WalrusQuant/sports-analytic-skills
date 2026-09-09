@@ -48,17 +48,24 @@ def build_elo_asof_table(
 
         exp_home = expected_score(rh + home_adv, ra)
         exp_away = 1.0 - exp_home
-        score_home = float(r.won)
-        score_away = 1.0 - score_home
+        tied = float(r.point_diff) == 0.0
+        if tied:
+            score_home = 0.5
+            score_away = 0.5
+        else:
+            score_home = float(r.won)
+            score_away = 1.0 - score_home
         mult = margin_multiplier(r.point_diff) if use_margin else 1.0
         delta_home = k * mult * (score_home - exp_home)
         delta_away = k * mult * (score_away - exp_away)
+        gameday = getattr(r, "gameday", None)
 
         rows.append(
             {
                 "game_id": r.game_id,
                 "season": int(r.season),
                 "week": int(r.week),
+                "gameday": gameday,
                 "team": home_team,
                 "opponent": away_team,
                 "is_home": 1,
@@ -75,10 +82,11 @@ def build_elo_asof_table(
                 "game_id": r.game_id,
                 "season": int(r.season),
                 "week": int(r.week),
+                "gameday": gameday,
                 "team": away_team,
                 "opponent": home_team,
                 "is_home": 0,
-                "won": 1 - int(r.won),
+                "won": 0 if tied else 1 - int(r.won),
                 "point_diff": -float(r.point_diff),
                 "elo_pre": ra,
                 "opp_elo_pre": rh,
@@ -92,9 +100,10 @@ def build_elo_asof_table(
         ratings[away_team] = ra + delta_away
 
     out = pd.DataFrame(rows)
+    sort_cols = [c for c in ["season", "gameday", "week", "game_id"] if c in out.columns]
     return out.sort_values(
-        ["season", "week", "game_id", "is_home"],
-        ascending=[True, True, True, False],
+        sort_cols + ["is_home"],
+        ascending=[True] * len(sort_cols) + [False],
     ).reset_index(drop=True)
 
 

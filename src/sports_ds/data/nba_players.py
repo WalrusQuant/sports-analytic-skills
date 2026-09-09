@@ -6,7 +6,7 @@ from typing import Iterable
 
 import pandas as pd
 
-from sports_ds.data.panel import as_season_list, to_pandas
+from sports_ds.data.panel import as_season_list, assign_season_week, to_pandas
 from sports_ds.data.sdv_common import MultiSportDataError, require_sportsdataverse
 
 
@@ -89,7 +89,7 @@ def load_nba_player_game_panel(
             "starter": df.get("starter", False),
         }
     )
-    out["week"] = out["gameday"].dt.isocalendar().week.astype("Int64")
+    out = assign_season_week(out)
     # simple fantasy-ish score (common 9-cat lite / fantasy points proxy)
     out["fantasy_points"] = (
         out["points"]

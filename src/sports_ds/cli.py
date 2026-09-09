@@ -15,6 +15,11 @@ def main(argv: list[str] | None = None) -> int:
     p_nfl.add_argument("--seasons", default="2018-2024")
     p_nfl.add_argument("--min-train-seasons", type=int, default=2)
     p_nfl.add_argument("--json-out", default="")
+    p_nfl.add_argument(
+        "--skill-out",
+        default="",
+        help="Directory for portable fold_metrics.json + predictions.csv",
+    )
 
     p_margin = sub.add_parser("nfl-margin-pipeline", help="Run NFL team-margin walk-forward pipeline")
     p_margin.add_argument("--seasons", default="2018-2024")
@@ -33,12 +38,12 @@ def main(argv: list[str] | None = None) -> int:
     p_cal.add_argument("--min-train-seasons", type=int, default=2)
     p_cal.add_argument("--bins", type=int, default=10)
     p_cal.add_argument("--json-out", default="")
-    p_cal.add_argument("--sport", default="nfl", choices=["nfl", "nba", "mlb"])
+    p_cal.add_argument("--sport", default="nfl", choices=["nfl", "nba", "mlb", "nhl"])
 
     p_leak = sub.add_parser("leakage-audit", help="Audit pre-game form feature time-safety")
     p_leak.add_argument("--seasons", default="2023-2024")
     p_leak.add_argument("--json-out", default="")
-    p_leak.add_argument("--sport", default="nfl", choices=["nfl", "nba", "mlb"])
+    p_leak.add_argument("--sport", default="nfl", choices=["nfl", "nba", "mlb", "nhl"])
 
     p_eda = sub.add_parser("nfl-eda", help="Load NFL team-game panel and print EDA summary")
     p_eda.add_argument("--seasons", default="2023-2024")
@@ -113,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
     p_mlb_player_eda.add_argument("--min-pa", type=float, default=1.0)
     p_mlb_player_eda.add_argument("--max-games", type=int, default=0)
 
-    # multi-sport win/margin/elo/eda (NBA + MLB primary; NHL kept for load/eda only)
+    # multi-sport win/margin/elo/eda
     for sport in ("nba", "mlb", "nhl"):
         p = sub.add_parser(f"{sport}-eda", help=f"Load {sport.upper()} team-game panel EDA")
         p.add_argument("--seasons", default="2023-2024")
@@ -123,6 +128,11 @@ def main(argv: list[str] | None = None) -> int:
         p2.add_argument("--seasons", default="2023-2024")
         p2.add_argument("--min-train-seasons", type=int, default=1)
         p2.add_argument("--json-out", default="")
+        p2.add_argument(
+            "--skill-out",
+            default="",
+            help="Directory for portable fold_metrics.json + predictions.csv",
+        )
 
     for sport in ("nba", "mlb"):
         pm = sub.add_parser(
@@ -156,8 +166,7 @@ def main(argv: list[str] | None = None) -> int:
         seasons = _parse_seasons(args.seasons)
         result = run_nfl_win_pipeline(seasons=seasons, min_train_seasons=args.min_train_seasons)
         print(format_pipeline_report(result))
-        _maybe_json(args.json_out, result, drop_keys=("eda",))
-        return 0
+        return _finish_win(result, args.json_out, getattr(args, "skill_out", ""))
 
     if args.cmd == "nfl-margin-pipeline":
         from sports_ds.pipelines.nfl_margin_model import format_margin_report, run_nfl_margin_pipeline
@@ -339,8 +348,7 @@ def main(argv: list[str] | None = None) -> int:
         result = _run_sport_win(sport, _parse_seasons(args.seasons), args.min_train_seasons)
         print(result["report"])
         payload = {k: v for k, v in result.items() if k != "report"}
-        _maybe_json(args.json_out, payload)
-        return 0
+        return _finish_win(payload, args.json_out, getattr(args, "skill_out", ""))
 
     if args.cmd in {"nba-margin-pipeline", "mlb-margin-pipeline"}:
         sport = args.cmd.split("-")[0]
@@ -485,7 +493,7 @@ def _cmd_calibrate(args) -> int:
     )
     from sports_ds.metrics.classification import brier_score, log_loss_binary
     from sports_ds.models.baselines import fit_logistic_baseline
-    from sports_ds.pipelines.team_win import FEATURE_COLS
+    from sports_ds.features.team_form import DEFAULT_WIN_FEATURE_COLS as FEATURE_COLS
     from sports_ds.validation.splits import season_walk_forward_masks
 
     seasons = _parse_seasons(args.seasons)
@@ -535,6 +543,16 @@ def _cmd_calibrate(args) -> int:
         print("  season {season}: n={n} ece={ece:.4f} brier={brier:.4f}".format(**row))
     _maybe_json(args.json_out, result)
     return 0
+
+
+def _finish_win(result: dict, json_out: str, skill_out: str = "") -> int:
+    _maybe_json(json_out, result, drop_keys=("eda", "eda_text", "predictions", "report"))
+    if skill_out:
+        from sports_ds.artifacts import write_win_skill_artifacts
+
+        paths = write_win_skill_artifacts(result, skill_out)
+        print(f"\nwrote skill artifacts: {paths['folds']} {paths['predictions']}")
+    return 2 if result.get("warning") else 0
 
 
 def _maybe_json(path: str, result: dict, drop_keys: tuple[str, ...] = ()) -> None:

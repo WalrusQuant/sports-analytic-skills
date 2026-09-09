@@ -7,19 +7,11 @@ from typing import Any, Callable
 import pandas as pd
 
 from sports_ds.eda.summary import format_summary, summarize_team_game_panel
-from sports_ds.features.team_form import add_pregame_form_features
+from sports_ds.features.team_form import DEFAULT_WIN_FEATURE_COLS, add_pregame_form_features
 from sports_ds.models.regress import baseline_mean_margin, fit_margin_regressor
 from sports_ds.validation.splits import season_walk_forward_masks
 
-FEATURE_COLS = [
-    "is_home",
-    "feature_win_pct_diff",
-    "feature_diff_diff",
-    "feature_roll3_win_diff",
-    "feature_roll5_diff_diff",
-    "pre_games_played",
-    "opp_pre_games_played",
-]
+FEATURE_COLS = list(DEFAULT_WIN_FEATURE_COLS)
 
 
 def run_team_margin_pipeline(
@@ -142,6 +134,8 @@ def run_loader_margin_pipeline(
     sport: str,
     min_train_seasons: int = 1,
     min_pre_games: int = 5,
+    min_train_rows: int = 100,
+    min_test_rows: int = 50,
 ) -> dict[str, Any]:
     panel = load_panel(seasons)
     return run_team_margin_pipeline(
@@ -150,4 +144,6 @@ def run_loader_margin_pipeline(
         seasons=seasons,
         min_train_seasons=min_train_seasons,
         min_pre_games=min_pre_games,
+        min_train_rows=min_train_rows,
+        min_test_rows=min_test_rows,
     )

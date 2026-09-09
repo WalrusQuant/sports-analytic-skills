@@ -6,6 +6,8 @@ from typing import Iterable
 
 import pandas as pd
 
+from sports_ds.data.panel import schedule_to_team_game_panel
+
 
 def _to_pandas(obj):
     if hasattr(obj, "to_pandas"):
@@ -42,44 +44,4 @@ def load_team_game_panel(seasons: int | Iterable[int] | None = None) -> pd.DataF
     One row per team per game with opponent, home flag, result, and points.
     Only completed games with non-null scores are kept.
     """
-    sched = load_schedules(seasons)
-    needed = ["game_id", "season", "week", "gameday", "home_team", "away_team", "home_score", "away_score"]
-    missing = [c for c in needed if c not in sched.columns]
-    if missing:
-        raise ValueError(f"schedule missing columns: {missing}")
-
-    done = sched.dropna(subset=["home_score", "away_score"]).copy()
-    done["home_score"] = done["home_score"].astype(float)
-    done["away_score"] = done["away_score"].astype(float)
-
-    home = pd.DataFrame(
-        {
-            "game_id": done["game_id"],
-            "season": done["season"],
-            "week": done["week"],
-            "gameday": done["gameday"],
-            "team": done["home_team"],
-            "opponent": done["away_team"],
-            "is_home": 1,
-            "points_for": done["home_score"],
-            "points_against": done["away_score"],
-        }
-    )
-    away = pd.DataFrame(
-        {
-            "game_id": done["game_id"],
-            "season": done["season"],
-            "week": done["week"],
-            "gameday": done["gameday"],
-            "team": done["away_team"],
-            "opponent": done["home_team"],
-            "is_home": 0,
-            "points_for": done["away_score"],
-            "points_against": done["home_score"],
-        }
-    )
-    panel = pd.concat([home, away], ignore_index=True)
-    panel["won"] = (panel["points_for"] > panel["points_against"]).astype(int)
-    panel["point_diff"] = panel["points_for"] - panel["points_against"]
-    panel = panel.sort_values(["season", "week", "gameday", "game_id", "team"]).reset_index(drop=True)
-    return panel
+    return schedule_to_team_game_panel(load_schedules(seasons))

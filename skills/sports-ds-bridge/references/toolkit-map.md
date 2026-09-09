@@ -9,6 +9,7 @@ CLI with `sports-ds --help` rather than assuming this file is exhaustive.
 from sports_ds.data.nfl import load_team_game_panel
 from sports_ds.data.nba import load_nba_team_game_panel
 from sports_ds.data.mlb import load_mlb_team_game_panel
+from sports_ds.data.nhl import load_nhl_team_game_panel
 ```
 
 NFL is included in the base toolkit dependency set. NBA and MLB loaders require

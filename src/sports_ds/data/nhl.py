@@ -94,7 +94,6 @@ def load_nhl_schedules(seasons: int | Iterable[int] | None = None) -> pd.DataFra
     )
     out = out.dropna(subset=["game_id", "season", "home_team", "away_team", "home_score", "away_score"])
     out = out.drop_duplicates(subset=["game_id"], keep="first")
-    out["week"] = out["gameday"].dt.isocalendar().week.astype("Int64")
     # stash skip notes on attrs for debugging
     out.attrs["skipped_seasons"] = skipped
     return out.reset_index(drop=True)

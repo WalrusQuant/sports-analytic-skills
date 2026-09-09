@@ -6,6 +6,20 @@ import numpy as np
 import pandas as pd
 
 
+def chronology_sort_columns(df: pd.DataFrame, entity_col: str) -> list[str]:
+    """Sort keys for shift-1 history: date before week so ISO-week wrap cannot invert time."""
+    cols = [entity_col]
+    if "season" in df.columns:
+        cols.append("season")
+    if "gameday" in df.columns and df["gameday"].notna().any():
+        cols.append("gameday")
+    elif "week" in df.columns:
+        cols.append("week")
+    if "game_id" in df.columns:
+        cols.append("game_id")
+    return [c for c in cols if c in df.columns]
+
+
 def add_pregame_form_features(
     panel: pd.DataFrame,
     windows: list[int] | None = None,
@@ -25,7 +39,7 @@ def add_pregame_form_features(
     if ewma_spans is None:
         ewma_spans = [5]
 
-    df = panel.sort_values(["team", "season", "week", "gameday", "game_id"]).copy()
+    df = panel.sort_values(chronology_sort_columns(panel, "team")).copy()
     g = df.groupby("team", group_keys=False)
 
     df["pre_win_pct"] = g["won"].apply(lambda s: s.shift(1).expanding().mean())
@@ -70,7 +84,7 @@ def add_pregame_form_features(
         df["pre_home_win_pct"] = np.nan
         df["pre_away_win_pct"] = np.nan
         for team, idx in df.groupby("team").groups.items():
-            sub = df.loc[idx].sort_values(["season", "week", "gameday", "game_id"])
+            sub = df.loc[idx].sort_values(chronology_sort_columns(df, "team"))
             for home_val, col in ((1, "pre_home_win_pct"), (0, "pre_away_win_pct")):
                 mask = sub["is_home"].astype(int) == home_val
                 split = sub.loc[mask, "won"].astype(float)

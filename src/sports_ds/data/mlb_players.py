@@ -10,7 +10,7 @@ from typing import Iterable
 import pandas as pd
 
 from sports_ds.data.mlb import load_mlb_schedules
-from sports_ds.data.panel import as_season_list, to_pandas
+from sports_ds.data.panel import as_season_list, assign_season_week, to_pandas
 from sports_ds.data.sdv_common import MultiSportDataError, require_sportsdataverse
 
 
@@ -165,30 +165,64 @@ def load_mlb_player_boxscores(
     return out
 
 
-def _extract_opp_starter_k9(raw: pd.DataFrame) -> pd.DataFrame:
-    """Per game/side opposing starter rough quality: K/9 from game pitching line if GS=1."""
+def _starter_pitching_lines(raw: pd.DataFrame) -> pd.DataFrame:
+    """One row per game/side for the starting pitcher, with this-game K and IP."""
+    empty = pd.DataFrame(
+        columns=["game_id", "team_side", "pitcher_id", "gameday", "season", "strikeouts", "innings"]
+    )
     if "stats_pitching_games_started" not in raw.columns:
-        return pd.DataFrame(columns=["game_id", "team_side", "opp_starter_k9", "opp_starter_ip"])
-    df = raw.copy()
-    gs = pd.to_numeric(df.get("stats_pitching_games_started"), errors="coerce").fillna(0)
-    starters = df.loc[gs >= 1].copy()
+        return empty
+    pid_col = "person_id" if "person_id" in raw.columns else None
+    if pid_col is None:
+        return empty
+    gs = pd.to_numeric(raw.get("stats_pitching_games_started"), errors="coerce").fillna(0)
+    starters = raw.loc[gs >= 1].copy()
     if not len(starters):
-        return pd.DataFrame(columns=["game_id", "team_side", "opp_starter_k9", "opp_starter_ip"])
-    ip = pd.to_numeric(starters.get("stats_pitching_innings_pitched"), errors="coerce")
-    # innings can be 5.1 / 5.2 style; approximate
-    ip = ip.fillna(0.0).astype(float)
-    # convert baseball innings notation if needed is hard; treat as float IP already often is
+        return empty
+    ip = pd.to_numeric(starters.get("stats_pitching_innings_pitched"), errors="coerce").fillna(0.0)
     k = pd.to_numeric(starters.get("stats_pitching_strike_outs"), errors="coerce").fillna(0.0)
-    starters = starters.assign()
-    starters["opp_starter_ip"] = ip
-    k9 = (k * 9.0) / ip.where(ip > 0)
-    starters["opp_starter_k9"] = pd.to_numeric(k9, errors="coerce")
-    side = starters.get("team_side", pd.Series([""] * len(starters))).astype(str).str.lower()
-    starters["team_side"] = side
-    starters["game_id"] = starters["game_id"].astype(str)
-    # opposing side for batters: if pitcher is home, opp for away batters is this pitcher
-    out = starters[["game_id", "team_side", "opp_starter_k9", "opp_starter_ip"]].copy()
-    return out
+    side = starters.get("team_side", pd.Series("", index=starters.index)).astype(str).str.lower()
+    gameday = (
+        pd.to_datetime(starters["gameday"], errors="coerce")
+        if "gameday" in starters.columns
+        else pd.Series(pd.NaT, index=starters.index)
+    )
+    season = (
+        pd.to_numeric(starters["season"], errors="coerce")
+        if "season" in starters.columns
+        else pd.Series(pd.NA, index=starters.index)
+    )
+    out = pd.DataFrame(
+        {
+            "game_id": starters["game_id"].astype(str).to_numpy(),
+            "team_side": side.to_numpy(),
+            "pitcher_id": starters[pid_col].astype(str).to_numpy(),
+            "gameday": gameday.to_numpy(),
+            "season": season.to_numpy(),
+            "strikeouts": k.to_numpy(),
+            "innings": ip.astype(float).to_numpy(),
+        }
+    )
+    return out.drop_duplicates(subset=["game_id", "team_side", "pitcher_id"], keep="first")
+
+
+def _prior_starter_k9(starters: pd.DataFrame) -> pd.DataFrame:
+    """Pitcher shift-1 expanding K/9. First start for a pitcher is NA (no prior)."""
+    if starters is None or not len(starters):
+        return pd.DataFrame(columns=["game_id", "team_side", "opp_k9", "opp_ip"])
+    sort_cols = [c for c in ["pitcher_id", "gameday", "game_id"] if c in starters.columns]
+    s = starters.sort_values(sort_cols).copy()
+    g = s.groupby("pitcher_id", group_keys=False)
+    s["pre_k"] = g["strikeouts"].apply(lambda series: series.shift(1).expanding().sum())
+    s["pre_ip"] = g["innings"].apply(lambda series: series.shift(1).expanding().sum())
+    s["opp_k9"] = (s["pre_k"] * 9.0) / s["pre_ip"].where(s["pre_ip"] > 0)
+    s["opp_ip"] = s["pre_ip"]
+    return s[["game_id", "team_side", "opp_k9", "opp_ip"]]
+
+
+def _extract_opp_starter_k9(raw: pd.DataFrame) -> pd.DataFrame:
+    """Opposing starter quality from *prior* starts, never this game's boxscore K/9."""
+    return _prior_starter_k9(_starter_pitching_lines(raw))
 
 
 def load_mlb_player_game_panel(
@@ -287,7 +321,7 @@ def load_mlb_player_game_panel(
         lambda r: r["away_team"] if int(r["is_home"]) == 1 else r["home_team"],
         axis=1,
     )
-    out["week"] = out["gameday"].dt.isocalendar().week.astype("Int64")
+    out = assign_season_week(out)
 
     # rates (game-level; form will shift/expand these)
     out["avg"] = out["hits"] / out["at_bats"].replace(0, pd.NA)
@@ -316,16 +350,11 @@ def load_mlb_player_game_panel(
         + 5.0 * out["stolen_bases"]
     )
 
-    # opposing starter K/9 (game-level); merge pitcher side opposite batter side
+    # opposing starter prior-start K/9; merge pitcher side opposite batter side
     starters = _extract_opp_starter_k9(df)
     if len(starters):
-        # batter home faces away starter
-        away_st = starters[starters["team_side"] == "away"][
-            ["game_id", "opp_starter_k9", "opp_starter_ip"]
-        ].rename(columns={"opp_starter_k9": "opp_k9", "opp_starter_ip": "opp_ip"})
-        home_st = starters[starters["team_side"] == "home"][
-            ["game_id", "opp_starter_k9", "opp_starter_ip"]
-        ].rename(columns={"opp_starter_k9": "opp_k9", "opp_starter_ip": "opp_ip"})
+        away_st = starters[starters["team_side"] == "away"][["game_id", "opp_k9", "opp_ip"]]
+        home_st = starters[starters["team_side"] == "home"][["game_id", "opp_k9", "opp_ip"]]
         home_bat = out[out["is_home"] == 1].merge(away_st, on="game_id", how="left")
         away_bat = out[out["is_home"] == 0].merge(home_st, on="game_id", how="left")
         out = pd.concat([home_bat, away_bat], ignore_index=True)

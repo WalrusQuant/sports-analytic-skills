@@ -51,8 +51,9 @@ def main() -> int:
         print(f"FAIL: features identical to target on complete rows: {identical}")
     if named or identical:
         return 2
-    print(f"OK: {len(features)} features passed name and exact-target smoke checks")
+    print(f"REVIEW: {len(features)} features passed name and exact-target smoke checks")
     print("manual follow-up required: verify source timestamps, joins, shifts, and fold-local transforms")
+    print("this helper cannot issue CLEAN; use leakage-audit for the verdict")
     return 0
 
 

@@ -8,7 +8,7 @@ import pandas as pd
 
 from sports_ds.eda.summary import format_summary, summarize_team_game_panel
 from sports_ds.features.team_form import RICH_WIN_FEATURE_COLS, add_pregame_form_features
-from sports_ds.models.baselines import baseline_home_rate, fit_logistic_baseline
+from sports_ds.models.baselines import baseline_constant_rate, baseline_home_rate, fit_logistic_baseline
 from sports_ds.models.ensemble import fit_form_elo_ensemble
 from sports_ds.models.predict import fit_win_classifier
 from sports_ds.ratings.elo import add_elo_asof
@@ -50,19 +50,23 @@ def run_team_win_rich_pipeline(
     ):
         if int(train_mask.sum()) < min_train_rows or int(test_mask.sum()) < min_test_rows:
             continue
-        const = baseline_home_rate(model_df, train_mask, test_mask)
+        const = baseline_constant_rate(model_df, train_mask, test_mask)
+        home = baseline_home_rate(model_df, train_mask, test_mask)
         _, log_base, _ = fit_logistic_baseline(model_df, use_cols, train_mask, test_mask)
         _, gbm_res, _ = fit_win_classifier(
             model_df, use_cols, train_mask, test_mask, model_type="hist_gbm"
         )
         row: dict[str, Any] = {
             "test_season": int(test_season),
+            "fold": str(int(test_season)),
             "n_train": int(train_mask.sum()),
             "n_test": int(test_mask.sum()),
             "constant_log_loss": const.log_loss,
+            "home_rate_log_loss": home.log_loss,
             "logistic_log_loss": log_base.log_loss,
             "hist_gbm_log_loss": gbm_res.log_loss,
             "constant_accuracy": const.accuracy,
+            "home_rate_accuracy": home.accuracy,
             "logistic_accuracy": log_base.accuracy,
             "hist_gbm_accuracy": gbm_res.accuracy,
             "logistic_brier": log_base.brier,
@@ -94,10 +98,12 @@ def run_team_win_rich_pipeline(
     if len(folds):
         mean_keys = [
             "constant_log_loss",
+            "home_rate_log_loss",
             "logistic_log_loss",
             "hist_gbm_log_loss",
             "ensemble_log_loss",
             "constant_accuracy",
+            "home_rate_accuracy",
             "logistic_accuracy",
             "hist_gbm_accuracy",
             "ensemble_accuracy",

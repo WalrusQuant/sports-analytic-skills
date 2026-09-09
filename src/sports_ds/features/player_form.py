@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pandas as pd
 
+from sports_ds.features.team_form import chronology_sort_columns
+
 
 PLAYER_TARGET_DEFAULT = "fantasy_points_ppr"
 
@@ -202,7 +204,7 @@ def add_pregame_player_form_features(
         else:
             position_values = ()
 
-    df = panel.sort_values(["player_id", "season", "week", "gameday", "game_id"]).copy()
+    df = panel.sort_values(chronology_sort_columns(panel, "player_id")).copy()
     present_stat_cols = [column for column in stat_cols if column in df.columns]
     df = _merge_columns(
         df,
@@ -249,8 +251,8 @@ def add_pregame_player_form_features(
         ).dt.days
         derived["rest_days"] = rest_days.clip(lower=0, upper=15)
 
-    # opp pitcher quality is game-level known at lineup time if starter is announced;
-    # keep as-is (not player-shifted). Coerce numeric.
+    # opp_k9 is opposing starter prior-start K/9 (already shift-1 by pitcher).
+    # Do not player-shift it again. Current-game K/9 is illegal here.
     if "opp_k9" in df.columns:
         derived["opp_k9"] = pd.to_numeric(df["opp_k9"], errors="coerce")
 

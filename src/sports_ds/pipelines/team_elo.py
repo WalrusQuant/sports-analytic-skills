@@ -9,7 +9,7 @@ import pandas as pd
 
 from sports_ds.metrics.calibration import expected_calibration_error, verdict_from_ece
 from sports_ds.metrics.classification import brier_score, log_loss_binary
-from sports_ds.models.baselines import baseline_home_rate, fit_logistic_baseline
+from sports_ds.models.baselines import baseline_constant_rate, baseline_home_rate, fit_logistic_baseline
 from sports_ds.ratings.elo import add_elo_asof
 from sports_ds.validation.splits import season_walk_forward_masks
 
@@ -38,7 +38,8 @@ def run_team_elo_baseline(
     ):
         if int(train_mask.sum()) < min_train_rows or int(test_mask.sum()) < min_test_rows:
             continue
-        const = baseline_home_rate(model_df, train_mask, test_mask)
+        const = baseline_constant_rate(model_df, train_mask, test_mask)
+        home = baseline_home_rate(model_df, train_mask, test_mask)
         _, log_res, prob = fit_logistic_baseline(model_df, FEATURE_COLS, train_mask, test_mask)
         test = model_df.loc[test_mask].dropna(subset=FEATURE_COLS + ["won"])
         y = test["won"].astype(int).to_numpy()
@@ -48,11 +49,14 @@ def run_team_elo_baseline(
         fold_rows.append(
             {
                 "test_season": int(test_season),
+                "fold": str(int(test_season)),
                 "n_train": int(train_mask.sum()),
                 "n_test": int(len(test)),
                 "constant_log_loss": const.log_loss,
+                "home_rate_log_loss": home.log_loss,
                 "elo_logistic_log_loss": log_res.log_loss,
                 "constant_accuracy": const.accuracy,
+                "home_rate_accuracy": home.accuracy,
                 "elo_logistic_accuracy": log_res.accuracy,
                 "elo_logistic_brier": log_res.brier,
             }
@@ -71,8 +75,10 @@ def run_team_elo_baseline(
     if len(folds):
         summary["mean_metrics"] = {
             "constant_log_loss": float(folds["constant_log_loss"].mean()),
+            "home_rate_log_loss": float(folds["home_rate_log_loss"].mean()),
             "elo_logistic_log_loss": float(folds["elo_logistic_log_loss"].mean()),
             "constant_accuracy": float(folds["constant_accuracy"].mean()),
+            "home_rate_accuracy": float(folds["home_rate_accuracy"].mean()),
             "elo_logistic_accuracy": float(folds["elo_logistic_accuracy"].mean()),
         }
         summary["beats_constant"] = bool(
@@ -137,6 +143,8 @@ def run_loader_elo_baseline(
     min_train_seasons: int = 1,
     k: float = 20.0,
     home_adv: float = 65.0,
+    min_train_rows: int = 100,
+    min_test_rows: int = 50,
 ) -> dict[str, Any]:
     panel = load_panel(seasons)
     return run_team_elo_baseline(
@@ -146,4 +154,6 @@ def run_loader_elo_baseline(
         min_train_seasons=min_train_seasons,
         k=k,
         home_adv=home_adv,
+        min_train_rows=min_train_rows,
+        min_test_rows=min_test_rows,
     )

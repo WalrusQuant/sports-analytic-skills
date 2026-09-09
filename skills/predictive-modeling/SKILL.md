@@ -1,6 +1,7 @@
 ---
 name: predictive-modeling
 description: Build and evaluate predictive sports models from user-provided modeling data. Use for binary outcome models, feature/model selection, chronological backtests, probability scoring, and comparison to baselines.
+license: MIT
 metadata:
   version: "0.12.0"
 ---
@@ -9,19 +10,25 @@ metadata:
 
 ## Overview
 
-Train and evaluate predictive models on sports data **without leaking the future**.
+This skill's job is to **fit and compare predictive candidates** on a user-owned
+modeling table under a locked chronological evaluation.
 
-Goal: a model that beats honest baselines under **walk-forward** evaluation, with
-metrics locked before peeking at test folds, and a write-up that states limits.
+It is not the project charter, the data loader, the EDA, the feature-legality
+review, or the results report. Those are other skills. Start here only after
+the question, decision time T, legal features, and walk-forward design exist.
 
-This skill defines:
+Goal: a candidate that beats honest baselines under walk-forward evaluation,
+with the primary metric locked before peeking at test folds.
+
+This skill owns:
 
 - the model ladder (when complexity is allowed)
 - metrics by task
-- season walk-forward protocol
-- leakage rules
-- how to extend to new targets
-- how to report results
+- the fold-local fitting loop and bundled horse-race helper
+- keep/reject rules for a predictive candidate
+
+Validation design details live in `validation-design`. Leakage verdicts live in
+`leakage-audit`. Probability reliability lives in `calibration-check`.
 
 ---
 
@@ -64,49 +71,32 @@ argument parsing, so `--help` remains available.
 
 ## Analysis Workflow
 
-Every sound sports predictive analysis follows this arc. Do not skip.
+This skill assumes a user-owned modeling table and a written charter. If those
+are missing, stop and use `sports-modeling-doctrine`, a loader skill, `eda-sports`,
+`feature-rules`, and `validation-design` first.
 
-1. **Frame the question before fitting.**
-   - Target (win, margin, player stat)
-   - Grain (game, team-game, player-game)
-   - Decision time T (e.g. scheduled kickoff)
-   - Primary metric (lock it now)
+On the prepared table:
 
-2. **Load data** with the right loader skill into a user-owned table.
-
-3. **EDA** (`eda-sports`).
-   - n, coverage, missingness, base rates, leakage scouts
-
-4. **Build time-safe features only** (`feature-rules`, `time-series-sports`, `ratings-strength-models`).
-   - Every feature must be knowable at T
-   - Prefer shifted form / as-of ratings
-
-5. **Create walk-forward folds** (`validation-design`).
-   - Default: train on seasons `< S`, test on season `S`
-
-6. **Fit baselines on each fold** (`baseline-models`).
-   - Constant rate / mean
-   - Home-only or rating-diff logistic/linear
-   - Logistic/linear on form features
-
-7. **Fit candidate ML on each fold** only if baselines exist.
-   - Default tree model: `HistGradientBoostingClassifier` / regressor
-
-8. **Aggregate metrics across folds.**
-   - Mean + per-season table
-   - Count how many folds beat the baseline
-
-9. **Calibration check** for probability models (`calibration-check`).
-
-10. **Interpret and report** only if predictive value exists
-    (`model-interpretation`, `results-reporting`, `experiment-log`).
+1. **Confirm the locked contract.** Target, grain, T, primary metric, fold unit,
+   and eligible population must already be written down.
+2. **Confirm features are legal at T.** If that is unproven, run `leakage-audit`
+   rather than fitting.
+3. **Fit baselines on each frozen fold** (`baseline-models`).
+   Constant / mean, then home or rating, then a simple legal-feature model.
+4. **Fit one candidate ML model per fold** only if baselines exist.
+   Default tree: `HistGradientBoostingClassifier` / regressor.
+5. **Aggregate metrics across folds.** Mean, per-season table, and how many
+   folds beat the baseline.
+6. **Hand off.** Calibration → `calibration-check`. Slices/misses →
+   `model-interpretation`. Narrative → `results-reporting`.
 
 Skipping baselines or using random K-fold on seasons is a failed analysis.
 
 Read [model_ladder.md](references/model_ladder.md) before adding model complexity,
 [metrics.md](references/metrics.md) before locking the primary score,
-[walk_forward.md](references/walk_forward.md) when defining folds, and
-[leakage_rules.md](references/leakage_rules.md) before approving the feature set.
+[walk_forward.md](references/walk_forward.md) when applying the frozen folds, and
+[leakage_rules.md](references/leakage_rules.md) as a fitting-time checklist — not
+as a substitute for `leakage-audit`.
 
 ---
 
@@ -293,6 +283,9 @@ Anti-pattern: repeatedly tweaking until the last season looks good.
 
 ## Leakage Rules (Non-Negotiable)
 
+A passing smoke check is not `CLEAN`. Issue the verdict with `leakage-audit`.
+During fitting, still refuse:
+
 1. No `points_for` / `points_against` / `won` / current-game EPA as pre-game features.
 2. No final-season aggregates applied backward onto early weeks.
 3. No opponent “season stats” that include the current matchup.
@@ -300,15 +293,13 @@ Anti-pattern: repeatedly tweaking until the last season looks good.
 5. No scaler/imputer fit on train+test together.
 6. If a feature needs same-game information, the task is no longer pre-game — redefine T.
 
-Checks:
-
 ```bash
 python /path/to/predictive-modeling/scripts/leakage_smoke.py \
   --input modeling_table.csv --target won \
   --features is_home,rating_diff,rest_diff
 ```
 
-See `references/leakage_rules.md`.
+See `references/leakage_rules.md`. The helper never certifies cleanliness.
 
 ---
 

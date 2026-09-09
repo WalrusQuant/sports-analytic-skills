@@ -6,7 +6,7 @@ from typing import Any
 
 import pandas as pd
 
-from sports_ds.features.team_form import add_pregame_form_features
+from sports_ds.features.team_form import add_pregame_form_features, chronology_sort_columns
 
 
 def audit_pregame_form_features(panel: pd.DataFrame) -> dict[str, Any]:
@@ -24,7 +24,7 @@ def audit_pregame_form_features(panel: pd.DataFrame) -> dict[str, Any]:
     errors: list[str] = []
 
     # Keep the same team timeline order used by add_pregame_form_features.
-    sort_cols = [c for c in ["team", "season", "week", "gameday", "game_id"] if c in featured.columns]
+    sort_cols = chronology_sort_columns(featured, "team")
 
     # first game for each team must have null expanding history
     first = (

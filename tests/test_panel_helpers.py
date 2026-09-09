@@ -1,6 +1,13 @@
 import pandas as pd
 
-from sports_ds.data.panel import normalize_schedule_columns, schedule_to_team_game_panel
+import pytest
+
+from sports_ds.data.panel import (
+    assign_season_week,
+    normalize_schedule_columns,
+    schedule_to_team_game_panel,
+    validate_panel,
+)
 
 
 def test_schedule_to_panel_basic():
@@ -47,3 +54,34 @@ def test_normalize_aliases():
     out = normalize_schedule_columns(raw)
     for c in ["game_id", "season", "gameday", "home_team", "away_team", "home_score", "away_score"]:
         assert c in out.columns
+
+
+def test_assign_season_week_is_chronological_across_year_wrap():
+    df = pd.DataFrame(
+        {
+            "season": [2024, 2024],
+            "gameday": pd.to_datetime(["2023-10-15", "2024-01-10"]),
+        }
+    )
+    out = assign_season_week(df)
+    assert int(out.loc[0, "week"]) == 1
+    assert int(out.loc[1, "week"]) > int(out.loc[0, "week"])
+
+
+def test_validate_panel_rejects_one_row_games():
+    panel = pd.DataFrame(
+        {
+            "game_id": ["g1"],
+            "season": [2024],
+            "week": [1],
+            "team": ["A"],
+            "opponent": ["B"],
+            "is_home": [1],
+            "points_for": [10.0],
+            "points_against": [7.0],
+            "won": [1],
+            "point_diff": [3.0],
+        }
+    )
+    with pytest.raises(ValueError, match="exactly 2 team rows"):
+        validate_panel(panel)

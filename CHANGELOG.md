@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Toolkit correctness
+
+- Form features sort by `gameday` rather than ISO week, so Oct–Jun NBA/NHL
+  seasons no longer leak later games into earlier rows.
+- Non-NFL team and player loaders derive `week` from days since the season's
+  first game instead of `isocalendar().week`.
+- MLB batter `opp_k9` is the opposing starter's prior-start K/9, not this
+  game's boxscore line.
+- Elo ties update 0.5/0.5 instead of treating the away team as the winner.
+- `baseline_home_rate` is a real home/away baseline; the previous overall mean
+  lives in `baseline_constant_rate`.
+- Team panels run `validate_panel`. NFL uses the shared panel builder.
+- NFL win/margin/Elo pipelines wrap the generic cores instead of forking them.
+- `sports-ds *-win-pipeline --skill-out` writes fold JSON and prediction CSV
+  matching standalone skill contracts.
+
 ## 0.12.0 — 2026-08-24
 
 ### Standalone skill pack

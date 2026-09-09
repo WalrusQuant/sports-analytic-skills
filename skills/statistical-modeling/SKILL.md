@@ -13,16 +13,17 @@ metadata:
 
 ## Overview
 
-Conduct statistical analyses on sports data the way a careful analyst would:
-right model family for the outcome, verified assumptions, honest effect sizes
-and uncertainty, time-safe features when predicting, and a write-up that
-survives review.
+This skill's job is **classical statistical inference** on a user-owned sports
+table: choose a GLM or test, check assumptions, report effects and uncertainty.
 
-This is a sports-domain statistical-analysis methodology with deep references,
-specialized for games, teams, players, and seasons. Its bundled scripts are
-deliberately narrower: univariate assumption summaries and an additive numeric
-binomial GLM. The linear, count, mixed, Bayesian, causal, and power-analysis
-workflows below require the named external libraries and analyst-written code.
+It is not a universal modeling workflow. Do not use it to load data, design
+walk-forward ML horse races, or certify leakage. Mixed, Bayesian, causal, and
+power-analysis material below is routed methodology — the bundled scripts only
+cover univariate assumption checks and an additive numeric binomial GLM.
+
+Conduct the analysis the way a careful analyst would: right model family for
+the outcome, verified assumptions, honest effect sizes and uncertainty, and a
+write-up that survives review.
 
 Typical stack: `pandas`, `numpy`, `scipy`, `statsmodels`, and `scikit-learn`
 (+ optional `pingouin`, `seaborn`, `pymc`, and `arviz`).
@@ -34,8 +35,8 @@ Use this skill when:
 - Modeling win/loss, margins, points, goals, runs, or other sports outcomes
 - Comparing groups (home vs away, pre/post rule change, position groups)
 - Fitting logistic, linear, Poisson, or NegBin models on sports panels
-- Adding hierarchical team/player effects (partial pooling)
-- Checking residual diagnostics and probability calibration
+- Checking residual diagnostics and reporting effects with uncertainty
+- After the GLM path, clustered or partially pooled effects (see hierarchical section)
 - Reporting coefficients, odds ratios, effect sizes, and model fit
 - Choosing between classical stats models and jumping to ML
 
@@ -369,6 +370,11 @@ import pingouin as pg
 ---
 
 ## Hierarchical / Partial Pooling Patterns
+
+Read this section when the estimand is a clustered or partially pooled effect.
+This is not the default path of the skill, and there is no bundled mixed-model
+helper. Prefer the GLM/test workflow above unless grouping structure is the
+question.
 
 When player or team n is uneven, complete-pooling (ignore groups) and
 no-pooling (dummy each group) both fail. Partial pooling is the default

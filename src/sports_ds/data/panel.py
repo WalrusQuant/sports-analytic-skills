@@ -111,6 +111,26 @@ def normalize_schedule_columns(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def assign_season_week(df: pd.DataFrame, *, date_col: str = "gameday") -> pd.DataFrame:
+    """Set `week` to 1-based weeks since the earliest date in each season.
+
+    ISO week numbers wrap at the calendar year (week 1 sorts before week 40),
+    which inverts Oct–Jun NBA/NHL seasons. Use this instead of isocalendar.
+    Does not overwrite an existing week column that already has values.
+    """
+    out = df.copy()
+    if date_col not in out.columns or "season" not in out.columns:
+        return out
+    if "week" in out.columns and pd.to_numeric(out["week"], errors="coerce").notna().any():
+        return out
+    gd = pd.to_datetime(out[date_col], errors="coerce")
+    start = gd.groupby(out["season"]).transform("min")
+    days = (gd - start).dt.days
+    week = ((days // 7) + 1).astype("Int64")
+    out["week"] = week.where(gd.notna(), other=pd.NA)
+    return out
+
+
 def schedule_to_team_game_panel(sched: pd.DataFrame) -> pd.DataFrame:
     """Convert a normalized schedule frame into the shared team-game panel."""
     needed = ["game_id", "season", "home_team", "away_team", "home_score", "away_score"]
@@ -129,16 +149,19 @@ def schedule_to_team_game_panel(sched: pd.DataFrame) -> pd.DataFrame:
     done = done.dropna(subset=["home_score", "away_score"]).copy()
     done["season"] = pd.to_numeric(done["season"], errors="coerce").astype(int)
     done["game_id"] = done["game_id"].astype(str)
+    done = done.drop_duplicates(subset=["game_id"], keep="first")
 
     if "gameday" in done.columns:
         gameday = pd.to_datetime(done["gameday"], errors="coerce")
+        done["gameday"] = gameday
     else:
         gameday = pd.Series(pd.NaT, index=done.index)
 
-    if "week" in done.columns and done["week"].notna().any():
+    if "week" in done.columns and pd.to_numeric(done["week"], errors="coerce").notna().any():
         week = pd.to_numeric(done["week"], errors="coerce").fillna(0).astype(int)
     elif gameday.notna().any():
-        week = gameday.dt.isocalendar().week.astype(int)
+        assigned = assign_season_week(done)
+        week = pd.to_numeric(assigned["week"], errors="coerce").fillna(0).astype(int)
     else:
         week = pd.Series(0, index=done.index, dtype=int)
 
@@ -173,7 +196,9 @@ def schedule_to_team_game_panel(sched: pd.DataFrame) -> pd.DataFrame:
     # ties (soccer/hockey OT handled upstream): count as not-win for binary target
     panel.loc[panel["points_for"] == panel["points_against"], "won"] = 0
     panel["point_diff"] = panel["points_for"] - panel["points_against"]
-    panel = panel.sort_values(["season", "week", "gameday", "game_id", "team"]).reset_index(drop=True)
+    sort_cols = [c for c in ["season", "gameday", "week", "game_id", "team"] if c in panel.columns]
+    panel = panel.sort_values(sort_cols).reset_index(drop=True)
+    validate_panel(panel)
     return panel
 
 
@@ -181,3 +206,13 @@ def validate_panel(panel: pd.DataFrame) -> None:
     missing = [c for c in REQUIRED_PANEL_COLS if c not in panel.columns]
     if missing:
         raise ValueError(f"panel missing columns: {missing}")
+    if panel.duplicated(["game_id", "team"]).any():
+        n_dup = int(panel.duplicated(["game_id", "team"]).sum())
+        raise ValueError(f"panel has {n_dup} duplicate (game_id, team) rows")
+    counts = panel.groupby("game_id").size()
+    bad = counts[counts != 2]
+    if len(bad):
+        raise ValueError(
+            f"{int(len(bad))} games do not have exactly 2 team rows "
+            f"(examples: {list(bad.index[:5])})"
+        )

@@ -58,6 +58,24 @@ If a toolkit pipeline emits different keys, translate them or provide an
 explicit mapping. Never let a reporting skill infer the validation design from
 the filename or producer.
 
+Win pipelines write raw keys `test_season`, `logistic_log_loss`, and
+`constant_log_loss`. Convert with:
+
+```python
+from sports_ds.artifacts import write_win_skill_artifacts
+
+write_win_skill_artifacts(result, "data/skill_artifacts")
+```
+
+Or CLI:
+
+```bash
+sports-ds nfl-win-pipeline --seasons 2018-2024 --skill-out data/skill_artifacts
+```
+
+That directory contains `fold_metrics.json` (this schema) and `predictions.csv`
+with `y_true`, `p_pred`, `fold`, `season`, `game_id`, and `team`.
+
 ## Elo schedule
 
 One row per remaining matchup, not a doubled team panel.
@@ -70,5 +88,11 @@ Required fields:
 - `opponent`
 - `is_home`
 - either `win_probability` or enough documented rating fields to calculate it
+
+Toolkit Elo tables are a **doubled** team-game panel with `elo_expected`, not
+`win_probability`. Before simulation:
+
+1. keep `is_home == 1` (one row per game);
+2. rename `elo_expected` → `win_probability`, or compute it from `elo_diff`.
 
 Validate uniqueness of the game key before simulation.
