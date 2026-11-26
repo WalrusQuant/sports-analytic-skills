@@ -18,7 +18,7 @@ table: choose a GLM or test, check assumptions, report effects and uncertainty.
 
 It is not a universal modeling workflow. Do not use it to load data, design
 walk-forward ML horse races, or certify leakage. Mixed, Bayesian, causal, and
-power-analysis material below is routed methodology. The worked code covers univariate assumption checks and an additive numeric binomial GLM. Other families use the same libraries directly.
+power-analysis material below is routed methodology. Univariate assumption checks are in [assumptions_and_diagnostics.md](references/assumptions_and_diagnostics.md). The binomial GLM below is an additive numeric example on the team-game panel from `data-sources`. Other families use the same libraries directly.
 
 Conduct the analysis the way a careful analyst would: right model family for
 the outcome, verified assumptions, honest effect sizes and uncertainty, and a
@@ -190,6 +190,8 @@ independent evidence.
 
 ### Logistic model with robust inference
 
+`model_df` starts from the team-game panel in `data-sources` (`team`, `event_time`, `won`, `point_diff`, `is_home`). `rating_diff` and `rest_diff` are pre-event features built on that panel.
+
 ```python
 import numpy as np
 import statsmodels.api as sm
@@ -218,7 +220,7 @@ sampling structure requires it.
 ```python
 home = train[train["is_home"] == 1].copy()  # one row per game
 margin_fit = smf.ols(
-    "point_margin ~ rating_diff + rest_diff",
+    "point_diff ~ rating_diff + rest_diff",
     data=home,
 ).fit(cov_type="HC3")
 print(margin_fit.summary())
@@ -444,7 +446,7 @@ APA-style general templates: `references/reporting_standards.md`.
 
 ---
 
-## Bundled Resources
+## References
 
 ### references/
 

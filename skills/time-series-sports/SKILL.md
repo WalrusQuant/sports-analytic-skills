@@ -92,7 +92,7 @@ calendar gaps, and elapsed-time features.
 
 Require non-null entity keys, a parseable time or order field, and numeric or boolean values. Reject infinite values and contradictory event order. Leave missing observations missing. Do not fill them with zero. Shift each value by one event, then apply the rolling or EWMA summary.
 
-Name generated fields so the shift is obvious, for example `pre_ewma_points`. Group by season when history should not cross the offseason; otherwise say that history carries across seasons. If `game_date` can tie, use `start_time` or another real event order. An arbitrary row id is not order.
+Name generated fields so the shift is obvious, for example `pre_ewma_points`. Group by season when history should not cross the offseason; otherwise say that history carries across seasons. Team files have `game_date` as a date and no `start_time`. Convert it with `pd.to_datetime` before using `.dt`. Order same-day games with `event_time` from the `data-sources` panel (`games.start_time`). An arbitrary row id is not order.
 
 ### Opponent features
 
@@ -191,7 +191,7 @@ g["pre_ewma_points"] = g.groupby("team_id")["pre_points"].transform(
 
 ---
 
-## Bundled Resources
+## References
 
 ### references/
 | File | Contents |

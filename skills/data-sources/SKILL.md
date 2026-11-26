@@ -54,7 +54,7 @@ Each manifest `files` entry has `url`, `rows`, `columns`, `bytes`, `sha256`, `le
 
 The same files are available through the sports-leader MCP connector: https://github.com/WalrusQuant/sports-leader-mcp
 
-If that connector is already available (some clients list it as `sports-leader-v05`), call `get_data_status`, then the historical tool for the dataset. Otherwise read the manifest and the Parquet URL. A later `sports-leader-lab` connector is for lab work and is not part of this pack.
+If that connector is already available (some clients list it as `sports-leader-v05`), call `get_data_status`, then the historical tool for the dataset. Otherwise read the manifest and the Parquet URL.
 
 Historical tools and the datasets they read:
 
@@ -151,14 +151,29 @@ games = duckdb.sql(f"""
 """).df()
 ```
 
-A team-game win label is derived. Drop ties unless the charter defines them. Do not treat a null score as a zero.
+## Team-game panel from sportsleader-data
+
+Team files (`team_game_stats`, and the same prefix on `team_box_scores`) have `team_id`, `opponent_id`, and `game_date`. `game_date` is a date, not a datetime, and those rows have no `start_time`. `games` has `start_time`. Join it, then derive `event_time`, `won`, and `point_diff`. Rename `team_id` to `team` and `opponent_id` to `opponent`. Ties stay missing until the charter defines them. Do not treat a null score as a zero.
+
+This is the panel `eda-sports`, `feature-rules`, `leakage-audit`, and `statistical-modeling` expect. Each published file is one season. Concatenate the seasons the manifest lists before the join.
 
 ```python
 import pandas as pd
-team = pd.read_parquet("nfl_team_game_stats_2024.parquet")
-team = team.dropna(subset=["score", "opponent_score"])
-team = team[team["score"] != team["opponent_score"]]
-team["won"] = (team["score"] > team["opponent_score"]).astype(int)
+
+def read_seasons(dataset, seasons):
+    frames = [pd.read_parquet(f"nfl_{dataset}_{season}.parquet") for season in seasons]
+    return pd.concat(frames, ignore_index=True)
+
+games = read_seasons("games", [2022, 2023, 2024])
+team = read_seasons("team_game_stats", [2022, 2023, 2024])
+games = games.loc[games["completed"], ["game_id", "start_time"]]
+panel = team.merge(games, on="game_id", how="inner", validate="many_to_one")
+panel["event_time"] = pd.to_datetime(panel["start_time"], utc=True)
+panel["game_date"] = pd.to_datetime(panel["game_date"])
+panel["point_diff"] = panel["score"] - panel["opponent_score"]
+panel["won"] = (panel["score"] > panel["opponent_score"]).astype("float")
+panel.loc[panel["point_diff"] == 0, "won"] = pd.NA
+panel = panel.rename(columns={"team_id": "team", "opponent_id": "opponent"})
 ```
 
 ## Workflow

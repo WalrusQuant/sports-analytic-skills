@@ -29,5 +29,5 @@ Leave a time gap when labels/features finalize after event time.
 ## Never
 
 - Shuffle all games, 5-fold CV, report mean accuracy as proof
-- Train on 2018–2024, test on 2023
+- Train on 2021–2025, test on 2023
 - Use future opponent information unknown at T

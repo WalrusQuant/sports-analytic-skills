@@ -111,10 +111,7 @@ on multiple folds — not one lucky season.
 | 3 | HistGradientBoosting / other tabular trees | nonlinear ML |
 | 4 | Deeper nets / specialized architectures | only with lots of data + clear gain |
 
-Implement the constant, regularized logistic, and histogram-gradient rungs for any compatible
-user-owned table. It is not an NFL-specific pipeline and does not implement the
-regression, ranking, neural-network, encoding, or tuning workflows described
-elsewhere in this methodology.
+Implement the constant, regularized logistic, and histogram-gradient rungs on the team-game panel from `data-sources`. Regression, ranking, and neural-network choices stay in the metric and model sections above; do not add a rung that the walk-forward table did not beat.
 
 Promotion rule:
 
@@ -161,17 +158,17 @@ See `references/metrics.md`.
 Use season walk-forward:
 
 ```text
-train 2018–2019 → test 2020
-train 2018–2020 → test 2021
+train 2021–2022 → test 2023
+train 2021–2023 → test 2024
 ...
 ```
 
 Represent folds explicitly in the modeling artifact:
 
 ```text
-fold 1: train groups < 2021 → test 2021
-fold 2: train groups < 2022 → test 2022
-fold 3: train groups < 2023 → test 2023
+fold 1: train groups < 2023 → test 2023
+fold 2: train groups < 2024 → test 2024
+fold 3: train groups < 2025 → test 2025
 ```
 
 The split group may be season, date block, event sequence, or another
@@ -190,7 +187,7 @@ Details: `validation-design`, `references/walk_forward.md`.
 
 ---
 
-## Standalone Binary Model Comparison
+## Binary model comparison
 
 Before fitting, define the target, row grain, decision time, eligible population,
 chronological split unit, primary metric, practical success threshold, baseline
@@ -218,17 +215,44 @@ Keep rows with missing feature values and place median imputation inside each fi
 
 ### Custom model loop
 
-For each frozen fold:
+`panel` is the team-game panel from `data-sources`. The shift uses only earlier games for that team. Fit every candidate inside the fold, then score the same test rows.
 
 ```python
-train = frame[frame["season"] < test_season]
-test = frame[frame["season"] == test_season]
+import pandas as pd
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import log_loss
+from sklearn.pipeline import make_pipeline
 
-# Fit preprocessing and every candidate only on train.
-constant_probability = train["won"].mean()
-# Fit a regularized linear/logistic baseline next.
-# Fit a nonlinear candidate only after the baseline exists.
-# Score all candidates on exactly the same test rows.
+frame = panel.dropna(subset=["won", "season", "is_home"]).copy()
+frame["is_home"] = frame["is_home"].astype(int)
+frame["won"] = frame["won"].astype(int)
+frame = frame.sort_values(["team", "event_time", "game_id"])
+frame["pre_win"] = frame.groupby("team")["won"].shift(1)
+features = ["is_home", "pre_win"]
+records = []
+for test_season in sorted(frame["season"].unique())[2:]:
+    train = frame[frame["season"] < test_season]
+    test = frame[frame["season"] == test_season]
+    y_train = train["won"].to_numpy()
+    constant = float(y_train.mean())
+    logistic = make_pipeline(SimpleImputer(strategy="median"), LogisticRegression(max_iter=500))
+    tree = make_pipeline(
+        SimpleImputer(strategy="median"),
+        HistGradientBoostingClassifier(max_iter=50, random_state=0),
+    )
+    logistic.fit(train[features], y_train)
+    tree.fit(train[features], y_train)
+    y = test["won"].to_numpy()
+    records.append({
+        "season": int(test_season),
+        "n": len(test),
+        "log_loss_constant": log_loss(y, [constant] * len(test)),
+        "log_loss_logistic": log_loss(y, logistic.predict_proba(test[features])[:, 1]),
+        "log_loss_hgb": log_loss(y, tree.predict_proba(test[features])[:, 1]),
+    })
+print(pd.DataFrame(records))
 ```
 
 For continuous outcomes, use a training-mean dummy baseline, then ridge/linear
@@ -307,11 +331,31 @@ See `references/leakage_rules.md`. A smoke check never certifies cleanliness.
 
 ## Reporting Template
 
+```text
+Predictive model report
+Question: …
+Sport/league: …
+Grain: …
+Decision time T: …
+Target: …
+Features: … (all knowable at T: yes/no)
+Baselines: constant; logistic form; (optional rating)
+Candidate models: …
+Validation: season walk-forward, min_train_seasons=…
+Primary metric: …
+Mean walk-forward metrics: …
+Per-season table: …
+Calibration: …
+Leakage audit: CLEAN / NOT CLEAN
+Decision: keep logistic | keep ML | discard | follow-up
+Limits: …
+```
+
 Also use `results-reporting` and `experiment-log`.
 
 ---
 
-## Bundled Resources
+## References
 
 ### references/
 

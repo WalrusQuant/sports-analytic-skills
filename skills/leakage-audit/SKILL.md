@@ -89,6 +89,7 @@ performance or a join looks implausible.
 ### Transformations
 
 ```python
+# df is the team-game panel from data-sources
 ordered = df.sort_values(["team", "event_time", "game_id"])
 expected = ordered.groupby("team")["won"].transform(
     lambda s: s.shift(1).expanding(min_periods=1).mean()

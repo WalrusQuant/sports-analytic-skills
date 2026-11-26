@@ -198,7 +198,7 @@ actually has; never invent a command.
 
 ```text
 Question: Do shifted pre-event form features improve team-win probabilities?
-Data: NFL team-game panel, 2018-2024, completed regular-season games; report
+Data: NFL team-game panel, 2021-2025, completed regular-season games; report
 both team-row and unique-game counts.
 Validation: season walk-forward; primary metric log-loss, lower is better.
 Result: candidate 0.681 versus constant baseline 0.693 on identical held-out

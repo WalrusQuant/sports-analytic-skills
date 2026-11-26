@@ -99,24 +99,42 @@ The prediction table should keep identifiers, split/fold, `y_true`, `constant_pr
 
 A home-only summary can report group rates and a continuity-corrected odds ratio with a Wald interval. Treat that as pooled descriptive inference unless the same home indicator is scored inside the chronological folds. It does not by itself establish predictive generalization.
 
+`panel` is the team-game panel from `data-sources`. Score each fold with log loss and Brier score, and keep the prediction rows `calibration-check` reads.
+
 ```python
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import brier_score_loss, log_loss
 
-df = pd.read_parquet("team_game_stats.parquet")  # user-owned sportsleader-data file
-df = df.dropna(subset=["score", "opponent_score", "season", "is_home"])
-df = df[df["score"] != df["opponent_score"]]
-df["won"] = (df["score"] > df["opponent_score"]).astype(int)
-rows = []
+df = panel.dropna(subset=["won", "season", "is_home"]).copy()
+df["is_home"] = df["is_home"].astype(int)
+df["won"] = df["won"].astype(int)
+fold_rows, pred_rows = [], []
 for season in sorted(df["season"].unique())[2:]:
     train = df[df["season"] < season]
     test = df[df["season"] == season]
     constant = float(train["won"].mean())
     model = LogisticRegression(max_iter=500)
     model.fit(train[["is_home"]], train["won"])
-    p = model.predict_proba(test[["is_home"]])[:, 1]
-    rows.append({"season": int(season), "n": len(test), "constant": constant})
-print(pd.DataFrame(rows))
+    y = test["won"].to_numpy()
+    p_const = [constant] * len(test)
+    p_model = model.predict_proba(test[["is_home"]])[:, 1]
+    fold_rows.append({
+        "season": int(season),
+        "n": len(test),
+        "log_loss_constant": log_loss(y, p_const),
+        "log_loss_home": log_loss(y, p_model),
+        "brier_constant": brier_score_loss(y, p_const),
+        "brier_home": brier_score_loss(y, p_model),
+    })
+    part = test[["game_id", "team", "season"]].copy()
+    part["y_true"] = y
+    part["constant_probability"] = p_const
+    part["logistic_probability"] = p_model
+    part["p_pred"] = p_model
+    pred_rows.append(part)
+print(pd.DataFrame(fold_rows))
+predictions = pd.concat(pred_rows, ignore_index=True)
 ```
 
 ---
@@ -207,7 +225,7 @@ Done means:
 
 ---
 
-## Bundled Resources
+## References
 
 ### references/
 | File | Contents |

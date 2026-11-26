@@ -217,18 +217,18 @@ Done means:
 
 ## Worked Example
 
-**NFL form logistic, 2018–2024 walk-forward**
+**NFL form logistic, 2021–2025 walk-forward**
 
 1. Mean log-loss beats constant → proceed
 2. Leakage CLEAN
-3. Slice by season: check if 2020 or one year carries it
+3. Slice by season: check whether one season carries the result
 4. Slice home/away: both should beat constant if the model is real
-6. Largest misses: road dogs that won, or huge favorites that lost
-7. Writeup: “beats constant on most folds; weak on early-season low-sample rows”
+5. Largest misses: road dogs that won, or huge favorites that lost
+6. Writeup: “beats constant on most folds; weak on early-season low-sample rows”
 
 ---
 
-## Bundled Resources
+## References
 
 ### references/
 - [interpretation_methods.md](references/interpretation_methods.md)

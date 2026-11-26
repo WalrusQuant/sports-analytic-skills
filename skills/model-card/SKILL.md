@@ -190,7 +190,7 @@ Status: evaluated; not approved for wagering
 Purpose: Estimate pre-event P(team wins) from venue and shifted form
 Grain: team-game; paired rows share one contest
 Decision time: scheduled start, before event-day updates
-Data: completed regular-season games, 2018-2024; immutable Parquet snapshot
+Data: completed regular-season games, 2021-2025; immutable Parquet snapshot
 Validation: season walk-forward; primary metric log-loss
 Baseline: constant training-fold prevalence
 Result: report mean and every held-out season on identical rows

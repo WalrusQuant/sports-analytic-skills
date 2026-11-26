@@ -109,7 +109,7 @@ Expect one row per simulated event after filtering, with a pre-event win probabi
 season,game_id,is_home,team_id,opponent_id,win_probability
 ```
 
-Filter to one perspective per game, require unique `game_id`, draw binary outcomes from the supplied probabilities, and aggregate wins. Write the mean, central quantiles, and any predeclared threshold probabilities. Do not add wins from completed games left out of the input. The result is a full-season total only when the rows cover every game in that season. For a remaining schedule, add each team's known completed wins outside the draw and label that step. Record whether `mean_wins` counts supplied games only.
+Filter to one perspective per game, require unique `game_id`, draw binary outcomes from the supplied probabilities, and aggregate wins. Write the mean, central quantiles, and any predeclared threshold probabilities. Do not add wins from completed games left out of the input. The result is a full-season total only when the rows cover every game in that season. For a remaining schedule, add each team's known completed wins outside the draw and label that step.
 
 ### Game-level only
 
@@ -202,7 +202,7 @@ does not include all roster, injury, schedule, or model uncertainty.”
 
 ---
 
-## Bundled Resources
+## References
 
 ### references/
 | File | Contents |

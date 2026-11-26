@@ -79,6 +79,8 @@ If grain is wrong or keys are unexplained duplicates, stop before modeling.
 | Play/event | one event | `game_id, event_id` | using post-event fields at pre-event T |
 | Pitch | one pitch | `game_pk, pitch_no` | unstable event ordering |
 
+These checks use the team-game panel from `data-sources`: `team`, `opponent`, `game_id`, `season`, `game_date`, `event_time`, `is_home`, `won`, and `point_diff`.
+
 ```python
 key = ["game_id", "team"]
 dupes = panel.duplicated(key, keep=False)
@@ -94,8 +96,11 @@ repairs. A normal team-game panel usually has two rows per game.
 ## Coverage and entity balance
 
 ```python
+import pandas as pd
+
+panel["game_date"] = pd.to_datetime(panel["game_date"])
 coverage = (
-    panel.groupby(["season", "week"], dropna=False)
+    panel.groupby("season", dropna=False)
     .agg(rows=("game_id", "size"), games=("game_id", "nunique"),
          teams=("team", "nunique"))
     .reset_index()
@@ -109,7 +114,7 @@ the tail of an active season. Imbalance can be real—byes, playoffs, injuries,
 promotion/relegation—but can also reveal missing loads. Use stable IDs and a
 documented crosswalk for relocations and renames.
 
-sportsleader-data `games` rows are one game each, with `season`, `game_id`, `game_date`, `home_team_id`, and `away_team_id`. Team files are one row per team per game, with `team_id` and `game_date`. There is no `week` column. Map names explicitly, and derive a within-season index from `game_date` only when the question needs one:
+sportsleader-data `games` rows are one game each, with `season`, `game_id`, `game_date`, `home_team_id`, and `away_team_id`. Team files are one row per team per game, with `team_id` and `game_date` (a date, not a datetime) and no `start_time`. There is no `week` column. The panel in `data-sources` renames `team_id` to `team` and joins `games.start_time` as `event_time`.
 
 ## Panel base rates
 
@@ -131,7 +136,7 @@ alter this identity. Explain them rather than forcing the expected value.
 Overall rates can hide an era or provider boundary:
 
 ```python
-critical = [c for c in ["event_time", "points_for", "points_against", "won"] if c in panel]
+critical = [c for c in ["event_time", "score", "opponent_score", "won", "point_diff"] if c in panel]
 print(panel[critical].isna().mean().sort_values(ascending=False))
 print(panel.groupby("season")[critical].agg(lambda s: s.isna().mean()))
 ```

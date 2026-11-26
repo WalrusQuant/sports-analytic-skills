@@ -116,6 +116,26 @@ For a symmetric team-game table, filter to one perspective per game (`is_home ==
 
 Report Brier score, log loss, ECE, reliability-bin counts, row accounting, and optional group metrics. A numeric summary cannot prove held-out provenance or turn a favorable pooled ECE into `well-calibrated`; apply the verdict scale above. Also report all-row, categorical-segment, probability-tail metrics, and sparse-bin counts.
 
+`predictions` is the table from `baseline-models` (`y_true`, `p_pred`).
+
+```python
+import numpy as np
+from sklearn.metrics import brier_score_loss, log_loss
+
+y = predictions["y_true"].to_numpy()
+p = np.clip(predictions["p_pred"].to_numpy(), 1e-6, 1 - 1e-6)
+bin_id = np.minimum(np.digitize(p, np.linspace(0, 1, 11)) - 1, 9)
+ece, rows = 0.0, []
+for b in range(10):
+    m = bin_id == b
+    n = int(m.sum())
+    mean_p, obs = (float(p[m].mean()), float(y[m].mean())) if n else (None, None)
+    ece += (n / len(y) * abs(obs - mean_p)) if n else 0.0
+    rows.append({"bin": b, "n": n, "mean_p": mean_p, "obs_rate": obs})
+print({"brier": float(brier_score_loss(y, p)), "log_loss": float(log_loss(y, p)), "ece": ece})
+print(rows)
+```
+
 ---
 
 ## Binning Guidance
@@ -205,7 +225,7 @@ do not infer a durable defect from a handful of rows.
 
 ---
 
-## Bundled Resources
+## References
 
 ### references/
 | File | Contents |

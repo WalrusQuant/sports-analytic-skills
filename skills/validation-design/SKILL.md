@@ -164,9 +164,29 @@ change dominates results.
 
 ## Fold table
 
-Print expanding walk-forward fold sizes from the user's CSV or Parquet before fitting. Validate every named column, sort distinct split values, and accept an ordered season, date, or group column.
+`panel` is the team-game panel from `data-sources`. Minimum training groups default to 2. The first N groups are training-only history and never appear as a test fold.
 
-**Minimum training groups default to 2.** The first N groups are training-only history and never appear as a test fold. Example with seasons `2022, 2023, 2024`:
+```python
+import pandas as pd
+
+seasons = sorted(panel["season"].unique())
+min_train = 2
+folds = []
+for index, season in enumerate(seasons):
+    if index < min_train:
+        continue
+    train = panel[panel["season"].isin(seasons[:index])]
+    test = panel[panel["season"] == season]
+    folds.append({
+        "test_season": int(season),
+        "train_seasons": ",".join(str(int(s)) for s in seasons[:index]),
+        "n_train": len(train),
+        "n_test": len(test),
+    })
+print(pd.DataFrame(folds))
+```
+
+Example with seasons `2022, 2023, 2024`:
 
 - `2` → one test fold: 2024 (train 2022+2023)
 - `1` → test folds: 2023 and 2024

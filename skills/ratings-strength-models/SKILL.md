@@ -17,12 +17,8 @@ Estimate latent team (or player) strength from **past** results, then use those
 ratings only as they existed **before** game T.
 
 Ratings are often the strongest simple sports baselines and strong features for
-logistic/ML models. The non-negotiable rule: **as-of only**.
-
-Bundled standalone path:
-
-- standalone sequential rating construction
-- held-out evaluation against simple baselines
+logistic/ML models. The non-negotiable rule: **as-of only**. Write the loop in
+the analysis: read each team's rating before the game, score the game, then update.
 
 ---
 
@@ -48,15 +44,14 @@ Do **not** use as a substitute for:
 
 ---
 
-## Installation
+## Setup
 
-The standalone Elo builder and evaluator require pandas:
+The loop below is ordinary pandas. Read `games` from a sportsleader-data URL (`data-sources`). `start_time` is on `games`, not on team rows.
 
 ```bash
-python -m pip install pandas
+python3 -m venv .venv
+.venv/bin/pip install pandas pyarrow
 ```
-
-Parquet input also needs `pyarrow` or `fastparquet`.
 
 ---
 
@@ -97,11 +92,43 @@ before designing forward scoring and baseline comparisons.
 
 ## Elo on a game table
 
-Read one row per completed game. sportsleader-data `games` already has `season`, `game_date`, `game_id`, `home_team_id`, `away_team_id`, `home_score`, and `away_score`. Filter `completed` and non-null scores. `start_time` orders same-day games.
+Read one completed game per row from sportsleader-data `games` (`season`, `start_time`, `game_id`, `home_team_id`, `away_team_id`, `home_score`, `away_score`). Expected home score, using ratings from **before** the game:
 
-Save both teams' pre-event ratings before updating either one. A useful team-game output includes `team_id`, `opponent_id`, `is_home`, `elo_pre`, raw rating difference, home-adjusted difference, `win_probability`, and the actual result. Ties update as 0.5/0.5.
+```text
+p_home = 1 / (1 + 10 ** (-(elo_home + home_adv - elo_away) / 400))
+```
 
-The order field must strictly order each team's events. Score home rows once per game. Report season-level Elo log loss, Brier score, and accuracy against a fixed 0.5 reference and, after the first season, a home-win rate estimated only from prior seasons. A supplied legal baseline probability can be scored on the same rows. This is a score table for as-of probabilities, not a license to tune K on the final season.
+`actual_home` is 1 when the home team wins, 0 when it loses, and 0.5 on a tie. The update is `change = K * (actual_home - p_home)`, then add `change` to the home rating and subtract it from the away rating. Defaults: `K = 20`, `home_adv = 65`, initial rating 1500. Record `elo_pre` and `p_home` before applying `change`. Do not tune `K` or `home_adv` on the final season.
+
+```python
+import pandas as pd
+
+games = pd.concat(
+    [pd.read_parquet(f"nfl_games_{season}.parquet") for season in (2022, 2023, 2024)],
+    ignore_index=True,
+)
+games = games[games["completed"]].dropna(subset=["home_score", "away_score"])
+games = games.sort_values(["season", "start_time", "game_id"])
+ratings = {}
+k, home_adv, init = 20.0, 65.0, 1500.0
+rows = []
+for game in games.itertuples(index=False):
+    home_pre = ratings.get(game.home_team_id, init)
+    away_pre = ratings.get(game.away_team_id, init)
+    p_home = 1 / (1 + 10 ** (-(home_pre + home_adv - away_pre) / 400))
+    if game.home_score > game.away_score:
+        actual = 1.0
+    elif game.home_score < game.away_score:
+        actual = 0.0
+    else:
+        actual = 0.5
+    rows.append({"game_id": game.game_id, "home_pre": home_pre, "away_pre": away_pre, "p_home": p_home})
+    change = k * (actual - p_home)
+    ratings[game.home_team_id] = home_pre + change
+    ratings[game.away_team_id] = away_pre - change
+```
+
+When a charter sets carryover below 1, shrink between seasons with `rating = init + carryover * (rating - init)`. A team-game table is two rows per game: the away pre-game probability is `1 - p_home`. Score those as-of probabilities on later seasons only. The order field must strictly order each team's events.
 
 ---
 
@@ -221,7 +248,7 @@ earlier games.
 
 ---
 
-## Bundled Resources
+## References
 
 ### references/
 | File | Contents |

@@ -172,7 +172,7 @@ required_artifacts
 
 ```text
 Question: Do venue and shifted form improve P(team wins)?
-Sport/population: NFL completed regular-season games, 2018-2024
+Sport/population: NFL completed regular-season games, 2021-2025
 Grain: team-game; two paired rows per contest
 Decision time: scheduled kickoff
 Target: won; ties reported separately

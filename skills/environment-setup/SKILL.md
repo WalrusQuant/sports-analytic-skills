@@ -57,7 +57,6 @@ A local checkout can be listed with `npx skills add . --list`. Expect 20 skills.
 1. If the sports-leader connector is already enabled, use it. In Cursor that connector may be named `sports-leader-v05`. The server source is https://github.com/WalrusQuant/sports-leader-mcp
 2. Confirm history with `get_data_status`. It reads the public manifest.
 3. If the connector is not connected, read https://github.com/WalrusQuant/sportsleader-data/releases/download/manifest/manifest.json and the Parquet `url` on the chosen entry. `data-sources` has the dataset list.
-4. A later `sports-leader-lab` connector is the place for lab workflows. This pack does not install it and does not ship that skill.
 
 The connector needs no ESPN key for the public export. Do not put tokens, hosts, or account secrets into a skill file or a commit.
 

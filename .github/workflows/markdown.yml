@@ -1,0 +1,73 @@
+name: markdown
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  skills:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate skill frontmatter and relative links
+        run: |
+          python3 << 'PY'
+          import pathlib
+          import re
+          import sys
+
+          root = pathlib.Path(".")
+          errors = []
+          skill_files = sorted(root.glob("**/SKILL.md"))
+          if not skill_files:
+              errors.append("no SKILL.md files")
+
+          def field(block, key):
+              match = re.search(rf"^{key}:\s*[\"']?([^\"'\n]+)", block, re.M)
+              return match.group(1).strip() if match else ""
+
+          for path in skill_files:
+              text = path.read_text(encoding="utf-8")
+              if not text.startswith("---\n"):
+                  errors.append(f"{path}: missing frontmatter")
+                  continue
+              end = text.find("\n---\n", 4)
+              if end < 0:
+                  errors.append(f"{path}: unclosed frontmatter")
+                  continue
+              block = text[4:end]
+              name = field(block, "name")
+              license_name = field(block, "license")
+              version = re.search(r"(?m)^\s*version:\s*[\"']?([^\"'\n]+)", block)
+              version = version.group(1).strip() if version else ""
+              if name != path.parent.name:
+                  errors.append(f"{path}: name {name!r} != folder {path.parent.name!r}")
+              if license_name != "MIT":
+                  errors.append(f"{path}: license {license_name!r}")
+              if version != "1.0.0":
+                  errors.append(f"{path}: version {version!r}")
+
+          link_re = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+          fence_re = re.compile(r"```.*?```", re.S)
+          for path in root.rglob("*.md"):
+              if any(part.startswith(".") for part in path.parts):
+                  continue
+              body = fence_re.sub("", path.read_text(encoding="utf-8"))
+              for target in link_re.findall(body):
+                  if target.startswith(("http://", "https://", "mailto:")) or target.startswith("#"):
+                      continue
+                  target = target.split("#", 1)[0]
+                  if not target:
+                      continue
+                  resolved = (path.parent / target).resolve()
+                  if not resolved.exists():
+                      errors.append(f"{path}: missing link {target}")
+
+          if errors:
+              print("\n".join(errors))
+              sys.exit(1)
+          print(f"ok: {len(skill_files)} SKILL.md files, relative links resolve")
+          PY

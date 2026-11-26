@@ -28,4 +28,4 @@ validation-design → leakage-audit → calibration-check
 model-interpretation → results-reporting / model-card / experiment-log
 ```
 
-Twenty skills. A later sports-leader-lab skill would be added beside `data-sources`, not instead of it.
+Twenty skills. Dataset choice stays in `data-sources`.

@@ -13,6 +13,6 @@ sports-modeling-doctrine
  → results-reporting / model-card / experiment-log
 ```
 
-Use only the steps the question needs. `data-sources` is the acquisition step. The sports-leader connector and a direct Parquet read are two ways to reach the same files. A later sports-leader-lab connector can sit beside `data-sources` for lab work. It is not a skill in this pack.
+Use only the steps the question needs. `data-sources` is the acquisition step. The sports-leader connector and a direct Parquet read are two ways to reach the same files.
 
 `sports-visualization` and `anti-slop-analytics` apply wherever a figure is made. `simulation-sports` applies after probabilities exist. `experiment-log` starts before fitting, not after.

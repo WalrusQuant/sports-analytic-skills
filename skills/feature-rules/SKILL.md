@@ -94,6 +94,8 @@ documenting the final inventory.
 
 ## Construction patterns
 
+`panel` is the team-game panel from `data-sources`.
+
 ### Shift, then aggregate
 
 ```python
@@ -146,11 +148,16 @@ current outcome fields on either side.
 ### Rest, minimum history, and priors
 
 ```python
+import pandas as pd
+
 panel = panel.sort_values(["team", "event_time", "game_id"])
-panel["rest_days"] = (
-    panel.groupby("team")["event_time"].diff().dt.total_seconds() / 86400
-)
+panel["game_date"] = pd.to_datetime(panel["game_date"])
+panel["rest_days"] = panel.groupby("team")["game_date"].diff().dt.days
 panel["pre_games_played"] = panel.groupby("team").cumcount()
+opp_hist = panel[["game_id", "team", "pre_games_played"]].rename(
+    columns={"team": "opponent", "pre_games_played": "opp_pre_games_played"}
+)
+panel = panel.merge(opp_hist, on=["game_id", "opponent"], how="left", validate="one_to_one")
 model_df = panel.loc[
     panel["pre_games_played"].ge(3)
     & panel["opp_pre_games_played"].ge(3)
@@ -198,9 +205,9 @@ assert all feature values at or before the cutoff remain unchanged.
 
 ## Build a team-game feature table
 
-Read a user-owned table with pandas. sportsleader-data `team_game_stats` is already one row per team per game. Map `team_id`, `opponent_id`, `is_home`, `game_date`, and `season`. Derive `won` and `point_diff` from `score` and `opponent_score` after the tie rule is declared. Candidate features are explicit; there is no hidden feature list.
+Start from the team-game panel in `data-sources` (`team`, `opponent`, `game_id`, `event_time`, `game_date`, `is_home`, `won`, `point_diff`). Candidate features are explicit; there is no hidden feature list.
 
-Sort by team and `game_date`, then `shift(1)` before any rolling or expanding form. Opponent values come from the opponent's own pre-event row joined on `game_id`. Current outcomes remain labels only. This does **not** replace `leakage-audit`.
+Sort by `team`, `event_time`, and `game_id`, then `shift(1)` before any rolling or expanding form. Rest days use `pd.to_datetime(game_date)` before `.dt`. Opponent values come from the opponent's own pre-event row joined on `game_id`. Current outcomes remain labels only. This does **not** replace `leakage-audit`.
 
 Useful differentials when the inputs exist:
 
