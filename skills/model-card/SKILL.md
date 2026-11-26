@@ -6,7 +6,7 @@ description: >
   maintenance, and kill conditions. Use when freezing or sharing a model.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Sports Model Card
@@ -213,18 +213,9 @@ Status: experimental until prediction-interval coverage is evaluated
 The second example does not manufacture a calibration claim; it states the
 missing uncertainty check and constrains status accordingly.
 
-## Helper
+## Card file
 
-```bash
-python <path-to-model-card>/scripts/write_card_stub.py \
-  --name home-form-logit \
-  --version v1 \
-  --grain team-game \
-  --out data/model_card.md
-```
-
-Fill the generated user-owned Markdown file from verified artifacts. The helper
-creates structure only; it does not validate performance or approve the model.
+Fill a user-owned Markdown card from verified artifacts. The template creates structure only. It does not validate performance or approve the model.
 
 ## Output contract
 
@@ -246,4 +237,3 @@ A complete card has:
   drafting the full card section by section.
 - [`references/kill_conditions.md`](references/kill_conditions.md) — read when
   converting failure modes into measurable monitoring and retirement rules.
-- `scripts/write_card_stub.py` — portable model-card scaffold writer.

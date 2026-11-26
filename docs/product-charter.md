@@ -1,48 +1,37 @@
-# Product Charter — Sports Analytic Skills
+# Product charter
 
 ## What this is
 
 A portable collection of agent skills for sports analytics and modeling.
 
-The skills are the product. They operate on user-owned data and public
-dependencies without requiring this repository's Python package. The optional
-`sports_ds` toolkit supplies prebuilt public-data adapters and reference
-workflows through the dedicated `sports-ds-bridge` skill.
+The skills are the product. They describe how to work on user-owned tables and on sportsleader-data. This repository does not ship a runtime.
 
 ## Users
 
-- Analysts and builders working with sports data.
-- AI coding agents that need rigorous, sports-specific decision guidance.
-- Users who already have data and should not be forced into a new pipeline.
-- Users who need public data and may opt into a supported loader or toolkit.
+- Analysts working with sports data.
+- Agents that need sports-specific decision guidance.
+- People who already have a table and should not be sent through a hidden pipeline.
 
 ## In scope
 
-- Team-game and player-game exploration.
+- Team-game and player-game exploration on the six leagues in sportsleader-data.
 - Time-safe features and as-of ratings.
 - Statistical and predictive modeling.
 - Time-ordered validation, leakage audits, and calibration.
-- Simulation, interpretation, reproducibility, and honest reporting.
-- Public-data source selection and loading guidance.
-- An optional bridge to the `sports_ds` toolkit.
+- Simulation, interpretation, and honest reporting.
 
 ## Out of scope
 
-- Requiring a canonical pipeline or panel for generic analysis.
-- Treating `sports_ds` as an undeclared dependency of skill installation.
-- Paid vendors, wagering execution, pick selling, or guaranteed-profit claims.
-- A hosted dashboard or complete player-valuation platform.
+- A Python toolkit, bundled programs, or a required panel schema.
+- Play-by-play or pitch-level acquisition. Those grains are not in sportsleader-data.
+- Wagering execution, pick selling, or guaranteed-profit claims.
+- A hosted dashboard.
 
 ## Success criteria
 
-- A skill-only install can complete documented workflows on supplied artifacts.
-- No generic skill imports or instructs users to install `sports_ds`.
-- Every helper validates its input contract and runs outside the repository root.
-- The bridge clearly discloses and isolates optional toolkit setup.
-- Tests cover skill validation, forbidden imports, isolated help, and toy data.
-- The optional toolkit retains its independent package test suite.
-- A cold agent can choose a skill, identify required inputs, and produce an
-  honest result without discovering hidden infrastructure.
+- An installed skill can be followed on a sportsleader-data file or a user-owned table.
+- Dataset names in the skills match the manifest.
+- A cold agent can name the required inputs and produce an honest limit.
 
 ## Non-negotiables
 
@@ -50,4 +39,4 @@ workflows through the dedicated `sports-ds-bridge` skill.
 - Baselines before complexity.
 - Time-ordered validation for ordered sports data.
 - Explicit grain, schema, provenance, and limitations.
-- No hidden runtime dependencies.
+- Research use. Not a claim of betting edge.

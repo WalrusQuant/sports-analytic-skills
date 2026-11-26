@@ -6,80 +6,41 @@
 npx skills add WalrusQuant/sports-analytic-skills
 ```
 
-No repository clone or `sports_ds` installation is required.
-
-Choose a single skill without an interactive prompt:
+One skill:
 
 ```bash
 npx skills add WalrusQuant/sports-analytic-skills --skill eda-sports -y
 ```
 
-Install the complete pack for every detected agent:
+The full pack:
 
 ```bash
 npx skills add WalrusQuant/sports-analytic-skills --all
 ```
 
-## Start from the task
+No clone is required.
 
-Give the agent the question, the decision time for predictive work, and the path
-to your CSV, Parquet, or JSON artifact.
+## Point the agent at data
 
-```text
-Use eda-sports on data/team_games.parquet. Confirm the grain, coverage,
-missingness, target balance, and any leakage risks before modeling.
-```
+sportsleader-data is the default source. The file list is the [manifest](https://github.com/WalrusQuant/sportsleader-data/releases/download/manifest/manifest.json). When the sports-leader connector is connected, `data-sources` uses that instead of a manual download. The connector repository is [sports-leader-mcp](https://github.com/WalrusQuant/sports-leader-mcp). A client may show the connector as `sports-leader-v05`.
 
 ```text
-Use validation-design on data/features.parquet. The prediction is made at
-kickoff; create season walk-forward folds and lock the primary metric.
+Use data-sources and eda-sports on the NFL games file for the 2024 season.
+Confirm completed games, score nulls, and home and away ids before modeling.
 ```
 
-Each skill documents the fields it requires. If the artifact does not meet the
-contract, the agent should report the missing fields rather than silently infer
-them.
-
-## Run a bundled helper
-
-Resolve the helper path relative to the installed skill's `SKILL.md`, not the
-current working directory:
-
-```bash
-python <path-to-installed-skill>/scripts/<helper>.py --help
+```text
+Use validation-design on this feature table. The prediction is made at
+kickoff. Create season walk-forward folds and lock the primary metric.
 ```
 
-Helpers use public dependencies and user-owned artifacts. Install only the
-packages required by the selected helper in the user's project environment.
+Each skill names the fields it needs. If a sportsleader-data column is not in the manifest entry, the agent should say so instead of inventing it.
 
-## Need public data?
+## What a skill contains
 
-Use one of the source skills:
-
-- `nflreadpy`
-- `sportsdataverse-py`
-- `pybaseball`
-- `data-sources`
-
-If the user specifically wants the optional `sports_ds` toolkit, use
-`sports-ds-bridge`. It materializes a portable artifact and hands it back to
-the standalone skill.
-
-## Optional toolkit development
-
-Only users who want the repository's Python toolkit or reference pipelines need
-the checkout:
-
-```bash
-git clone https://github.com/WalrusQuant/sports-analytic-skills.git
-cd sports-analytic-skills
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-pytest -q -m "not live"
+```text
+skills/<id>/SKILL.md
+skills/<id>/references/
 ```
 
-Run live provider integrations separately:
-
-```bash
-SPORTS_DS_LIVE_TESTS=1 pytest -q -rs -m live
-```
+Examples in a skill are illustrative. Analysis runs in the user's environment, against sportsleader-data or a file the user owns.

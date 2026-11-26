@@ -1,170 +1,87 @@
 ---
 name: environment-setup
 description: >
-  Create and verify a portable Python environment for sports analysis. Use for
-  machine setup, onboarding, dependency diagnosis, or reproducibility checks.
+  Install this skill pack, connect the sports-leader connector, and optionally
+  prepare a user-owned Python environment for notebooks that read Parquet.
+  Use for onboarding and setup checks. This repository has no package to install.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Environment Setup
 
 ## Outcome
 
-Produce an isolated environment, explicit dependency record, and
-machine-readable verification report for the selected analysis. Install only
-the public scientific libraries and loaders the work actually requires.
+The skills are installed, the data path is either the sports-leader connector or the public sportsleader-data manifest, and any notebook stack the user asked for imports. Nothing in this repository is installed as a Python package.
 
-Read [the verification checklist](references/verify_checklist.md) while
-verifying a new environment and
-[the troubleshooting guide](references/troubleshooting.md) when an install,
-import, output, or loader probe fails.
+Read [verify_checklist.md](references/verify_checklist.md) while checking a new machine and [troubleshooting.md](references/troubleshooting.md) when a step fails.
 
-## When to Use This Skill
+## When to use this skill
 
-Use when:
+Use it when:
 
-- onboarding a new machine or project for sports analysis;
-- diagnosing broken imports, wrong interpreters, or conflicting packages;
-- locking a reproducible environment before serious modeling;
-- verifying that selected skill helpers and loaders work offline at `--help`.
+- installing the pack into an agent;
+- connecting sports-leader data tools;
+- a notebook cannot read a Parquet file the user already downloaded.
 
-Do **not** use this skill to:
-
-- install the optional repository toolkit / bridge path → `sports-ds-bridge`;
-- choose a public data source → `data-sources`;
-- run EDA or modeling once the environment already works.
+Do not use it to choose a dataset (`data-sources`) or to start EDA (`eda-sports`).
 
 | Need | Go instead |
 |---|---|
-| Optional toolkit bridge | `sports-ds-bridge` |
-| Source selection | `data-sources` |
-| Analysis after setup | the relevant modeling skill |
+| Which file to read | `data-sources` |
+| Analysis | the modeling skill for that question |
 
-## Plan before installing
+## Install the skills
 
-Record operating system/architecture, Python version and executable, analysis
-tasks, named loaders, required file/plot formats, CPU/memory/storage constraints,
-network/proxy constraints, and whether exact reproduction or flexible minimum
-versions are needed. Separate core packages from optional loaders and dev tools.
+```bash
+npx skills add WalrusQuant/sports-analytic-skills
+```
 
-## Create an isolated environment
+One skill, without a prompt:
+
+```bash
+npx skills add WalrusQuant/sports-analytic-skills --skill data-sources -y
+```
+
+The whole pack:
+
+```bash
+npx skills add WalrusQuant/sports-analytic-skills --all
+```
+
+A local checkout can be listed with `npx skills add . --list`. Expect 20 skills.
+
+## Connect data
+
+1. If the sports-leader connector is already enabled, use it. In Cursor that connector may be named `sports-leader-v05`. The server source is https://github.com/WalrusQuant/sports-leader-mcp
+2. Confirm history with `get_data_status`. It reads the public manifest.
+3. If the connector is not connected, read https://github.com/WalrusQuant/sportsleader-data/releases/download/manifest/manifest.json and the Parquet `url` on the chosen entry. `data-sources` has the dataset list.
+4. A later `sports-leader-lab` connector is the place for lab workflows. This pack does not install it and does not ship that skill.
+
+The connector needs no ESPN key for the public export. Do not put tokens, hosts, or account secrets into a skill file or a commit.
+
+## Optional notebook stack
+
+Only if the user wants to read Parquet in their own project:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install numpy pandas scipy scikit-learn statsmodels matplotlib pyarrow
+python -m pip install pandas pyarrow duckdb
 ```
 
-On Windows PowerShell use `.venv\Scripts\Activate.ps1`. Use `python -m pip` so
-the installer follows the active interpreter. Do not modify the system Python.
+On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`. Use `python -m pip` so the install follows the active interpreter. Do not modify the system Python. Do not install a package named after this repository. There is not one.
 
-Install public loaders only when the source plan requires them:
+## Verification
 
-```bash
-python -m pip install nflreadpy
-python -m pip install pybaseball
-python -m pip install sportsdataverse
-```
+1. Record the agent and that `npx skills add` completed.
+2. Record whether `sports-leader-v05` (or the sports-leader connector under another client name) is connected.
+3. Call `get_data_status`, or fetch the manifest and record `generated_at` and the number of `files`.
+4. If the user asked for local Python, import `pandas` and `duckdb` and read one Parquet `url` from the manifest with the snippet in `data-sources`.
+5. Stop at the first unexplained failure.
 
-Do not install every loader “just in case”; optional native/transitive
-dependencies add conflicts and weaken reproducibility.
+## Reproducibility
 
-## Verification ladder
-
-Work from cheapest/local to bounded/networked. Stop at the first unexplained
-failure; later successes do not erase it.
-
-1. Record `python --version`, executable path, platform, and `python -m pip --version`.
-2. Confirm Python and pip resolve inside the same environment.
-3. Import the minimum scientific packages and record resolved versions.
-4. Run every selected helper or loader's `--help`; help must not make a network call.
-5. Test required local outputs: JSON, Parquet, and images as applicable.
-6. If network is authorized, run one small bounded public-data sample.
-7. Save the verification report; freeze dependencies only after success.
-8. Recreate from the lock in a clean environment for high-stakes reproducibility.
-
-```bash
-python /path/to/environment-setup/scripts/verify_install.py
-python /path/to/environment-setup/scripts/verify_install.py \
-  --packages numpy,pandas,sklearn --out data/environment.json
-python -m pip freeze > requirements-lock.txt
-```
-
-The portable verifier accepts comma-separated import names through `--packages`.
-Import names can differ from distribution names (`sklearn` versus
-`scikit-learn`); document both when that matters.
-
-The verifier checks the current interpreter, `python -m pip`, and the requested
-imports only. Its JSON lists helper, output, network, and lock-recreation checks
-as not run; `OK` is therefore not full environment sign-off. A standard-library
-venv is detected from Python prefixes, but other environment managers may not be.
-Run and document the remaining ladder steps separately. On a completed probe,
-stdout is exactly one JSON document; package import output is captured inside
-the relevant package result. With `--out`, the same JSON is also written to that
-path, and no human status line is mixed into stdout.
-
-## Verification matrix
-
-| Layer | Probe | Pass evidence |
-|---|---|---|
-| Interpreter | version, executable, prefixes | intended environment path/version |
-| Installer | `python -m pip --version` | pip invoked by that exact interpreter |
-| Core imports | minimal package list | import + resolved versions (covered by verifier) |
-| Skill helpers | `--help` | usage text, status 0, no network |
-| File formats | tiny round trip | readable output in user-owned path |
-| Loader import | lightweight import | module/version recorded |
-| Network sample | bounded query | plausible rows + provenance |
-| Reproduction | clean reinstall | same checks pass from lock |
-
-## Troubleshooting by layer
-
-| Symptom | Diagnose | Remediation |
-|---|---|---|
-| `ModuleNotFoundError` | active executable and exact import name | install named distribution in venv |
-| install succeeds, import fails | compare Python/pip paths and architecture | reactivate; use `python -m pip` |
-| Parquet write fails | engine and output permissions | install `pyarrow`; test bounded path |
-| loader request fails | network, provider, rate limit, requested coverage | retry bounded documented probe |
-| native-library error | OS/CPU, wheel, native runtime | choose compatible version/install prerequisite |
-| stale notebook import | kernel executable and process state | select venv kernel; restart |
-| resolver conflict | incompatible constraints | isolate optional loader or revise pins explicitly |
-| empty load | season/status/filter semantics | inspect request and provider coverage |
-
-Capture the complete error, command, interpreter, package versions, and minimal
-reproduction before changing dependencies. Never silently substitute a package
-or broaden versions until something happens to install.
-
-## Reproducibility policy
-
-Keep a human-edited dependency specification separate from a resolved lock.
-Record Python minor version, OS/architecture, package versions, loader versions,
-and relevant environment variables without secrets. Treat caches as performance
-artifacts, not provenance; data snapshots need their own source metadata.
-
-Lock files are platform-sensitive. For multiple supported platforms, maintain
-and test explicit platform locks or a reproducible resolver workflow. A freeze
-from a contaminated environment is not a dependency design.
-
-## Worked example
-
-For a new NFL analysis: create `.venv`; install scientific packages and
-`nflreadpy`; run the verifier for `numpy,pandas,sklearn,nflreadpy`; run every
-selected helper's `--help`; perform a one-season or smaller authorized sample;
-write `environment.json`; inspect it; freeze dependencies; then repeat the
-local checks in a clean environment before claiming setup is reproducible.
-
-## Output contract and integrity rules
-
-The complete sign-off should report Python version/executable, platform,
-requested distributions and import names, resolved versions, helper/loader
-probes, skipped network checks, output round trips, exact failures/remediations,
-and paths to report and lock. The portable verifier emits only the subset stated
-above and enumerates the checks it did not run.
-
-1. Use an isolated environment and `python -m pip`.
-2. Never hide failed imports, skipped checks, or platform limitations.
-3. `--help` must remain offline; network samples must be bounded and authorized.
-4. Freeze only after verification; verify the lock by recreation when required.
-5. Use `verify_checklist.md` for sign-off and `troubleshooting.md` for failure routing.
+Record the skill-pack version (`1.0.0`), the connector name, the manifest `generated_at`, and the file `sha256` values the analysis used. For a notebook, also record the Python version and the package versions. That is the environment record. This repository has no lockfile for a toolkit.

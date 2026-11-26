@@ -1,22 +1,23 @@
-# Public Sports Source Matrix
+# sportsleader-data dataset choice
 
-This is a discovery checklist, not a current ranking or coverage guarantee.
-Verify upstream documentation, access, release freshness, and terms when making
-the plan; record the evidence in the source-plan artifact.
+Confirm the file in the manifest before committing. This table is the dataset catalog, not a coverage guarantee.
 
-| Need | Candidate ecosystem examples | Selection evidence |
+| Question grain | Dataset | Check before use |
 |---|---|---|
-| NFL PBP / schedules / rosters / weekly | nflverse via `nflreadpy`; maintained public league tooling | required table, season, grain, schema, terms |
-| College football | maintained public college modules, including SportsDataverse where applicable | competition, season, stable IDs, rate/access terms |
-| Basketball | maintained league/public modules, including SportsDataverse where applicable | league/table coverage, field definitions, IDs |
-| MLB pitch / Statcast / season data | public MLB tooling such as `pybaseball`; maintained releases | query grain, bounded dates, revision behavior |
-| Hockey | maintained league/public modules, including SportsDataverse where applicable | league/table coverage, timestamps, stable IDs |
-| Soccer events | documented open event providers and maintained public modules | competition rights, event semantics, redistribution terms |
+| One row per game, scores and schedule | `games` | `completed`, null scores, `season_type`, `neutral_site` |
+| One row per team per game, box line | `team_box_scores` | two rows per `game_id`, `is_home`, league-specific stat nulls |
+| One row per team per game, for and against | `team_game_stats` | same keys; college football follows NFL columns, college basketball follows NBA columns |
+| NBA or men's college basketball player-game | `player_game_logs` | `did_not_play`, blank college plus/minus |
+| NHL skater-game | `skater_game_logs` | `toi_seconds` nulls in older seasons if a backfill is present |
+| NHL goalie-game | `goalie_game_logs` | `starter` |
+| MLB batter-game or pitcher-game | `batting_game_logs`, `pitching_game_logs` | `starter`, `batting_order` or `pitching_order` |
+| NFL or college football passer, rusher, receiver | `passing_game_logs`, `rushing_game_logs`, `receiving_game_logs` | college blanks called out in the dataset note |
+| Who was on the roster as of a date | `rosters` | `valid_from` / `valid_to`; pro leagues only; often current season only |
+| Injury, transaction, NFL depth, probables, lineups, weather | matching dataset | source column, valid span, and which seasons the manifest actually lists |
 
 Rules:
 
-- Prefer release loaders over live scrapers
-- State analytical grain and each source's native grain/key
-- Document aggregation and joins whenever those grains differ
-- Snapshot for reproducible offline analysis
-- Source choice does not create predictive value by itself
+- One dataset per fact. Do not mix grains without an aggregation contract.
+- Season integers are not comparable across leagues until the numbering rule is applied.
+- Play-by-play and pitch-level tables are not in this catalog.
+- The user's own file is the fallback when the manifest has no matching dataset. Record its path, grain, and rights. Do not describe it as sportsleader-data.

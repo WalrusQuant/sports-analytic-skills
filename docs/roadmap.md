@@ -1,28 +1,19 @@
 # Roadmap
 
-## Current priority
+## Now
 
-1. Gather cross-agent feedback on skill discovery and standalone use.
-2. Expand worked examples that start from public sports data.
-3. Version portable input/output artifacts as their contracts evolve.
-4. Keep public loader skills current across supported sports.
-5. Benchmark and maintain `sports_ds` as an optional toolkit behind
-   `sports-ds-bridge`.
+1. Keep the 20 skills aligned with the sportsleader-data manifest when datasets change.
+2. Add worked examples that start from a manifest URL and a declared decision time.
+3. Keep portable input and output shapes stable: charters, fold tables, prediction rows, and model cards.
 
-## Skill quality bar
+## Later
 
-- concise, discriminating discovery description;
-- explicit input and output contracts;
-- sports-specific methodology and decision rules;
-- no hidden repository or package dependency;
-- runnable standalone helper only when it materially improves reliability;
-- references loaded progressively;
-- realistic toy-data verification;
-- honest reporting of baselines, uncertainty, sample size, and limitations.
+A `sports-leader-lab` skill can document the lab connector when that connector exists. It should call `data-sources` for files rather than replacing it.
 
-## Optional toolkit roadmap
+## Quality bar
 
-- stable exports matching portable skill contracts;
-- reusable core modules with no inward pipeline dependencies;
-- public-data adapter maintenance;
-- reference pipelines that demonstrate, but do not define, the methodology.
+- A description that distinguishes the skill.
+- Explicit inputs and outputs.
+- Sports-specific decision rules.
+- No dependency on code in this repository.
+- Honest reporting of baselines, uncertainty, sample size, and limitations.

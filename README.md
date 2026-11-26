@@ -1,70 +1,55 @@
 # Sports Analytic Skills
 
-[![CI](https://github.com/WalrusQuant/sports-analytic-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/WalrusQuant/sports-analytic-skills/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/WalrusQuant/sports-analytic-skills?display_name=tag)](https://github.com/WalrusQuant/sports-analytic-skills/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-24-brightgreen.svg)](#skills)
+[![Skills](https://img.shields.io/badge/skills-20-brightgreen.svg)](#skills)
 [![Agent Skills](https://img.shields.io/badge/standard-Agent_Skills-blueviolet.svg)](https://agentskills.io/)
 [![Agent Plugins](https://img.shields.io/badge/standard-Agent_Plugins-0A7A72.svg)](https://agent-plugins.org/)
 [![Site](https://img.shields.io/badge/site-GitHub%20Pages-111111.svg)](https://walrusquant.github.io/sports-analytic-skills/)
 
 **Site:** [walrusquant.github.io/sports-analytic-skills](https://walrusquant.github.io/sports-analytic-skills/) · **Docs:** [Getting started](https://walrusquant.github.io/sports-analytic-skills/docs.html)
 
-Standalone agent skills for sports analytics and modeling.
+Twenty agent skills for sports analytics and modeling. Version 1.0.0 is markdown only.
 
-Install the skills, point your agent at your data, and use focused guidance for
-EDA, time-safe features, baselines, statistical and predictive models,
-walk-forward validation, calibration, simulation, interpretation, and honest
-reporting. The skills work without this repository's Python package or pipelines.
+Install the skills, point your agent at [sportsleader-data](https://github.com/WalrusQuant/sportsleader-data), and use the pack for EDA, time-safe features, baselines, statistical and predictive models, walk-forward validation, calibration, simulation, interpretation, and honest reporting.
 
-The repository also contains an optional `sports_ds` toolkit for acquiring and
-normalizing public NFL, NBA, and MLB data. The `sports-ds-bridge` skill connects
-that toolkit to the portable artifacts consumed by the standalone skills.
+sportsleader-data publishes Parquet for MLB, NBA, NFL, NHL, college football, and men's college basketball. The file list is the [manifest](https://github.com/WalrusQuant/sportsleader-data/releases/download/manifest/manifest.json). The same files are available through the [sports-leader MCP connector](https://github.com/WalrusQuant/sports-leader-mcp). Current-season files are refreshed nightly. This repository does not ship code that downloads or models them.
 
-## Install the skills
+## Install
 
 ```bash
 npx skills add WalrusQuant/sports-analytic-skills
 ```
 
-The default command lets you select skills interactively. Install one skill
-non-interactively:
+One skill:
 
 ```bash
 npx skills add WalrusQuant/sports-analytic-skills --skill eda-sports -y
 ```
 
-Install every skill for every detected agent:
+Every skill:
 
 ```bash
 npx skills add WalrusQuant/sports-analytic-skills --all
 ```
 
-That is enough to use the skills. You do not need to clone this repository,
-install `sports_ds`, or run an end-to-end pipeline.
+You do not need to clone this repository to use the skills.
 
-Ask your agent to:
+Ask the agent to:
 
-- explore a team-game or player-game dataset before modeling;
-- audit candidate features for decision-time leakage;
-- establish constant and domain baselines;
-- build a time-ordered validation design;
-- assess probability calibration;
-- interpret the largest misses and error slices;
-- simulate outcomes from a schedule and win probabilities;
-- write a results report or model card.
+- lock the question, target, decision time, and baseline;
+- choose a sportsleader-data dataset and check its grain;
+- audit coverage, missingness, and leakage;
+- fit a constant baseline before a heavier model;
+- score season walk-forward folds;
+- check calibration and the largest misses;
+- write a results note or model card.
 
-Each skill documents the input columns or artifact shape it needs. Bundled
-helpers operate on user-owned CSV, Parquet, or JSON files and public Python
-dependencies; they do not import `sports_ds`.
-
-## A composable analysis path
-
-The skills are independently invocable. Combine only the ones the task needs:
+## Analysis path
 
 ```text
 question and decision time
-  -> data acquisition
+  -> data-sources (sportsleader-data)
   -> EDA
   -> time-safe features / ratings
   -> baselines and candidate models
@@ -76,8 +61,9 @@ question and decision time
 Examples:
 
 ```text
-Use eda-sports to inspect this CSV at team-game grain. Report coverage,
-missingness, duplicated game rows, target balance, and modeling red flags.
+Use data-sources and eda-sports on NFL team-game stats from sportsleader-data
+for the 2023 and 2024 seasons. Report grain, coverage, missingness, and
+whether scores can support a pre-kickoff win label.
 ```
 
 ```text
@@ -90,61 +76,13 @@ Use baseline-models, predictive-modeling, and validation-design to compare a
 constant baseline with logistic regression under season walk-forward folds.
 ```
 
-## Finding data
+## Data
 
-The data skills work directly with public ecosystems:
+`data-sources` is the default acquisition skill. It reads the manifest and, when the sports-leader connector is connected, the connector's historical tools. Those tools may appear in a client as `sports-leader-v05`.
 
-- `nflreadpy` for nflverse data;
-- `sportsdataverse-py` for supported multi-sport sources;
-- `pybaseball` for Statcast and MLB tables;
-- `data-sources` for choosing a source and grain.
+The Parquet files hold schedules, team boxes, team counting stats, player game logs, and current-season roster, injury, transaction, depth-chart, probable, lineup, and weather extracts, as listed in the manifest. They do not include ratings, forecasts, or betting lines. Ids are ESPN ids. NFL, MLB, and college football season numbers are the year the season starts. NBA, NHL, and men's college basketball season numbers are the year the season ends.
 
-If the user wants the repository's prebuilt loaders, normalized panels, or CLI,
-use `sports-ds-bridge`. It owns all optional `sports_ds` integration and hands a
-portable artifact back to the standalone skill.
-
-```text
-public source -> sports_ds loader (optional) -> CSV/Parquet/JSON
-                                            -> standalone skill
-```
-
-## Optional `sports_ds` toolkit
-
-The toolkit is useful when you want ready-made public-data adapters, reusable
-feature/model components, or reference pipelines. It is a separate opt-in
-runtime, not a dependency of the skills.
-
-```bash
-git clone https://github.com/WalrusQuant/sports-analytic-skills.git
-cd sports-analytic-skills
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -U pip
-pip install -e .
-```
-
-Optional multi-sport loaders:
-
-```bash
-# macOS only: XGBoost, pulled by sportsdataverse, needs OpenMP
-brew install libomp
-
-pip install -e ".[multi]"
-```
-
-The Homebrew command is unnecessary for skill-only use and normally
-unnecessary on Linux. It is only a native runtime prerequisite for the optional
-multi-sport toolkit path on macOS.
-
-Discover the current toolkit surface with:
-
-```bash
-sports-ds --help
-sports-ds feature-registry
-```
-
-Pipeline commands remain useful reference benchmarks. They are documented in
-`sports-ds-bridge`, not embedded as prerequisites throughout the generic skills.
+Attribute game data to ESPN and to any other source named on that dataset, and attribute the files to sportsleader-data.
 
 ## Skills
 
@@ -153,12 +91,8 @@ Pipeline commands remain useful reference benchmarks. They are documented in
 | Skill | Purpose |
 |---|---|
 | `sports-modeling-doctrine` | Lock the question, target, decision time, baseline, and success criteria |
-| `environment-setup` | Prepare a portable analysis environment for the user's project |
-| `data-sources` | Choose a public data source and appropriate grain |
-| `nflreadpy` | Load NFL data directly from nflverse |
-| `sportsdataverse-py` | Load supported multi-sport public data |
-| `pybaseball` | Load Statcast and MLB season data |
-| `sports-ds-bridge` | Optionally connect the `sports_ds` toolkit to standalone skill artifacts |
+| `environment-setup` | Install the pack and connect sportsleader-data |
+| `data-sources` | Choose a sportsleader-data dataset and grain |
 
 ### Exploration and features
 
@@ -192,67 +126,32 @@ Pipeline commands remain useful reference benchmarks. They are documented in
 | `model-card` | Record a durable model contract |
 | `experiment-log` | Maintain a reproducible experiment history |
 
-## Skill structure
+## Layout
 
 ```text
 skills/<skill-id>/
   SKILL.md
-  references/     # conditional detail
-  scripts/        # optional standalone helpers
-  agents/         # optional UI metadata
+  references/
 ```
 
-The path to a bundled script is resolved relative to its `SKILL.md`; instructions
-must not assume the user's current directory is this repository.
-
-## Repository architecture
-
-```text
-skills/                         primary product; standalone
-  sports-ds-bridge/             optional integration boundary
-
-src/sports_ds/                  optional Python toolkit
-  data, eda, features, ...      reusable components
-  pipelines/                    reference orchestration
-  cli.py                        toolkit command surface
-
-tests/                          toolkit + skill-independence tests
-```
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for dependency rules.
+Each skill is an operator manual. Runnable work uses sportsleader-data, the sports-leader connector, or files the user already owns. Short code examples in a skill illustrate a step. They do not call a program in this repository.
 
 ## Design rules
 
-1. A skill-only install works without `sports_ds`.
-2. Generic skills consume documented user artifacts and public dependencies.
-3. Only `sports-ds-bridge` may direct users to the optional toolkit.
-4. Predictive features must be knowable at the declared decision time.
-5. Time-ordered sports data uses walk-forward validation, not random shuffles by default.
-6. Baselines come before model complexity.
-7. Reports retain sample sizes, uncertainty, failures, and limitations.
+1. Predictive features must be knowable at the declared decision time.
+2. Time-ordered sports data uses walk-forward validation.
+3. Baselines come before model complexity.
+4. Reports retain sample sizes, uncertainty, failures, and limitations.
+5. The manifest is the schema. Do not invent a dataset or a column.
+6. This is a research workflow, not a betting product and not a claim of edge.
 
-## Development
+## Contributing
 
-Repository contributors can install the optional toolkit and test dependencies:
+Skill changes are markdown. Read [CONTRIBUTING.md](./CONTRIBUTING.md) and [docs/skill-authoring.md](./docs/skill-authoring.md).
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-pytest -q -m "not live"
-```
+## Disclaimer
 
-Live data integrations are a separate gate because they call third-party
-services:
-
-```bash
-SPORTS_DS_LIVE_TESTS=1 pytest -q -rs -m live
-```
-
-GitHub Actions runs the offline suite on Python 3.10 through 3.13. A separate
-scheduled and manually triggered workflow exercises the live integrations.
-
-Read [docs/skill-authoring.md](./docs/skill-authoring.md) before changing a skill.
+This project provides methodological guidance for sports data science and research. You are solely responsible for how you use it.
 
 ## License
 

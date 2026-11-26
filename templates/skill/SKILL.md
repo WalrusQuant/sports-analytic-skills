@@ -1,9 +1,11 @@
 ---
-name: skill-name
+name: skill
 description: >
   One or two sentences. State WHAT the skill does and WHEN an agent should
   load it. Write for discovery, not marketing.
 license: MIT
+metadata:
+  version: "1.0.0"
 ---
 
 # Skill Name
@@ -19,7 +21,7 @@ license: MIT
 ## Required inputs
 
 - …
-- State the file format, grain, and minimum fields.
+- State the file format, grain, and minimum fields. For sportsleader-data, copy column names from the manifest entry.
 
 ## Procedure
 
@@ -40,9 +42,9 @@ license: MIT
 
 ## Hard constraints
 
-- …
-- Never require `sports_ds`, a repository checkout, or a pipeline. Only the
-  dedicated `sports-ds-bridge` skill may integrate with that optional toolkit.
+- Predictive inputs must be knowable at decision time T.
+- Do not invent a sportsleader-data dataset or column.
+- Do not require a program stored in this repository. Illustrative snippets read the user's files or a public Parquet URL.
 
 ## Anti-patterns
 
@@ -58,24 +60,18 @@ Done means:
 
 ## Handoffs
 
-- Optionally suggest `other-skill` if available; the core job remains usable
-  without it.
+- Suggest another skill when it helps. The core job stays usable without it.
 - Stop if …
 
 ## Worked example
 
-Synthetic or public-data example only unless the user supplies private data.
-
-Show the input assumptions, the key decision, the observable output, and how to
-interpret it. Put substantial mode-specific examples in routed references.
+Use a sportsleader-data file or a clearly synthetic table. Show the input assumption, the decision, and how to read the output.
 
 ## Reporting requirements
 
-- State …
-- Include …
-- Do not claim …
+- State sample size, baseline, and limits.
+- Do not claim a betting edge.
 
 ## References
 
-- Read [references/example.md](references/example.md) when …
-- Run `python <path-to-this-skill>/scripts/helper.py --help` when …
+- Put conditional detail in `references/` and link it from the step that needs it. The link must resolve.

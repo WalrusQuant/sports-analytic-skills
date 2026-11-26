@@ -6,7 +6,7 @@ description: >
   Use for rankings, opponent adjustment, and strong prediction baselines.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Ratings & Strength Models (Sports)
@@ -86,9 +86,7 @@ Parquet input also needs `pyarrow` or `fastparquet`.
 
 Start with Elo-like or margin power ratings before exotic variants.
 
-The bundled scripts implement only the sequential Elo row builder and its
-score table. Glicko, offense/defense, least-squares, hierarchical, margin, and
-possession models are methodology in this skill and require separate code.
+Sequential Elo is the reference implementation the agent writes on the user's game table. Glicko, offense/defense, least-squares, hierarchical, margin, and possession models are additional methodology and need their own code.
 
 Read [rating_families.md](references/rating_families.md) when choosing Elo, power ratings, or an
 offense/defense model. Read [parameters.md](references/parameters.md) before setting update,
@@ -97,34 +95,13 @@ before designing forward scoring and baseline comparisons.
 
 ---
 
-## Standalone Elo Builder and Evaluator
+## Elo on a game table
 
-The builder reads a user-owned CSV, Parquet, JSON, JSONL, or NDJSON table with
-one row per completed game. Defaults require `season`, `game_date`, unique
-`game_id`, `home_team`, `away_team`, `home_score`, and `away_score`;
-all names are configurable.
+Read one row per completed game. sportsleader-data `games` already has `season`, `game_date`, `game_id`, `home_team_id`, `away_team_id`, `home_score`, and `away_score`. Filter `completed` and non-null scores. `start_time` orders same-day games.
 
-```bash
-python /path/to/ratings-strength-models/scripts/elo_asof.py \
-  --input games.csv --out elo_asof.csv --k 20 --home-adv 65
+Save both teams' pre-event ratings before updating either one. A useful team-game output includes `team_id`, `opponent_id`, `is_home`, `elo_pre`, raw rating difference, home-adjusted difference, `win_probability`, and the actual result. Ties update as 0.5/0.5.
 
-python /path/to/ratings-strength-models/scripts/eval_elo_baseline.py \
-  --input elo_asof.csv
-```
-
-The builder saves both teams' pre-event ratings before updating either one. Its
-two-row-per-game output includes `team`, `opponent`, `is_home`, `elo_pre`,
-raw `rating_diff`, home-adjusted `elo_diff`, `win_probability`, and
-`actual`. Ties receive 0.5.
-
-The order field must strictly order each team's events. If calendar dates can
-tie, use kickoff timestamps or a verified event sequence. The evaluator scores
-home rows once per game and reports season-level Elo log loss, Brier score,
-accuracy, a fixed 0.5 reference, and—after the first season—a home-win-rate
-reference estimated only from prior seasons. Pass a matched legal baseline
-with `--baseline-prob-col` to score it on the same rows. This is a score table
-for already-built as-of probabilities, not a full walk-forward
-parameter-tuning pipeline.
+The order field must strictly order each team's events. Score home rows once per game. Report season-level Elo log loss, Brier score, and accuracy against a fixed 0.5 reference and, after the first season, a home-win rate estimated only from prior seasons. A supplied legal baseline probability can be scored on the same rows. This is a score table for as-of probabilities, not a license to tune K on the final season.
 
 ---
 
@@ -178,10 +155,7 @@ Partial pooling when player n is uneven (`statistical-modeling` mixed models / B
 - home-only model
 - form logistic baseline when available
 
-The bundled evaluator implements the 0.5 and prior-season home-rate references
-plus an optional supplied probability baseline. Constructing home-only
-logistic, form, or alternative-rating predictions requires `baseline-models`
-or another fold-local workflow before calling the evaluator.
+Always include the 0.5 reference and, after the first season, the prior-season home rate. Home-only logistic, form, or another rating need `baseline-models` or another fold-local fit before they are compared.
 
 **Success**
 - beats constant on most folds
@@ -215,15 +189,14 @@ or another fold-local workflow before calling the evaluator.
 
 ```text
 Rating model: Elo
-Sport:
-Signal: win (margin multiplier: …)
-Params: K=…, home_adv=…, init=1500
-As-of rule: pre-game rating before update
+Sport and season numbering:
+Signal: win (margin multiplier, if any)
+Params: K, home advantage, init (often 1500)
+As-of rule: pre-game rating saved before the update
 Validation: season walk-forward
-Metrics vs constant / home / form logistic: …
+Metrics vs constant / home / form logistic:
 Calibration:
-Limits: no roster continuity, no injuries, …
-Reproduce: python /path/to/ratings-strength-models/scripts/elo_asof.py --input …
+Limits:
 ```
 
 ---
@@ -242,14 +215,6 @@ Done means:
 
 ## Worked Examples
 
-```bash
-python /path/to/ratings-strength-models/scripts/elo_asof.py \
-  --input games.csv --out elo_asof.csv --k 20 --home-adv 65
-
-python /path/to/ratings-strength-models/scripts/eval_elo_baseline.py \
-  --input elo_asof.csv
-```
-
 For season simulation, pass a documented pre-event probability artifact to
 `simulation-sports`; do not treat final ratings as if they existed before
 earlier games.
@@ -265,15 +230,6 @@ earlier games.
 | [parameters.md](references/parameters.md) | K, home_adv, margin, regression |
 | [evaluation.md](references/evaluation.md) | how to score ratings |
 
-### scripts/
-| File | Contents |
-|---|---|
-| `elo_asof.py` | build pre-game Elo table |
-| `eval_elo_baseline.py` | score pre-event Elo probabilities against 0.5, prior-season home rate, and an optional supplied baseline |
-
-
----
-
 ## Related Skills
 
 | Need | Skill |
@@ -284,17 +240,5 @@ earlier games.
 | Predictive ML | `predictive-modeling` |
 | Validation | `validation-design` |
 | Simulation from ratings | `simulation-sports` |
-
----
-
-## Quick Command Card
-
-```bash
-python /path/to/ratings-strength-models/scripts/elo_asof.py \
-  --input games.csv --out elo_asof.csv --k 20 --home-adv 65
-
-python /path/to/ratings-strength-models/scripts/eval_elo_baseline.py \
-  --input elo_asof.csv
-```
 
 ---

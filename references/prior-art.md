@@ -1,17 +1,16 @@
 # Prior art
 
-Standards and data ecosystems this project builds on. Not a list of products to imitate.
+Standards and data this project builds on.
 
 ## Standards
 
 - [Agent Skills](https://agentskills.io/)
 - [Agent Plugins](https://agent-plugins.org/)
 
-## Data ecosystems this repo teaches (not reimplements)
+## Data
 
-- [nflverse](https://github.com/nflverse) / [nflreadpy](https://github.com/nflverse/nflreadpy)
-- [SportsDataverse](https://www.sportsdataverse.org/packages) / [sportsdataverse-py](https://py.sportsdataverse.org)
-- [pybaseball](https://github.com/jldbc/pybaseball)
+- [sportsleader-data](https://github.com/WalrusQuant/sportsleader-data) — public Parquet for MLB, NBA, NFL, NHL, college football, and men's college basketball
+- [sports-leader MCP](https://github.com/WalrusQuant/sports-leader-mcp) — connector over the same files, plus live league tools
 
 ## Methods
 

@@ -1,217 +1,211 @@
 ---
 name: data-sources
 description: >
-  Choose public sports data sources for a modeling question across NFL, NBA,
-  MLB, NHL, college sports, soccer, and more. Use before acquisition code or
-  whenever source coverage, grain, licensing, or historical depth is unclear.
+  Choose sportsleader-data Parquet, or the sports-leader connector, for MLB,
+  NBA, NFL, NHL, college football, and men's college basketball. Use before
+  loading a table, whenever grain, season coverage, or identifiers are unclear.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Data Sources
 
-## When to Use This Skill
+sportsleader-data is the default source for this pack. It publishes public Parquet for six leagues. The sports-leader connector reads the same files. This repository does not ship loaders.
 
-Use when:
+## When to use this skill
 
-- the user needs a public sports data source and is not sure which one;
-- choosing grain (game, team-game, player-game, play/event) before loading;
-- comparing nflverse / sportsdataverse / pybaseball / other public options;
-- writing a source plan with provenance, snapshot, and first-load checks.
+Use it when:
 
-Do **not** use this skill when:
+- the question needs a public table and none has been chosen;
+- the grain might be game, team-game, or player-game;
+- season numbers, coverage, or ESPN ids are unclear;
+- a snapshot and attribution note are part of the plan.
 
-- the user already has a usable table and wants EDA or modeling;
-- they explicitly want the optional repository toolkit panels/CLI → `sports-ds-bridge`;
-- they already chose a loader and just need that loader skill.
+Do not use it when the user already has a table and wants EDA or modeling. Hand that table to `eda-sports`.
 
 | Need | Go instead |
 |---|---|
-| NFL loader details | `nflreadpy` |
-| Multi-sport SDV details | `sportsdataverse-py` |
-| MLB / Statcast details | `pybaseball` |
-| Optional toolkit bridge | `sports-ds-bridge` |
-| EDA after load | `eda-sports` |
+| Coverage, missingness, grain audit | `eda-sports` |
+| Decision-time legality | `feature-rules` |
+| Machine setup or the connector | `environment-setup` |
 
 ## Outcome
 
-Produce a source plan naming the required grain, decision-time fields, primary
-source, fallback, coverage risks, terms, snapshot rule, and first-load checks.
-Source choice does not create predictive validity; it determines whether the
-question can be answered reproducibly and legally.
+A source plan that names the dataset, season window, grain, decision-time fields, snapshot, and what the files do not contain. Source choice does not create predictive validity.
 
-Use this skill before acquisition code or whenever coverage, field semantics,
-historical depth, IDs, latency, or licensing are uncertain. If the source is
-already chosen and a loader fails, use its package skill instead.
+## Where the files are
 
-## Required inputs
+Catalog:
 
-- sport, competition, question, target, and analytical population;
-- analytical grain and natural key: season, game, team-game, player-game,
-  possession, play, pitch, or event;
-- each candidate source's native grain and the aggregation/join contract needed
-  to reach the analytical grain;
-- historical depth, expected volume, refresh cadence, and completion latency;
-- exact prediction decision time T and fields that must be known by then;
-- stable identifiers and cross-source joins required;
-- license, attribution, redistribution, authentication, and rate constraints;
-- required raw and derived artifact formats.
+https://github.com/WalrusQuant/sportsleader-data/releases/download/manifest/manifest.json
 
-## Candidate guide
+File URL:
 
-These are ecosystems to investigate, not durable rankings. Confirm current
-coverage, access, and terms in upstream documentation at selection time.
+```text
+https://github.com/WalrusQuant/sportsleader-data/releases/download/<league>_<dataset>/<season>.parquet
+```
 
-| Need | Candidate ecosystem | Verify before committing |
-|---|---|---|
-| NFL schedules, PBP, rosters, weekly data | nflverse / `nflreadpy` | table-specific grain, season coverage, schema drift |
-| Basketball, hockey, college, soccer | maintained league/public modules, including SportsDataverse where applicable | competition/table support and field definitions |
-| MLB Statcast/pitch or season tables | public MLB data tooling such as `pybaseball` | query-specific grain, bounded dates, field availability |
-| Detailed event/possession data | public league-specific event provider | event IDs, ordering, correction policy |
-| Cross-source enrichment | sources with stable IDs and timestamps | join coverage and as-of legality |
+Example published by sportsleader-data:
 
-Read [the source matrix](references/source_matrix.md) while shortlisting
-ecosystems, [the terms notes](references/tos_notes.md) before acquisition or
-redistribution, and [the sanity checks](references/sanity_checks.md) before
-accepting the first pull.
+https://github.com/WalrusQuant/sportsleader-data/releases/download/nba_games/2027.parquet
 
-Choose a source whose native records contain the facts required for the
-analytical grain, and write the aggregation contract when the grains differ.
-For example, play data may be aggregated to team-game only after event ordering,
-completion, and key rules are explicit. A season aggregate cannot manufacture
-play-level detail or historical publication vintages it never contained.
+Each manifest `files` entry has `url`, `rows`, `columns`, `bytes`, `sha256`, `league`, `dataset`, and `season`. Also read `generated_at`, `datasets`, `ids`, and `coverage`. Download a file again only when its `sha256` changed. Column names and types live on that entry. Do not invent a column that the entry does not list.
 
-## Source comparison rubric
+The same files are available through the sports-leader MCP connector: https://github.com/WalrusQuant/sports-leader-mcp
 
-Compare at least two plausible sources on:
+If that connector is already available (some clients list it as `sports-leader-v05`), call `get_data_status`, then the historical tool for the dataset. Otherwise read the manifest and the Parquet URL. A later `sports-leader-lab` connector is for lab work and is not part of this pack.
 
-| Dimension | Questions |
+Historical tools and the datasets they read:
+
+| Tool | Dataset |
 |---|---|
-| Coverage | Which competitions, seasons, phases, and entities exist? |
-| Grain | What is one native record and its key? If it differs from the analytical grain, is the transformation explicit and valid? |
-| Semantics | Are fields, units, ties, overtime, and completion states defined? |
-| Time | Event, publication, update, and revision timestamps available? |
-| Identity | Stable event/team/player IDs across seasons and sources? |
-| Reliability | Bulk releases, versioning, uptime, schema-change notices? |
-| Access | Terms, license, attribution, auth, rate and redistribution limits? |
-| Reproducibility | Can responses be snapshotted and checksummed? |
-| Cost/volume | Can the bounded request fit time, memory, storage, and quotas? |
+| `get_games` | `games` |
+| `get_team_box_scores` | `team_box_scores` |
+| `get_team_game_stats` | `team_game_stats` |
+| `get_player_game_logs` | player logs, selected with the tool's `statGroup` |
+| `get_player_trends` | aggregates of those logs |
+| `get_rosters` | `rosters` |
+| `get_injury_reports` | `injuries` |
+| `get_transaction_log` | `transactions` |
+| `get_depth_charts` | `depth_charts` |
+| `get_probables` | `probables` |
+| `get_lineups` | `lineups` |
+| `get_weather` | `weather` |
 
-Do not treat “popular” or “easy to import” as sufficient evidence.
+`get_player_game_logs` chooses among `player_game_logs`, `skater_game_logs`, `goalie_game_logs`, `batting_game_logs`, `pitching_game_logs`, `passing_game_logs`, `rushing_game_logs`, and `receiving_game_logs`. Use the tool schema for `statGroup`. Do not guess a value.
+
+Documented filters: `league`, `season` / `seasons`, `from` / `to` (`YYYY-MM-DD`), `team`, `opponent`, `player`, `columns`, `sort`, `order`, and `limit` (default 100, hard cap 250). League codes are `mlb`, `nba`, `nfl`, `nhl`, `cfb`, and `cbb`.
+
+The connector also has live scoreboard, news, and odds tools. Modeling tables for this pack come from the historical export. These Parquet files do not include ratings, forecasts, or betting lines.
+
+## Leagues and season numbers
+
+| Code | League | Season number |
+|---|---|---|
+| `mlb` | MLB | calendar year |
+| `nfl` | NFL | year the season starts |
+| `cfb` | college football, FBS, including games against FCS teams and bowls | year the season starts |
+| `nba` | NBA | year the season ends, so 2023-24 is `2024` |
+| `nhl` | NHL | year the season ends |
+| `cbb` | men's college basketball, Division I, including non-Division I opponents and the postseason | year the season ends, so 2020-21 is `2021` |
+
+There is no NHL `2005` season. `season_type` is `regular`, `postseason`, `preseason`, or `nba_cup_final`.
+
+The connector describes the export as these six leagues from the 2021 season through the current season, refreshed nightly. The manifest is the list of files that exist. On the manifest with `generated_at` `2026-11-26T10:17:44+00:00`:
+
+- `games`, team box, team counting stats, and the matching player logs run from 2021 through 2026 for MLB, NFL, and college football, from 2021 through 2027 for men's college basketball, and from 2022 through 2027 for NBA and NHL.
+- Rosters, injuries, transactions, depth charts, probables, lineups, and weather on that manifest cover only the latest season or two, not the full game history.
+
+Read `files` again after `generated_at` moves. sportsleader-data can add older pro seasons by a manual backfill (the data README describes NFL from 1999, NBA and NHL from the 1993-94 season, and MLB from 2003). A season is usable here only when the manifest lists its file.
+
+Current-season files are rebuilt nightly, about 4:00 AM America/Chicago. The job refreshes recent games, team lines, player logs, current rosters, and the other current-season extracts named in the sportsleader-data README. Older seasons stay in place until a backfill replaces them.
+
+## Datasets
+
+Descriptions below are the manifest `datasets` notes. Stat columns differ by league. Read `columns` on the file entry before selecting fields.
+
+| Dataset | Leagues | Grain |
+|---|---|---|
+| `games` | mlb, nba, nfl, nhl, cfb, cbb | one row per game; upcoming games have no score |
+| `team_box_scores` | all six | ESPN team box, one row per team per game |
+| `team_game_stats` | all six | counting stats for and against, one row per team per game |
+| `player_game_logs` | nba, cbb | one row per player per game; college plus/minus is blank |
+| `skater_game_logs` | nhl | one row per skater per game |
+| `goalie_game_logs` | nhl | one row per goalie per game |
+| `batting_game_logs` | mlb | one row per batter per game |
+| `pitching_game_logs` | mlb | one row per pitcher per game |
+| `passing_game_logs` | nfl, cfb | one row per passer per game |
+| `rushing_game_logs` | nfl, cfb | one row per rusher per game |
+| `receiving_game_logs` | nfl, cfb | one row per receiver per game; college targets are blank when ESPN does not send them |
+| `rosters` | mlb, nba, nfl, nhl | roster spans; empty `valid_to` means still current |
+| `injuries` | mlb, nba, nfl, nhl | ESPN plus the NBA official report and the NFL practice report |
+| `transactions` | mlb, nba, nfl, nhl | ESPN, plus MLB official |
+| `depth_charts` | nfl | depth-chart slots with a valid span |
+| `probables` | mlb, nhl | probable pitchers and goalies |
+| `lineups` | mlb, nba, nhl | announced batting orders, starting fives, and NHL lines |
+| `weather` | mlb, nfl | venue conditions |
+
+Shared `games` columns: `league`, `season`, `season_type`, `game_id`, `game_date`, `start_time`, `status`, `completed`, `home_team_id`, `home_team_abbr`, `home_team_name`, `away_team_id`, `away_team_abbr`, `away_team_name`, `home_score`, `away_score`, `ending`, `neutral_site`, `venue`, `venue_city`, `venue_state`, `venue_country`, `notes`, `series_summary`, `if_necessary`.
+
+Shared team-file columns, then league-specific stats: `league`, `season`, `season_type`, `game_id`, `game_date`, `team_id`, `team_abbr`, `team_name`, `opponent_id`, `opponent_abbr`, `opponent_name`, `is_home`, `score`, `opponent_score`.
+
+Player logs add `player_id` and `player_name`, then the stat line for that dataset. College team rows use the pro columns and leave a stat null when ESPN does not send it. College football counting stats follow the NFL columns. College basketball counting stats follow the NBA columns.
+
+Ids, from the manifest: `game_id` is the ESPN event id; `team_id` and `opponent_id` are ESPN team ids; `player_id` is the ESPN athlete id. Abbreviations and names are on the row, so a file can be used alone. Files are Parquet with zstd compression. Timestamps are UTC.
+
+There is no play-by-play file and no pitch-level file. A question that needs those grains needs a table the user already has rights to, or the question has to change.
+
+## How to read a file
+
+Prefer the connector when it is connected. For a direct read, take `url` from the manifest:
+
+```python
+import duckdb
+url = "https://github.com/WalrusQuant/sportsleader-data/releases/download/nfl_games/2024.parquet"
+games = duckdb.sql(f"""
+  SELECT game_id, season, season_type, game_date, start_time, completed,
+         home_team_id, away_team_id, home_score, away_score, neutral_site
+  FROM read_parquet('{url}')
+  WHERE completed
+""").df()
+```
+
+A team-game win label is derived. Drop ties unless the charter defines them. Do not treat a null score as a zero.
+
+```python
+import pandas as pd
+team = pd.read_parquet("nfl_team_game_stats_2024.parquet")
+team = team.dropna(subset=["score", "opponent_score"])
+team = team[team["score"] != team["opponent_score"]]
+team["won"] = (team["score"] > team["opponent_score"]).astype(int)
+```
 
 ## Workflow
 
-1. Lock question, analytical grain/key, target, population, and T.
-2. List only the minimum required raw fields and stable identifiers.
-3. Shortlist and compare a primary and fallback source with the rubric.
-4. Read upstream documentation and record field/time semantics and terms.
-5. Estimate request count and data volume; bound event-level pulls by dates/IDs.
-6. Pull the smallest representative sample spanning relevant eras/statuses.
-7. Validate keys, row counts, periods, outcomes, entities, timestamps, and nulls.
-8. Test required joins on a small sample and quantify unmatched/many-to-many rows.
-9. Save the untouched raw response or immutable snapshot with retrieval metadata.
-10. Document fallback triggers, known gaps, and the EDA handoff.
+1. Lock the question, population, target, grain, and decision time T with `sports-modeling-doctrine` when the work is predictive.
+2. Pick the dataset whose native grain is the analytical grain, or write the aggregation.
+3. Read the manifest entry for that league, dataset, and season. Record `generated_at`, `url`, `sha256`, `rows`, and `columns`.
+4. Pull one season before a multi-season download.
+5. Check keys, completion, scores, and nulls. See [sanity_checks.md](references/sanity_checks.md).
+6. Save the file unchanged, or record the connector arguments and the file `updated_at`.
+7. Hand the path to `eda-sports`.
 
-## First-load diagnostics
+## Provenance
 
-- nonzero rows and requested competitions/seasons are present;
-- natural keys are unique at the claimed grain;
-- scheduled, live, completed, canceled, and postponed records are distinguishable;
-- completed events have plausible outcomes and nonconstant score distributions;
-- team-game overall win rate is near its paired identity and home-only rates are plausible;
-- identifiers remain stable or have a documented crosswalk;
-- timestamps have known timezone and meaning;
-- critical missingness is measured by season/status/source;
-- source/version/query/retrieval time accompany every saved artifact.
+Record league, dataset, season, manifest `generated_at`, file `sha256`, `url` or connector tool and arguments, and retrieval time in UTC. Do not overwrite a file an experiment already cited.
 
-```python
-key = ["game_id", "team"]
-assert len(df) > 0
-print(df["season"].value_counts().sort_index())
-print("duplicate key rows:", df.duplicated(key).sum())
-print(df.groupby("status")["game_id"].nunique())
-print(df.isna().mean().sort_values(ascending=False).head(20))
-```
+These are revised public rows, not a point-in-time feed of what was known before each game. Injury, lineup, roster, and weather extracts are current-season snapshots on the manifest above. A pre-game feature needs its own as-of rule. If the file has no publication time for a fact, do not treat that fact as known at T.
 
-Reject corrupt or mis-grained pulls rather than adapting the question silently.
+Game, box, roster, injury, transaction, lineup, depth-chart, and weather rows are collected from public sources, chiefly ESPN, plus the other sources named on each dataset in the sportsleader-data README. Attribute game data to ESPN and to any other named source, and attribute the files to sportsleader-data. sportsleader-data is not affiliated with ESPN, those sources, or the leagues. The underlying data stays under the terms of its source. Read [tos_notes.md](references/tos_notes.md) before redistributing a file.
 
-## Snapshot and provenance policy
-
-Preserve raw responses before normalization. Record source/project version,
-endpoint or release, exact parameters, requested/retrieved times in UTC, schema
-fingerprint, row count, checksum, timezone, license/attribution, and any later
-correction policy. Derived tables should point to immutable raw snapshots and
-transformation code/config. Never overwrite data referenced by an experiment.
-
-For predictive work, a current bulk snapshot may contain revisions unavailable
-historically. State whether the study reconstructs real-time vintages or accepts
-revised-history data and limit claims accordingly.
-
-## Hard constraints and anti-patterns
+## Hard constraints
 
 | Do not | Why |
 |---|---|
-| scrape when a supported release/API exists | fragile and may violate terms |
-| merge display names without a crosswalk | silent false matches and duplicates |
-| use current roster/rating as historical | post-T information leaks backward |
-| run unbounded pitch/play/event pulls | rate, memory, and reproducibility risk |
-| switch sources mid-experiment silently | changes population and semantics |
-| mix grains without an aggregation contract | estimand and independence change |
-| infer season coverage from one scoreboard call | endpoint purpose is different |
-| model before representative checks | corrupt data becomes plausible output |
-
-Respect terms, rate limits, access controls, and attribution. Never evade a
-provider restriction. Cache only when permitted.
-
-## Worked source plans
-
-**NFL pre-kickoff win model:** team-game grain; nflverse schedules/results via
-`nflreadpy`; require stable game/team IDs, scheduled start, home/away, completion
-state, and scores for labels. Check schema across requested seasons and snapshot
-the release. Use a documented public fallback only if coverage fails.
-
-**MLB pitch analysis:** pitch grain; `pybaseball` Statcast; bound every request by
-date and test a small window. Verify `game_pk`, at-bat/pitch order, units, missing
-tracking fields, doubleheaders, and revision behavior before scaling the pull.
-
-**Cross-source injury enrichment:** select sources with stable player/team IDs
-and publication timestamps. Build a reviewed crosswalk, measure unmatched joins,
-and require an as-of predicate. If historical timestamps are absent, the source
-cannot support the intended pre-event claim.
+| Invent a dataset or column | The manifest is the schema |
+| Assume NBA `2024` is the same season as NFL `2024` | End-year versus start-year labels |
+| Use both team rows as independent games | One contest, two perspectives |
+| Fill a null score with zero | Upcoming and missing games |
+| Join on abbreviations alone across eras | ESPN ids are the stable key; relocated clubs keep that season's name |
+| Treat the connector's odds tools as columns in these files | The Parquet export has no betting lines |
+| Claim a season file exists because a backfill is documented | Only the manifest lists files |
 
 ## Source-plan artifact
 
 ```text
-Question / sport / competition / target:
-Analytical grain and natural key / population / decision time T:
-Required fields and IDs:
-Primary source and rationale:
-Primary native grain/key and aggregation contract:
-Fallback and trigger:
-Fallback native grain/key and compatibility with primary:
-Coverage window / status handling:
-Event, publication, revision semantics:
-License, terms, attribution, access limits:
-Estimated request/volume and bounded query:
-Representative sample checks:
-Join checks and crosswalk:
-Raw snapshot location / checksum / retrieved_at:
-Known gaps and claim limitations:
+Question / league / target:
+Grain and natural key / population / decision time T:
+Dataset and native grain:
+Seasons requested and seasons present in the manifest:
+Required columns (copied from the manifest entry):
+Connector tool or Parquet URL:
+Manifest generated_at / sha256 / rows:
+Tie, overtime, and completion rule:
+What this file does not contain:
+Attribution:
+Known gaps:
 EDA handoff:
 ```
 
-Create the portable stub with:
-
-```bash
-python /path/to/data-sources/scripts/print_source_plan.py --out data/source_plan.md
-```
-
-## Integrity and resource routing
-
-1. Never claim coverage until a representative sample is inspected.
-2. Preserve raw snapshots and provenance for every reproducible claim.
-3. Source timestamps and revision policy are part of feature legality.
-4. Read `source_matrix.md` for ecosystem choice, `tos_notes.md` for access and
-   redistribution, and `sanity_checks.md` before accepting data.
-5. Hand off loaded data to `eda-sports`, then `feature-rules` and validation.
+Read [source_matrix.md](references/source_matrix.md) when more than one dataset could answer the question.

@@ -3,7 +3,7 @@ name: predictive-modeling
 description: Build and evaluate predictive sports models from user-provided modeling data. Use for binary outcome models, feature/model selection, chronological backtests, probability scoring, and comparison to baselines.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Predictive Modeling for Sports
@@ -13,7 +13,7 @@ metadata:
 This skill's job is to **fit and compare predictive candidates** on a user-owned
 modeling table under a locked chronological evaluation.
 
-It is not the project charter, the data loader, the EDA, the feature-legality
+It is not the project charter, data acquisition, the EDA, the feature-legality
 review, or the results report. Those are other skills. Start here only after
 the question, decision time T, legal features, and walk-forward design exist.
 
@@ -24,7 +24,7 @@ This skill owns:
 
 - the model ladder (when complexity is allowed)
 - metrics by task
-- the fold-local fitting loop and bundled horse-race helper
+- the fold-local fitting loop and the candidate comparison
 - keep/reject rules for a predictive candidate
 
 Validation design details live in `validation-design`. Leakage verdicts live in
@@ -46,7 +46,7 @@ Do **not** use this skill as a substitute for:
 
 | Need | Go to instead |
 |---|---|
-| Data not loaded yet | use the appropriate loader skill, then return with a user-owned modeling table |
+| Data not loaded yet | `data-sources`, then return with a user-owned sportsleader-data table |
 | No EDA yet | `eda-sports` |
 | Explanatory inference / GLM writeup | `statistical-modeling` |
 | Feature legality unsure | `feature-rules` then `leakage-audit` |
@@ -57,22 +57,20 @@ Do **not** use this skill as a substitute for:
 
 ## Installation
 
-The bundled fold helper requires pandas, NumPy, and scikit-learn:
+Fit candidates in the user's environment:
 
 ```bash
-python -m pip install pandas numpy scikit-learn
+python -m pip install pandas numpy scikit-learn pyarrow
 ```
 
-Parquet input also needs `pyarrow` or `fastparquet`. The scripts accept CSV,
-Parquet, JSON, JSONL, and NDJSON. Optional libraries are imported only after
-argument parsing, so `--help` remains available.
+Read the user's CSV, Parquet, or JSON table. This repository does not ship a fold runner.
 
 ---
 
 ## Analysis Workflow
 
 This skill assumes a user-owned modeling table and a written charter. If those
-are missing, stop and use `sports-modeling-doctrine`, a loader skill, `eda-sports`,
+are missing, stop and use `sports-modeling-doctrine`, `data-sources`, `eda-sports`,
 `feature-rules`, and `validation-design` first.
 
 On the prepared table:
@@ -113,7 +111,7 @@ on multiple folds — not one lucky season.
 | 3 | HistGradientBoosting / other tabular trees | nonlinear ML |
 | 4 | Deeper nets / specialized architectures | only with lots of data + clear gain |
 
-The bundled binary helper implements rungs 0, 2, and 3 for any compatible
+Implement the constant, regularized logistic, and histogram-gradient rungs for any compatible
 user-owned table. It is not an NFL-specific pipeline and does not implement the
 regression, ranking, neural-network, encoding, or tuning workflows described
 elsewhere in this methodology.
@@ -198,24 +196,13 @@ Before fitting, define the target, row grain, decision time, eligible population
 chronological split unit, primary metric, practical success threshold, baseline
 ladder, and required prediction artifact.
 
-```bash
-python /path/to/predictive-modeling/scripts/run_fold_table.py \
-  --input modeling_table.csv --target won --split-col season \
-  --features is_home,rating_diff,rest_diff --min-train-groups 2 \
-  --id-cols game_id,team --out model-folds.json \
-  --predictions-out held-out-predictions.csv
-```
-
-The helper compares three candidates on identical expanding folds:
+Compare three candidates on identical expanding folds:
 
 1. training-fold event-rate constant;
 2. regularized logistic regression;
 3. histogram gradient boosting.
 
-Its JSON output contains the modeling contract, validation design, candidate
-ladder, per-fold metrics, and means. The row-level prediction output contains
-identifiers, split/fold, `y_true`, and each candidate probability. Pass that
-artifact to calibration and interpretation work.
+Save JSON with the modeling contract, validation design, candidate ladder, per-fold metrics, and means. The row-level prediction table contains identifiers, split/fold, `y_true`, and each candidate probability. Pass that table to calibration and interpretation.
 
 ### Modeling-table contract
 
@@ -227,13 +214,7 @@ artifact to calibration and interpretation work.
 | identifiers | enough to reconcile predictions to source events |
 | duplicated perspectives | explicitly retained or filtered; never accidental |
 
-The helper keeps rows with missing feature values and places median imputation
-inside each fitted candidate. It drops only rows missing the target or split
-value, rejects nonnumeric/infinite feature values, and records both counts plus
-the number of imputed rows in `row_accounting`. If a feature is entirely
-missing in a training fold, the command stops instead of inventing a value.
-Any added encoding, scaling, selection, or tuning must also live inside the
-fold-local pipeline.
+Keep rows with missing feature values and place median imputation inside each fitted candidate. Drop only rows missing the target or split value. Reject nonnumeric or infinite feature values, and record both drop counts plus the number of imputed rows. If a feature is entirely missing in a training fold, stop instead of inventing a value. Any encoding, scaling, selection, or tuning must also live inside the fold-local pipeline.
 
 ### Custom model loop
 
@@ -293,13 +274,7 @@ During fitting, still refuse:
 5. No scaler/imputer fit on train+test together.
 6. If a feature needs same-game information, the task is no longer pre-game — redefine T.
 
-```bash
-python /path/to/predictive-modeling/scripts/leakage_smoke.py \
-  --input modeling_table.csv --target won \
-  --features is_home,rating_diff,rest_diff
-```
-
-See `references/leakage_rules.md`. The helper never certifies cleanliness.
+See `references/leakage_rules.md`. A smoke check never certifies cleanliness.
 
 ---
 
@@ -332,28 +307,6 @@ See `references/leakage_rules.md`. The helper never certifies cleanliness.
 
 ## Reporting Template
 
-```text
-Predictive model report
-Question: …
-Sport/league: …
-Grain: …
-Decision time T: …
-Target: …
-Features: … (all knowable at T: yes/no)
-Baselines: constant; logistic form; (optional rating)
-Candidate models: …
-Validation: season walk-forward, min_train_seasons=…
-Primary metric: …
-Mean walk-forward metrics: …
-Per-season table: …
-Calibration: …
-Leakage audit: CLEAN / NOT CLEAN
-Decision: keep logistic | keep ML | discard | follow-up
-Limits: …
-Reproduce:
-  python /path/to/predictive-modeling/scripts/run_fold_table.py --input …
-```
-
 Also use `results-reporting` and `experiment-log`.
 
 ---
@@ -368,16 +321,6 @@ Also use `results-reporting` and `experiment-log`.
 | [metrics.md](references/metrics.md) | metric definitions and pitfalls |
 | [walk_forward.md](references/walk_forward.md) | fold design details |
 | [leakage_rules.md](references/leakage_rules.md) | predictive leakage checklist |
-
-### scripts/
-
-| File | Contents |
-|---|---|
-| `leakage_smoke.py` | fast column, target, and suspicious-name checks on a supplied feature set |
-| `run_fold_table.py` | compare constant/logistic/GBM on expanding folds and optionally save predictions |
-
-
----
 
 ## Integrity Rules
 
@@ -406,21 +349,5 @@ Also use `results-reporting` and `experiment-log`.
 | Calibration | `calibration-check` |
 | Interpretation | `model-interpretation` |
 | Writeup | `results-reporting`, `model-card` |
-
----
-
-## Quick Command Card
-
-```bash
-python /path/to/predictive-modeling/scripts/leakage_smoke.py \
-  --input modeling_table.csv --target won \
-  --features is_home,rating_diff,rest_diff
-
-python /path/to/predictive-modeling/scripts/run_fold_table.py \
-  --input modeling_table.csv --target won --split-col season \
-  --features is_home,rating_diff,rest_diff --min-train-groups 2 \
-  --id-cols game_id,team --out model-folds.json \
-  --predictions-out held-out-predictions.csv
-```
 
 ---

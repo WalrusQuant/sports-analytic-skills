@@ -1,8 +1,9 @@
 ---
 name: time-series-sports
 description: Engineer and compare time-safe sports form features. Use for rolling windows, EWMA, rest, schedule gaps, early-season handling, and chronological evaluation.
+license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Time Series & Form (Sports)
@@ -18,8 +19,7 @@ simple trajectory forecasts that are legal at decision time T:
 - rest gaps
 - regime flags
 
-The bundled helper constructs shifted EWMA features from a user-owned event
-table, and the comparison helper evaluates already-computed feature sets.
+Build shifted EWMA features on a user-owned event table, then compare already-computed feature sets on the same folds.
 
 **Non-negotiable:** shift (or as-of) so the current game is never inside the feature.
 
@@ -49,14 +49,11 @@ Do **not** use when:
 
 ## Installation
 
-`ewma_form.py` requires pandas. `compare_form_windows.py` additionally
-requires NumPy and scikit-learn:
-
 ```bash
-python -m pip install pandas numpy scikit-learn
+python -m pip install pandas numpy scikit-learn pyarrow
 ```
 
-Parquet input also needs `pyarrow` or `fastparquet`.
+Build features in the user's environment. This repository does not ship a form-feature program.
 
 ---
 
@@ -91,27 +88,11 @@ calendar gaps, and elapsed-time features.
 
 ---
 
-## Standalone Feature Construction
+## Feature construction
 
-`ewma_form.py` requires non-null entity/reset keys, parseable finite numeric or
-timestamp time/order fields, and numeric or boolean value dtypes (including
-pandas nullable numeric/boolean dtypes). It rejects infinite values and contradictory
-event ordering. Missing observations in value columns remain missing—they are
-never filled with zero—before each value is shifted by one event and summarized
-with pandas EWMA semantics.
+Require non-null entity keys, a parseable time or order field, and numeric or boolean values. Reject infinite values and contradictory event order. Leave missing observations missing. Do not fill them with zero. Shift each value by one event, then apply the rolling or EWMA summary.
 
-```bash
-python /path/to/time-series-sports/scripts/ewma_form.py \
-  --input team_games.csv --entity-col team --time-col event_time \
-  --order-col event_sequence --group-cols season \
-  --values won,point_margin --span 5 \
-  --out team_games_with_ewma.csv
-```
-
-Generated fields are named `pre_ewma_<value>`. Omitting `--group-cols`
-carries history across the full entity timeline. If `--time-col` can tie,
-`--order-col` must encode genuine event order; an arbitrary row ID is not
-enough.
+Name generated fields so the shift is obvious, for example `pre_ewma_points`. Group by season when history should not cross the offseason; otherwise say that history carries across seasons. If `game_date` can tie, use `start_time` or another real event order. An arbitrary row id is not order.
 
 ### Opponent features
 
@@ -122,17 +103,7 @@ current result.
 
 ### Compare feature sets
 
-```bash
-python /path/to/time-series-sports/scripts/compare_form_windows.py \
-  --input modeling_table.csv --target won --split-col season \
-  --features-a pre_roll3_win,pre_roll3_margin \
-  --features-b pre_ewma_won,pre_ewma_point_margin
-```
-
-The comparison uses identical expanding folds and complete cases shared by both
-feature sets. It validates binary targets and finite numeric features, but does
-not impute them. It evaluates hypotheses already encoded in the supplied
-columns; it does not make illegal features legal.
+Use identical expanding folds and the complete cases shared by both feature sets. Validate binary targets and finite numeric features, and do not impute them in the comparison. The comparison evaluates columns that already exist. It does not make an illegal feature legal.
 
 ## Early-Season Handling
 
@@ -207,17 +178,15 @@ Done means:
 
 ## Worked Example
 
-```bash
-python /path/to/time-series-sports/scripts/ewma_form.py \
-  --input team_games.csv --entity-col team --time-col event_time \
-  --order-col event_sequence --group-cols season \
-  --values won,point_margin --span 5 \
-  --out team_games_with_ewma.csv
+On a team-game file, sort by `team_id` and `game_date`, shift the result, then take an EWMA. Compare that column with a shifted three-game mean under the same season folds before preferring either window.
 
-python /path/to/time-series-sports/scripts/compare_form_windows.py \
-  --input modeling_table.csv --target won --split-col season \
-  --features-a pre_roll3_win,pre_roll3_margin \
-  --features-b pre_ewma_won,pre_ewma_point_margin
+```python
+import pandas as pd
+g = pd.read_parquet("team_games.parquet").sort_values(["team_id", "game_date"])
+g["pre_points"] = g.groupby("team_id")["score"].shift(1)
+g["pre_ewma_points"] = g.groupby("team_id")["pre_points"].transform(
+    lambda s: s.ewm(span=5, min_periods=1).mean()
+)
 ```
 
 ---
@@ -231,15 +200,6 @@ python /path/to/time-series-sports/scripts/compare_form_windows.py \
 | [early_season.md](references/early_season.md) | small-sample handling |
 | [rest_and_gaps.md](references/rest_and_gaps.md) | byes and calendar gaps |
 
-### scripts/
-| File | Contents |
-|---|---|
-| `ewma_form.py` | shifted EWMA form table |
-| `compare_form_windows.py` | walk-forward compare roll vs EWMA features |
-
-
----
-
 ## Related Skills
 
 | Need | Skill |
@@ -249,22 +209,5 @@ python /path/to/time-series-sports/scripts/compare_form_windows.py \
 | EDA | `eda-sports` |
 | Models | `baseline-models`, `predictive-modeling` |
 | Leakage | `leakage-audit` |
-
----
-
-## Quick Command Card
-
-```bash
-python /path/to/time-series-sports/scripts/ewma_form.py \
-  --input team_games.csv --entity-col team --time-col event_time \
-  --order-col event_sequence --group-cols season \
-  --values won,point_margin --span 5 \
-  --out team_games_with_ewma.csv
-
-python /path/to/time-series-sports/scripts/compare_form_windows.py \
-  --input modeling_table.csv --target won --split-col season \
-  --features-a pre_roll3_win,pre_roll3_margin \
-  --features-b pre_ewma_won,pre_ewma_point_margin
-```
 
 ---

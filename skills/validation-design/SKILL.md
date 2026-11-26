@@ -1,8 +1,9 @@
 ---
 name: validation-design
 description: Design chronological sports-model validation and a written evaluation charter. Use for walk-forward splits, grouped time folds, metric locking, tuning boundaries, and go/no-go rules.
+license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Validation Design
@@ -161,39 +162,18 @@ target base rate, excluded rows, availability gap, and required-column nulls.
 Inspect whether one shortened season, expansion era, postseason, or source
 change dominates results.
 
-## Standalone helpers
+## Fold table
 
-Print expanding walk-forward fold sizes from user-owned CSV, Parquet, JSON,
-JSONL, or NDJSON. The helper requires `pandas`, validates every named column,
-sorts distinct split values, and accepts any ordered season/date/group column.
+Print expanding walk-forward fold sizes from the user's CSV or Parquet before fitting. Validate every named column, sort distinct split values, and accept an ordered season, date, or group column.
 
-```bash
-python /path/to/validation-design/scripts/print_folds.py \
-  --input modeling_table.csv --split-col season \
-  --required-cols won,is_home,rating_diff --min-train-groups 2
+**Minimum training groups default to 2.** The first N groups are training-only history and never appear as a test fold. Example with seasons `2022, 2023, 2024`:
 
-python /path/to/validation-design/scripts/write_charter.py \
-  --out data/validation_charter.md
-```
-
-**`--min-train-groups` default is 2.** That means the first N groups are
-training-only history and never appear as a test fold. Example with seasons
-`2022, 2023, 2024`:
-
-- default `2` → one test fold: 2024 (train 2022+2023)
+- `2` → one test fold: 2024 (train 2022+2023)
 - `1` → test folds: 2023 and 2024
 
-The helper prints the planned test folds on stderr before the CSV table. Match
-this setting when calling `baseline-models` / `predictive-modeling` helpers so
-evaluation rows stay identical.
+Print the planned test folds before any metric table. Use the same setting in `baseline-models` and `predictive-modeling` so evaluation rows stay identical.
 
-The helper exposes row counts for expanding group folds; it does not verify T,
-dependency grouping, embargo, transform fitting, or tuning isolation. Verify
-those manually before calling the design valid. Supported ordering values are
-finite numbers, ISO dates/timestamps, and common consecutive season ranges such
-as `2022-23`, `2022/23`, or `2022-2023`. Other labels—including stages whose
-lexical order is not chronology—require an explicit numeric ordinal/date field.
-The output is CSV with one row per test group.
+Row counts do not verify decision time, dependency grouping, embargo, transform fitting, or tuning isolation. Check those before calling the design valid. Supported ordering values are finite numbers, ISO dates and timestamps, and sportsleader-data `season` integers. NBA, NHL, and men's college basketball season numbers are the ending year (`2024` is 2023-24). Other labels whose lexical order is not chronology, including `2022-23`, need an explicit numeric ordinal or date. Write one row per test group.
 
 ## Anti-patterns
 
