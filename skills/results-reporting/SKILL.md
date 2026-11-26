@@ -6,7 +6,7 @@ description: >
   reproduction pointers. Use for research notes, reports, and final answers.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Results Reporting
@@ -140,7 +140,7 @@ still be operationally trivial; a useful predictor need not be a causal driver.
 
 ## Required artifact schema
 
-The bundled renderer accepts JSON with this minimum shape:
+Back the report with JSON of at least this shape:
 
 ```json
 {
@@ -160,7 +160,7 @@ The bundled renderer accepts JSON with this minimum shape:
 }
 ```
 
-Additional fields are allowed. The renderer requires an explicit
+Additional fields are allowed. Require an explicit
 `analysis_type`, source, sport, grain, period, positive `n`, non-empty results,
 limitations, and a reproduction artifact pointer. Predictive and ranking modes
 also require a baseline, candidate, decision/as-of time, validation design,
@@ -198,7 +198,7 @@ actually has; never invent a command.
 
 ```text
 Question: Do shifted pre-event form features improve team-win probabilities?
-Data: NFL team-game panel, 2018-2024, completed regular-season games; report
+Data: NFL team-game panel, 2021-2025, completed regular-season games; report
 both team-row and unique-game counts.
 Validation: season walk-forward; primary metric log-loss, lower is better.
 Result: candidate 0.681 versus constant baseline 0.693 on identical held-out
@@ -209,17 +209,9 @@ Limits: no injury model; early-season cold start; calibration status reported
 separately.
 ```
 
-## Helper
+## Draft
 
-```bash
-python <path-to-results-reporting>/scripts/render_results_report.py \
-  --json data/results.json \
-  --out data/results_report.md
-```
-
-Edit and verify the rendered draft. A valid schema does not prove that the
-metrics are comparable, the interpretation is justified, or the report is
-complete.
+Edit and verify the draft. A valid schema does not prove that the metrics are comparable, the interpretation is justified, or the report is complete.
 
 ## Output contract
 
@@ -234,4 +226,3 @@ to the audience without dropping the evidence chain.
   between concise and full narrative forms.
 - [`references/writeup_checklist.md`](references/writeup_checklist.md) — read
   for the final evidence and honesty pass.
-- `scripts/render_results_report.py` — validated standalone JSON-to-Markdown renderer.

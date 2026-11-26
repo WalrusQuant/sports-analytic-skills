@@ -21,10 +21,6 @@
 - accuracy near 90%+ on noisy sports outcomes without elite features
 - feature importance dominated by something that is secretly an outcome
 
-## Helper invocation
+## Smoke check
 
-```bash
-python /path/to/predictive-modeling/scripts/leakage_smoke.py \
-  --input modeling_table.csv --target won \
-  --features pre_win_rate,rest_diff,rating_diff
-```
+On the modeling table, confirm the target is absent from the feature list and that each named feature is finite and was shifted before use. A smoke check is not a `CLEAN` leakage verdict.

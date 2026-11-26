@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f2eee3" />
     <title>Docs — Sports Analytic Skills</title>
-    <meta name="description" content="Getting started, boundaries, skill catalog, and optional toolkit notes for Sports Analytic Skills." />
+    <meta name="description" content="Getting started, boundaries, and the 20-skill catalog for Sports Analytic Skills." />
     <link rel="stylesheet" href="styles.css" />
     <style>
       .docs-layout {
@@ -166,8 +166,8 @@
         <div class="nav-label">Catalog</div>
         <a href="#skills">Skill index</a>
         <a href="#path">Analysis path</a>
-        <div class="nav-label">Optional</div>
-        <a href="#sports-ds">sports_ds toolkit</a>
+        <div class="nav-label">Data</div>
+        <a href="#data">sportsleader-data</a>
         <a href="#repo-docs">Repo markdown</a>
       </aside>
 
@@ -202,7 +202,7 @@
                 <li>Portable agent skills for sports analytics</li>
                 <li>Guidance for EDA, features, models, validation, calibration, reporting</li>
                 <li>A way to learn time-safety and honest evaluation</li>
-                <li>Optional helpers for public NFL / NBA / MLB data</li>
+                <li>A path to sportsleader-data for six leagues</li>
               </ul>
             </article>
             <article class="no">
@@ -232,7 +232,7 @@ npx skills add WalrusQuant/sports-analytic-skills --skill eda-sports -y
 
 # Entire pack for every detected agent
 npx skills add WalrusQuant/sports-analytic-skills --all</code></pre>
-          <p>No repository clone and no <code>sports_ds</code> install are required for skill-only use.</p>
+          <p>No repository clone is required. This pack does not install a Python package.</p>
 
           <h3>2. Start from the task</h3>
           <p>Give the agent the question, the decision time for predictive work, and the path to your CSV / Parquet / JSON.</p>
@@ -247,12 +247,11 @@ kickoff; create season walk-forward folds and lock the primary metric.</code></p
             the agent should report that instead of silently inventing them.
           </p>
 
-          <h3>4. Optional helpers</h3>
+          <h3>4. Read sportsleader-data</h3>
           <p>
-            Some skills ship scripts. Resolve helper paths relative to the installed
-            skill’s <code>SKILL.md</code>, not your current working directory:
+            Use <code>data-sources</code>. The file list is the public manifest.
+            When the sports-leader connector is connected, use it. Otherwise read the Parquet URL from the manifest.
           </p>
-          <pre class="code-block"><code>python <path-to-installed-skill>/scripts/<helper>.py --help</code></pre>
         </section>
 
         <section id="prompts">
@@ -276,11 +275,7 @@ Report Brier, log loss, and reliability by bin.</code></pre>
             <tbody>
               <tr><td>sports-modeling-doctrine</td><td>Lock question, target, decision time, baseline, success criteria</td></tr>
               <tr><td>environment-setup</td><td>Portable analysis environment for the user’s project</td></tr>
-              <tr><td>data-sources</td><td>Choose a public data source and grain</td></tr>
-              <tr><td>nflreadpy</td><td>Load NFL data from nflverse</td></tr>
-              <tr><td>sportsdataverse-py</td><td>Load supported multi-sport public data</td></tr>
-              <tr><td>pybaseball</td><td>Load Statcast / MLB season data</td></tr>
-              <tr><td>sports-ds-bridge</td><td>Optional bridge to the sports_ds toolkit</td></tr>
+              <tr><td>data-sources</td><td>Choose a sportsleader-data dataset and grain</td></tr>
             </tbody>
           </table>
 
@@ -326,7 +321,7 @@ Report Brier, log loss, and reliability by bin.</code></pre>
         <section id="path">
           <h2>Analysis path</h2>
           <pre class="code-block"><code>question and decision time
-  -> data acquisition
+  -> data-sources (sportsleader-data)
   -> EDA
   -> time-safe features / ratings
   -> baselines and candidate models
@@ -336,28 +331,21 @@ Report Brier, log loss, and reliability by bin.</code></pre>
           <p>Combine only the skills the task needs. Do not force a full pipeline when EDA is the whole job.</p>
         </section>
 
-        <section id="sports-ds">
-          <h2>Optional sports_ds toolkit</h2>
+        <section id="data">
+          <h2>sportsleader-data</h2>
           <p>
-            The skills work without this repository’s Python package.
-            Use <code>sports-ds-bridge</code> only if you want prebuilt public-data adapters,
-            normalized panels, or reference CLI pipelines.
+            Public Parquet for MLB, NBA, NFL, NHL, college football, and men's college basketball.
+            The manifest lists every file:
+            <a href="https://github.com/WalrusQuant/sportsleader-data/releases/download/manifest/manifest.json">manifest.json</a>.
+            The <a href="https://github.com/WalrusQuant/sports-leader-mcp">sports-leader connector</a>
+            reads the same files. Current-season files are refreshed nightly.
+            The files do not include ratings, forecasts, or betting lines.
           </p>
-          <pre class="code-block"><code>git clone https://github.com/WalrusQuant/sports-analytic-skills.git
-cd sports-analytic-skills
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -U pip
-pip install -e .
-
-# optional multi-sport loaders
-pip install -e ".[multi]"
-
-sports-ds --help
-sports-ds feature-registry</code></pre>
+          <pre class="code-block"><code>https://github.com/WalrusQuant/sportsleader-data/releases/download/&lt;league&gt;_&lt;dataset&gt;/&lt;season&gt;.parquet</code></pre>
           <p>
-            On macOS only, XGBoost (pulled by sportsdataverse) may need OpenMP:
-            <code>brew install libomp</code>. Not required for skill-only installs.
+            NFL, MLB, and college football season numbers are the year the season starts.
+            NBA, NHL, and men's college basketball season numbers are the year the season ends.
+            Read <code>data-sources</code> before assuming a season file exists.
           </p>
         </section>
 
@@ -365,11 +353,11 @@ sports-ds feature-registry</code></pre>
           <h2>Deeper repo markdown</h2>
           <p>Still in the repository for contributors and deep dives:</p>
           <ul>
-            <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a></li>
-            <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/product-charter.md">product-charter.md</a></li>
             <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/getting-started.md">getting-started.md</a></li>
+            <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/product-charter.md">product-charter.md</a></li>
             <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/skill-authoring.md">skill-authoring.md</a></li>
-            <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/panel-contract.md">panel-contract.md</a></li>
+            <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/taxonomy.md">taxonomy.md</a></li>
+            <li><a href="https://github.com/WalrusQuant/sports-analytic-skills/blob/main/docs/agent-runbook.md">agent-runbook.md</a></li>
           </ul>
         </section>
       </main>

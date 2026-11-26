@@ -1,8 +1,9 @@
 ---
 name: leakage-audit
 description: Audit sports modeling tables and workflows for target, temporal, join, preprocessing, and split leakage. Use before trusting backtests or reported predictive performance.
+license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Leakage Audit
@@ -88,6 +89,7 @@ performance or a join looks implausible.
 ### Transformations
 
 ```python
+# df is the team-game panel from data-sources
 ordered = df.sort_values(["team", "event_time", "game_id"])
 expected = ordered.groupby("team")["won"].transform(
     lambda s: s.shift(1).expanding(min_periods=1).mean()
@@ -123,44 +125,16 @@ jump, train/test equality, or a result far beyond domain baselines triggers a
 stop. Recheck target aliases, current-event fields, shifts, opponent joins,
 duplicates, global preprocessing, and test-fold tuning before discussing merit.
 
-## Automated helpers
+## Heuristic checks
 
-The audit helper reads a user-owned CSV, Parquet, JSON, JSONL, or NDJSON table,
-requires `pandas`, validates named columns, and runs name, exact-target,
-duplicate, and near-perfect-correlation heuristics.
+On the user's table, check column names, exact copies of the target, duplicate keys, and near-perfect correlations. Name the forbidden columns for the task. The first-event null-rate check is always `REVIEW`, not `PASS`, because a legitimate prior can populate first events. Duplicate rows and near-perfect correlations are also `REVIEW`: they are suspicious, not proof. A direct forbidden or target-identical feature is `NOT CLEAN`. Otherwise the heuristic result is `REVIEW REQUIRED`. Heuristics never return `CLEAN`. Only a completed manual audit of lineage, transforms, joins, splits, and fold-local preprocessing can issue `CLEAN`.
 
-```bash
-python /path/to/leakage-audit/scripts/audit_pregame_features.py \
-  --input modeling_table.csv --target won \
-  --features pre_win_rate,rest_diff,rating_diff \
-  --entity-col team --time-col event_time --out leakage.json
+| Heuristic result | Agent action |
+|---|---|
+| `REVIEW REQUIRED` | Continue. Complete the manual audit. |
+| `NOT CLEAN` | Stop predictive claims until the table is repaired and retested. |
 
-python /path/to/leakage-audit/scripts/write_audit_stub.py \
-  --out data/leakage_audit.md
-```
-
-Use `--banned` to provide exact forbidden names for the task. The first-event
-null-rate check is always `REVIEW`, not `PASS`, because legitimate priors can
-populate first events. Duplicate rows and near-perfect correlations are also
-`REVIEW`: they are suspicious, not proof by themselves. A direct forbidden or
-target-identical feature returns `NOT CLEAN` and status 2. Otherwise the helper
-returns `REVIEW REQUIRED` and status 1: heuristics alone never return `CLEAN`.
-Only a completed manual audit of lineage, transforms, joins, splits, and
-fold-local preprocessing can issue the `CLEAN` verdict.
-
-### Exit codes (not crashes)
-
-| Exit | Verdict | Agent action |
-|---|---|---|
-| 1 | `REVIEW REQUIRED` | **Continue.** Read the JSON. Complete the manual audit. Do not treat this as a hard failure. |
-| 2 | `NOT CLEAN` | **Stop** predictive claims until repaired and retested. |
-| 0 | unused | Heuristics never auto-CLEAN. |
-
-Stderr also prints `exit=1 REVIEW REQUIRED...` or `exit=2 NOT CLEAN...` so a
-cold agent does not mistake a review signal for a broken script.
-
-Automated checks cannot prove source availability, transform correctness, join
-direction, or fold scope. They supplement—not replace—lineage and code review.
+Automated checks cannot prove source availability, transform correctness, join direction, or fold scope. They supplement lineage and code review.
 
 ## Diagnosis examples
 
@@ -199,7 +173,7 @@ Sport / question / target / grain:
 Decision time T and publication policy:
 Data snapshot and feature count:
 Validation and grouping rule:
-Automated helper result / exit status:
+Heuristic result:
 Lineage and transform evidence reviewed:
 Findings:
   1. [PASS | REVIEW | FAIL] item, evidence, affected scope

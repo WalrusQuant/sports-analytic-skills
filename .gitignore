@@ -46,4 +46,3 @@ node_modules/
 *.key
 credentials*
 secrets*
-src/sports_ds.egg-info/

@@ -6,7 +6,7 @@ description: >
   trials, model comparisons, and reproducible research history.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Experiment Log
@@ -151,21 +151,9 @@ new experiment ID linked to the invalidated one.
 | final metric replaced post-hoc | goalposts move | label exploratory; new experiment |
 | failed run deleted | troubleshooting and selection history lost | status `failed` with evidence |
 
-## Standalone helper
+## Log file
 
-```bash
-python /path/to/experiment-log/scripts/new_experiment.py \
-  --slug home-form-logit --sport nfl
-python /path/to/experiment-log/scripts/new_experiment.py \
-  --slug elo-sensitivity --out-dir data/experiments
-```
-
-The helper creates a timestamped, user-owned Markdown artifact and validates
-the slug. Creation is exclusive: concurrent invocations retry the sequence and
-never overwrite or reuse an existing ID. The stub contains every field in the
-required schema, but it is only a `planned` record; complete the pre-run fields
-before execution and append results/deviations without rewriting the frozen
-contract.
+Create a timestamped, user-owned Markdown file and a unique slug. Do not overwrite or reuse an existing experiment id. The stub contains every field in the required schema and starts as `planned`. Complete the pre-run fields before execution, and append results without rewriting the frozen contract.
 
 ## Worked example
 

@@ -1,12 +1,20 @@
 # Agent runbook
 
-Prompts for a skill-only installation.
+Prompts for an installed pack.
+
+## Data
+
+```text
+Use data-sources for NFL team-game counting stats. Seasons 2023 and 2024.
+Record the manifest generated_at, the file URL, and the sha256. Then run
+eda-sports on the team-game grain.
+```
 
 ## EDA
 
 ```text
-Use eda-sports on data/team_games.parquet. Report grain, date and season
-coverage, duplicates, missingness, target distribution, and modeling red flags.
+Use eda-sports on the team-game Parquet from data-sources. Report grain,
+season coverage, duplicate keys, missing scores, and modeling red flags.
 ```
 
 ## Feature legality
@@ -38,30 +46,12 @@ reliability bins, ECE, and important segments.
 ```text
 Use model-interpretation and results-reporting on data/predictions.csv and
 data/fold_metrics.json. Identify the largest misses, meaningful error slices,
-baseline delta, sample size, limitations, and reproduction inputs.
+baseline delta, sample size, limitations, and the manifest snapshot used.
 ```
 
-## Public data
+## If something fails
 
-```text
-Use data-sources to choose a public source for NFL team-game schedules and
-scores. Prefer a direct public loader skill and export a portable Parquet file.
-```
-
-## Optional sports_ds route
-
-```text
-Use sports-ds-bridge because I explicitly want the sports_ds toolkit. Load the
-requested public data, export a portable artifact, validate it, and hand it to
-eda-sports. Do not require the EDA skill to import sports_ds.
-```
-
-## Failure checklist
-
-1. Confirm the selected skill and read its input contract.
-2. Resolve helper paths relative to the installed `SKILL.md`.
-3. Validate required columns and grain before computation.
-4. Install only disclosed public dependencies for that helper.
-5. Do not assume `sports_ds` exists unless using `sports-ds-bridge`.
-6. Do not download data, install packages, or overwrite artifacts without the
-   user's authorization.
+1. Confirm the skill and read its input contract.
+2. Confirm the column exists on the manifest entry.
+3. Do not invent a field or a dataset.
+4. Do not download or overwrite files the user did not ask for.

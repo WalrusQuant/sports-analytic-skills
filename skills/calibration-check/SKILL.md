@@ -1,8 +1,9 @@
 ---
 name: calibration-check
 description: Evaluate whether sports-model probabilities match observed frequencies. Use for Brier score, log loss, reliability bins, ECE, segment checks, and recalibration decisions.
+license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Calibration Check (Sports)
@@ -45,14 +46,13 @@ Do **not** use when:
 
 ## Installation
 
-The bundled scripts require pandas:
+Compute calibration in the user's environment:
 
 ```bash
-python -m pip install pandas
+python -m pip install pandas numpy scikit-learn pyarrow
 ```
 
-Parquet input also needs `pyarrow` or `fastparquet`. Both scripts accept CSV,
-Parquet, JSON, JSONL, and NDJSON and expose `--help` without importing pandas.
+Accept the user's CSV, Parquet, or JSON prediction table. This repository does not ship a calibration program.
 
 ---
 
@@ -107,36 +107,34 @@ No universal ECE cutoff establishes that probabilities are trustworthy.
 The input must contain one row per evaluated decision, a binary outcome, and a
 probability in `[0, 1]`.
 
-Preferred portable names from this pack's baseline helper:
+Preferred column names from `baseline-models`:
 
 - outcome: `y_true`
-- probability: `p_pred` (also emitted as `logistic_probability`)
+- probability: `p_pred` (the same value may also be stored as `logistic_probability`)
 
-```bash
-# After baseline-models/scripts/run_baselines.py --predictions-out ...
-python /path/to/calibration-check/scripts/calibration_report.py \
-  --input baseline-predictions.csv --target y_true --probability p_pred \
-  --group-col season --bins 10 --out calibration.json
+For a symmetric team-game table, filter to one perspective per game (`is_home == 1`, or one row from `games`) before scoring. Do not double-count both sides of one event.
 
-python /path/to/calibration-check/scripts/calibration_report.py \
-  --input predictions.csv --target won --probability win_probability \
-  --group-col season --bins 10 --out calibration.json
+Report Brier score, log loss, ECE, reliability-bin counts, row accounting, and optional group metrics. A numeric summary cannot prove held-out provenance or turn a favorable pooled ECE into `well-calibrated`; apply the verdict scale above. Also report all-row, categorical-segment, probability-tail metrics, and sparse-bin counts.
 
-python /path/to/calibration-check/scripts/segment_calibration.py \
-  --input predictions.csv --target won --probability win_probability \
-  --segment-col is_home
+`predictions` is the table from `baseline-models` (`y_true`, `p_pred`).
+
+```python
+import numpy as np
+from sklearn.metrics import brier_score_loss, log_loss
+
+y = predictions["y_true"].to_numpy()
+p = np.clip(predictions["p_pred"].to_numpy(), 1e-6, 1 - 1e-6)
+bin_id = np.minimum(np.digitize(p, np.linspace(0, 1, 11)) - 1, 9)
+ece, rows = 0.0, []
+for b in range(10):
+    m = bin_id == b
+    n = int(m.sum())
+    mean_p, obs = (float(p[m].mean()), float(y[m].mean())) if n else (None, None)
+    ece += (n / len(y) * abs(obs - mean_p)) if n else 0.0
+    rows.append({"bin": b, "n": n, "mean_p": mean_p, "obs_rate": obs})
+print({"brier": float(brier_score_loss(y, p)), "log_loss": float(log_loss(y, p)), "ece": ece})
+print(rows)
 ```
-
-Use `--filter-col is_home --filter-value 1` for a symmetric team-game artifact
-when one home perspective per game is the actual evaluation unit. Do not
-double-count both sides of one event.
-
-`calibration_report.py` returns Brier score, log loss, ECE, reliability-bin
-counts, row accounting, optional group metrics, and a conservative
-`manual-review-required` helper verdict. The script cannot prove held-out
-provenance or turn a favorable pooled ECE into `well-calibrated`; the analyst
-must apply the verdict scale above. `segment_calibration.py` prints all-row,
-categorical-segment, probability-tail metrics, and sparse-bin counts.
 
 ---
 
@@ -221,24 +219,13 @@ Done means:
 
 ## Worked Example
 
-```bash
-python /path/to/calibration-check/scripts/calibration_report.py \
-  --input held-out-predictions.csv --target y_true \
-  --probability logistic_probability --group-col season \
-  --bins 10 --out calibration.json
-
-python /path/to/calibration-check/scripts/segment_calibration.py \
-  --input held-out-predictions.csv --target y_true \
-  --probability logistic_probability --segment-col is_home
-```
-
 Example finding: predictions near 0.70 occur in sparse bins and realize near
 0.60. Label the tail unstable or overconfident according to its uncertainty;
 do not infer a durable defect from a handful of rows.
 
 ---
 
-## Bundled Resources
+## References
 
 ### references/
 | File | Contents |
@@ -246,15 +233,6 @@ do not infer a durable defect from a handful of rows.
 | [calibration_metrics.md](references/calibration_metrics.md) | ECE/Brier/log-loss definitions |
 | [binning.md](references/binning.md) | bin strategy notes |
 | [recalibration.md](references/recalibration.md) | allowed recalibration patterns |
-
-### scripts/
-| File | Contents |
-|---|---|
-| `calibration_report.py` | descriptive calibration JSON for supplied prediction rows; provenance must be verified externally |
-| `segment_calibration.py` | home/away and tail slices |
-
-
----
 
 ## Related Skills
 
@@ -265,19 +243,5 @@ do not infer a durable defect from a handful of rows.
 | Statistical models | `statistical-modeling` |
 | Results writeup | `results-reporting` |
 | Model card | `model-card` |
-
----
-
-## Quick Command Card
-
-```bash
-python /path/to/calibration-check/scripts/calibration_report.py \
-  --input predictions.csv --target won --probability win_probability \
-  --group-col season --bins 10 --out calibration.json
-
-python /path/to/calibration-check/scripts/segment_calibration.py \
-  --input predictions.csv --target won --probability win_probability \
-  --segment-col is_home
-```
 
 ---

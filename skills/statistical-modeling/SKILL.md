@@ -6,7 +6,7 @@ description: >
   time-aware inference; GLM diagnostics; and complete reporting.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Statistical Modeling for Sports
@@ -18,8 +18,7 @@ table: choose a GLM or test, check assumptions, report effects and uncertainty.
 
 It is not a universal modeling workflow. Do not use it to load data, design
 walk-forward ML horse races, or certify leakage. Mixed, Bayesian, causal, and
-power-analysis material below is routed methodology — the bundled scripts only
-cover univariate assumption checks and an additive numeric binomial GLM.
+power-analysis material below is routed methodology. Univariate assumption checks are in [assumptions_and_diagnostics.md](references/assumptions_and_diagnostics.md). The binomial GLM below is an additive numeric example on the team-game panel from `data-sources`. Other families use the same libraries directly.
 
 Conduct the analysis the way a careful analyst would: right model family for
 the outcome, verified assumptions, honest effect sizes and uncertainty, and a
@@ -42,7 +41,7 @@ Use this skill when:
 
 Do **not** use this skill as a substitute for:
 
-- raw data loading → use the appropriate loader skill, then return with a user-owned analysis table
+- raw data loading → `data-sources`, then return with a user-owned sportsleader-data table
 - pure EDA → `eda-sports`
 - walk-forward ML horse races → `predictive-modeling`
 - leakage review of feature pipelines → `leakage-audit`
@@ -62,7 +61,7 @@ python -m pip install "pingouin>=0.6" "seaborn>=0.13"
 python -m pip install pymc arviz
 ```
 
-Parquet input to the bundled helpers also needs `pyarrow` or `fastparquet`.
+Reading Parquet needs `pyarrow`.
 
 Compatibility notes:
 
@@ -98,7 +97,6 @@ Every sound sports statistical analysis follows this arc. Do not skip.
    - home indicator + one strength feature beats a kitchen sink
 
 6. **Check assumptions / diagnostics.**
-   - Use `scripts/assumption_checks.py` and `scripts/glm_diagnostics.py`
    - residual plots, overdispersion, leverage, calibration for probabilities
 
 7. **Compare to baselines.**
@@ -192,6 +190,8 @@ independent evidence.
 
 ### Logistic model with robust inference
 
+`model_df` starts from the team-game panel in `data-sources` (`team`, `event_time`, `won`, `point_diff`, `is_home`). `rating_diff` and `rest_diff` are pre-event features built on that panel.
+
 ```python
 import numpy as np
 import statsmodels.api as sm
@@ -220,7 +220,7 @@ sampling structure requires it.
 ```python
 home = train[train["is_home"] == 1].copy()  # one row per game
 margin_fit = smf.ols(
-    "point_margin ~ rating_diff + rest_diff",
+    "point_diff ~ rating_diff + rest_diff",
     data=home,
 ).fit(cov_type="HC3")
 print(margin_fit.summary())
@@ -255,17 +255,7 @@ transform and model on earlier rows only; score the later block against a
 training-rate constant and a simple legal-feature baseline. Report every fold,
 not only the mean.
 
-For a standalone additive binomial diagnostic report:
-
-```bash
-python /path/to/statistical-modeling/scripts/glm_diagnostics.py \
-  --input model_frame.csv \
-  --formula "won ~ is_home + rating_diff + rest_diff" \
-  --out glm_report.json
-```
-
-The helper reports HC3 inference, odds ratios, intervals, AIC, and in-sample
-calibration bins. Those bins diagnose fit; they are not held-out evidence.
+An additive binomial fit can report HC3 inference, odds ratios, intervals, and AIC. In-sample calibration bins diagnose fit. They are not held-out evidence.
 
 ---
 
@@ -273,31 +263,13 @@ calibration bins. Those bins diagnose fit; they are not held-out evidence.
 
 **Always check assumptions before interpreting**, and report the checks.
 
-### Standalone assumption checks
+### Assumption checks
 
-```bash
-python /path/to/statistical-modeling/scripts/assumption_checks.py \
-  --input observations.csv --value-col margin \
-  --group-col venue --out assumptions.json
-```
+Report Shapiro-Wilk normality, IQR outliers, and an optional median-centered Levene variance test when those checks match the claim. Formal tests supplement plots and domain judgment. At large sample sizes they can reject practically harmless departures.
 
-The helper reports Shapiro-Wilk normality, IQR outliers, and optional
-median-centered Levene variance testing. Formal tests supplement plots and
-domain judgment; at large sample sizes they can reject practically harmless
-departures.
+### Binomial GLM diagnostics
 
-### Standalone binomial GLM diagnostics
-
-```bash
-python /path/to/statistical-modeling/scripts/glm_diagnostics.py \
-  --input model_frame.csv \
-  --formula "won ~ is_home + rating_diff + rest_diff" \
-  --out glm_report.json
-```
-
-Inputs may be CSV, Parquet, JSON, JSONL, or NDJSON. Formulas support additive
-numeric predictors joined by `+`; use `--outcome-col` when the binary target
-is not `won`.
+Fit additive numeric predictors on the user's table. In-sample odds ratios do not replace walk-forward scoring.
 
 ### What to check by family
 
@@ -317,10 +289,7 @@ is not `won`.
   example, statsmodels `OLSInfluence`), and use Breusch-Pagan or another
   predeclared variance check when appropriate
 
-The bundled `glm_diagnostics.py` fits only additive numeric binomial GLMs. It
-does not diagnose OLS, Poisson, negative-binomial, mixed, or Bayesian models;
-use the model library's diagnostics and the linked checklist for those
-families.
+The binomial example is an additive numeric GLM. It does not diagnose OLS, Poisson, negative-binomial, mixed, or Bayesian models. Use that library's diagnostics and the linked checklist for those families.
 
 **Poisson scoring models**
 
@@ -372,8 +341,7 @@ import pingouin as pg
 ## Hierarchical / Partial Pooling Patterns
 
 Read this section when the estimand is a clustered or partially pooled effect.
-This is not the default path of the skill, and there is no bundled mixed-model
-helper. Prefer the GLM/test workflow above unless grouping structure is the
+This is not the default path of the skill. Prefer the GLM or test workflow above unless grouping structure is the
 question.
 
 When player or team n is uneven, complete-pooling (ignore groups) and
@@ -425,8 +393,7 @@ print(pg.corr(feat["pre_form_diff"], feat["point_diff"], method="spearman"))
 ```
 
 The example assumes `pre_form_diff` was created outside this skill with an
-as-of/shifted feature workflow such as `time-series-sports`; no bundled
-`add_pregame_form_features` function exists.
+as-of or shifted feature workflow such as `time-series-sports`.
 
 Always state that observational sports associations are not automatically causal.
 
@@ -479,7 +446,7 @@ APA-style general templates: `references/reporting_standards.md`.
 
 ---
 
-## Bundled Resources
+## References
 
 ### references/
 
@@ -493,16 +460,6 @@ APA-style general templates: `references/reporting_standards.md`.
 | [bayesian_statistics.md](references/bayesian_statistics.md) | Priors, hierarchical Bayes, diagnostics |
 | [reporting_standards.md](references/reporting_standards.md) | Complete reporting standards and templates |
 
-### scripts/
-
-| File | Contents |
-|---|---|
-| `assumption_checks.py` | Normality, IQR outliers, and optional Levene variance check on a supplied column |
-| `glm_diagnostics.py` | Fit an additive logistic GLM on a user-owned table; export OR, intervals, and calibration JSON |
-
-
----
-
 ## Related Skills
 
 | Need | Go to |
@@ -515,20 +472,5 @@ APA-style general templates: `references/reporting_standards.md`.
 | Write-up | `results-reporting` / `model-card` |
 | Baselines ladder | `baseline-models` |
 | Validation design | `validation-design` |
-
----
-
-## Quick Command Card
-
-```bash
-python /path/to/statistical-modeling/scripts/assumption_checks.py \
-  --input observations.csv --value-col margin --group-col venue \
-  --out assumptions.json
-
-python /path/to/statistical-modeling/scripts/glm_diagnostics.py \
-  --input model_frame.csv \
-  --formula "won ~ is_home + rating_diff + rest_diff" \
-  --out glm_report.json
-```
 
 ---

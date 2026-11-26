@@ -6,7 +6,7 @@ description: >
   time-aware evaluation when explaining what drives a model and where it fails.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Model Interpretation (Sports)
@@ -52,14 +52,13 @@ Do **not** use when:
 
 ## Installation
 
-The bundled helpers require pandas and NumPy:
+Slice errors in the user's environment:
 
 ```bash
-python -m pip install pandas numpy
+python -m pip install pandas numpy pyarrow
 ```
 
-Parquet input also needs `pyarrow` or `fastparquet`. Inputs may be CSV,
-Parquet, JSON, JSONL, or NDJSON.
+Inputs are the user's CSV, Parquet, or JSON.
 
 ---
 
@@ -117,29 +116,11 @@ which failures suggest data repair, a new feature, drift handling, or no action.
 
 ---
 
-## Standalone Helpers
+## Error tables
 
-```bash
-python /path/to/model-interpretation/scripts/slice_errors.py \
-  --input held-out-predictions.csv --slice-cols fold --out slices.json
+Expect `y_true`, a probability column such as `logistic_probability` or `p_pred`, and a `fold` or `season` label from the prediction table. Map other names explicitly. Keep team, opponent, and home/away columns when those slices are required. Check that outcomes are binary and probabilities lie in `[0, 1]`. For a symmetric team-game table, filter to one row per event before ranking misses.
 
-python /path/to/model-interpretation/scripts/largest_misses.py \
-  --input held-out-predictions.csv \
-  --columns fold,source_row --top 25
-```
-
-The defaults (`y_true`, `logistic_probability`, and the `fold` slice) match the
-prediction artifact emitted by `predictive-modeling/scripts/run_fold_table.py`.
-Use `--actual-col`, `--prob-col`, and `--slice-cols` for another candidate or
-schema. Preserve context fields with the predictive helper's `--id-cols` if
-you need team, opponent, or home/away slices. The scripts validate binary
-outcomes and probability bounds. For symmetric team-game artifacts, add
-`--filter-col is_home --filter-value 1` so each event is evaluated once.
-
-These helpers cover probability-error tables only. Coefficient scaling,
-permutation importance, causal interpretation, margin residuals, and model
-stability require the external model artifacts and methods described below;
-the bundled scripts do not compute them.
+Probability-error tables do not produce coefficient scaling, permutation importance, causal claims, or margin residuals. Those need the fitted model and the methods below.
 
 ---
 
@@ -236,30 +217,23 @@ Done means:
 
 ## Worked Example
 
-**NFL form logistic, 2018–2024 walk-forward**
+**NFL form logistic, 2021–2025 walk-forward**
 
 1. Mean log-loss beats constant → proceed
 2. Leakage CLEAN
-3. Slice by season: check if 2020 or one year carries it
+3. Slice by season: check whether one season carries the result
 4. Slice home/away: both should beat constant if the model is real
-5. Tails: run `calibration-check/scripts/calibration_report.py` and inspect bin counts
-6. Largest misses: road dogs that won, or huge favorites that lost
-7. Writeup: “beats constant on most folds; weak on early-season low-sample rows”
+5. Largest misses: road dogs that won, or huge favorites that lost
+6. Writeup: “beats constant on most folds; weak on early-season low-sample rows”
 
 ---
 
-## Bundled Resources
+## References
 
 ### references/
 - [interpretation_methods.md](references/interpretation_methods.md)
 - [slice_guide.md](references/slice_guide.md)
 - [miss_taxonomy.md](references/miss_taxonomy.md)
-
-### scripts/
-- `slice_errors.py`
-- `largest_misses.py`
-
----
 
 ## Related Skills
 
@@ -269,18 +243,5 @@ Done means:
 - `predictive-modeling`
 - `statistical-modeling`
 - `experiment-log`
-
----
-
-## Quick Command Card
-
-```bash
-python /path/to/model-interpretation/scripts/slice_errors.py \
-  --input held-out-predictions.csv --slice-cols fold --out slices.json
-
-python /path/to/model-interpretation/scripts/largest_misses.py \
-  --input held-out-predictions.csv \
-  --columns fold,source_row --top 25
-```
 
 ---

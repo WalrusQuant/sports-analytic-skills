@@ -6,7 +6,7 @@ description: >
   and leakage red flags. Use before feature engineering or model fitting.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # EDA for Sports Data
@@ -79,6 +79,8 @@ If grain is wrong or keys are unexplained duplicates, stop before modeling.
 | Play/event | one event | `game_id, event_id` | using post-event fields at pre-event T |
 | Pitch | one pitch | `game_pk, pitch_no` | unstable event ordering |
 
+These checks use the team-game panel from `data-sources`: `team`, `opponent`, `game_id`, `season`, `game_date`, `event_time`, `is_home`, `won`, and `point_diff`.
+
 ```python
 key = ["game_id", "team"]
 dupes = panel.duplicated(key, keep=False)
@@ -94,8 +96,11 @@ repairs. A normal team-game panel usually has two rows per game.
 ## Coverage and entity balance
 
 ```python
+import pandas as pd
+
+panel["game_date"] = pd.to_datetime(panel["game_date"])
 coverage = (
-    panel.groupby(["season", "week"], dropna=False)
+    panel.groupby("season", dropna=False)
     .agg(rows=("game_id", "size"), games=("game_id", "nunique"),
          teams=("team", "nunique"))
     .reset_index()
@@ -109,15 +114,7 @@ the tail of an active season. Imbalance can be real—byes, playoffs, injuries,
 promotion/relegation—but can also reveal missing loads. Use stable IDs and a
 documented crosswalk for relocations and renames.
 
-The portable coverage helper expects `season`, `week`, `game_id`, and `team`.
-Map alternate schemas explicitly:
-
-```bash
-python /path/to/eda-sports/scripts/coverage_table.py --input games.csv
-python /path/to/eda-sports/scripts/coverage_table.py \
-  --input games.parquet --season-col year --period-col round \
-  --game-col event_id --team-col club_id
-```
+sportsleader-data `games` rows are one game each, with `season`, `game_id`, `game_date`, `home_team_id`, and `away_team_id`. Team files are one row per team per game, with `team_id` and `game_date` (a date, not a datetime) and no `start_time`. There is no `week` column. The panel in `data-sources` renames `team_id` to `team` and joins `games.start_time` as `event_time`.
 
 ## Panel base rates
 
@@ -139,7 +136,7 @@ alter this identity. Explain them rather than forcing the expected value.
 Overall rates can hide an era or provider boundary:
 
 ```python
-critical = [c for c in ["event_time", "points_for", "points_against", "won"] if c in panel]
+critical = [c for c in ["event_time", "score", "opponent_score", "won", "point_diff"] if c in panel]
 print(panel[critical].isna().mean().sort_values(ascending=False))
 print(panel.groupby("season")[critical].agg(lambda s: s.isna().mean()))
 ```
@@ -193,28 +190,11 @@ print("present suspects:", sorted(suspects.intersection(panel.columns)))
 Presence is not failure; use as a pre-event feature is. Keep candidate features
 separate and send them through `feature-rules` and `leakage-audit`.
 
-## Automated panel report
+## Panel report
 
-`panel_report.py` reads user-owned CSV, Parquet, JSON, JSONL, or NDJSON and
-expects `season`, `game_id`, `team`, `is_home`, and binary `won`, with mapping
-flags. Install `pandas`; Parquet also needs `pyarrow` or `fastparquet`.
+Read the user's CSV, Parquet, or JSON. For a team-game table derived from sportsleader-data `team_game_stats` or `team_box_scores`, expect `season`, `game_id`, `team_id`, `is_home`, `score`, and `opponent_score`. Derive `won` only after deciding how ties are labeled. `games` is one row per contest; do not require two team rows there.
 
-```bash
-python /path/to/eda-sports/scripts/panel_report.py \
-  --input games.parquet --out data/eda.json
-python /path/to/eda-sports/scripts/panel_report.py \
-  --input games.csv --out data/eda.json --season-col year \
-  --game-col event_id --team-col club --home-col home_flag --outcome-col win
-```
-
-Do not guess missing columns. Stop or create an explicit reviewed mapping.
-The report uses only the documented EDA decisions: `GO` (status 0), `REPAIR`
-(status 1), or `STOP` (status 2). A game without exactly two distinct team rows
-and exactly one home row, a null natural key, or a duplicate `(game, team)` key
-is structurally incompatible with this helper and returns `STOP`. Missing
-outcomes return `REPAIR`; they may be legitimate future events, but must be
-separated from completed-event analysis. `GO` still requires the separate time
-and leakage reviews described above.
+Do not guess missing columns. Stop or write an explicit reviewed mapping. Issue `GO`, `REPAIR`, or `STOP`. A team-game table with a null natural key, a duplicate `(game_id, team_id)`, or a completed game that does not have exactly two team rows and exactly one home row is `STOP`. Missing outcomes are `REPAIR`: upcoming `games` rows have no score and must be separated from completed-event analysis. `GO` still requires the time and leakage reviews above.
 
 ## Red flags
 
@@ -251,8 +231,7 @@ Reasons and next action:
 
 ## Worked example
 
-For a two-season pre-game team win project: declare `(game_id, team)`; run both
-helpers; confirm two rows per completed game and expected period coverage;
+For a two-season pre-game team win project: declare `(game_id, team_id)` on a team file; confirm two rows per completed game and expected season coverage;
 measure home win rate on home rows; separate future scheduled games from failed
 result joins; mark current score/result fields target-only; record era/provider
 breaks; and issue `GO` only for the supported population.
@@ -266,5 +245,3 @@ breaks; and issue `GO` only for the supported population.
 5. Use `references/eda_checklist.md` for completeness,
    `references/grain_guide.md` for grain/key questions, and
    `references/red_flags.md` for diagnosis.
-6. Run `scripts/coverage_table.py` for coverage and
-   `scripts/panel_report.py` for a machine-readable team-game summary.

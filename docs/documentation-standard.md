@@ -1,56 +1,40 @@
 # Documentation standard
 
-Public docs help a stranger use the standalone sports modeling skills. The
-optional toolkit is a secondary integration path.
+Public docs help a stranger use the skills. Data is sportsleader-data. This repository is markdown.
 
 ## Public front door
 
-- **GitHub Pages marketing site:** `docs/index.html` + `docs/docs.html`
-  served at https://walrusquant.github.io/sports-analytic-skills/
-- **README** remains the repo product page, not a project tracker.
+- **GitHub Pages:** `docs/index.html` and `docs/docs.html` at https://walrusquant.github.io/sports-analytic-skills/
+- **README** is the repository product page.
 
-It should include:
+The README should include:
 
-1. What the library is
-2. Skill-only install + first prompts
-3. Skill inventory with jobs and artifact expectations
-4. Optional bridge/toolkit overview
+1. What the pack is
+2. Install and first prompts
+3. The 20-skill catalog
+4. How sportsleader-data is reached
 5. Design rules
-6. Links to deeper docs
-7. License
+6. License and the research disclaimer
 
-It should **not** include:
-
-- personal status diaries
-- private tracker IDs
-- “done / next / blocked” project management tables
-- chat-process language
+It should not include personal status notes or private tracker ids.
 
 ## Deep docs
 
 | Doc | Job |
 |---|---|
 | `README.md` | Public orientation |
-| `ARCHITECTURE.md` | System design |
 | `CONTRIBUTING.md` | Contribution and quality gates |
-| `docs/getting-started.md` | Install/use |
-| `docs/skill-authoring.md` | How to write deep skills |
-| `docs/taxonomy.md` | Domains and skill IDs |
-| `docs/data-ecosystem.md` | Public sports data sources |
-| `docs/environment.md` | Runtime deps |
-| `docs/roadmap.md` | Sequencing for depth expansion |
+| `docs/getting-started.md` | Install and first data prompt |
+| `docs/skill-authoring.md` | How to write a skill |
+| `docs/taxonomy.md` | Domains and skill ids |
+| `docs/product-charter.md` | Scope |
+| `docs/agent-runbook.md` | Example prompts |
+| `docs/roadmap.md` | What comes next |
+| `references/prior-art.md` | Standards and the data repos |
 
 ## Writing style
 
-- Direct, technical
-- Sports modeling language
-- Prefer decision tables and code over slogans
-- Short sections
+- Direct and technical
+- Decision tables over slogans
+- Name datasets only as they appear in the sportsleader-data manifest
 - Write for strangers and agents
-
-## Skill doc minimum
-
-See `docs/skill-authoring.md`. Each installed skill must preserve the complete
-decision-changing operator guidance for its job, whether that guidance lives in
-`SKILL.md` or explicitly routed references. Length alone does not prove quality,
-but a large unexplained deletion is a review failure, not an optimization.

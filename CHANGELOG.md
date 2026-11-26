@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased
+## 1.0.0 — 2026-11-26
+
+### Breaking: markdown-only skill pack
+
+- Removed the `sports_ds` Python toolkit (`src/sports_ds`), its CLI and pipelines, `tests/`, `pyproject.toml`, `requirements/`, repository `scripts/`, and the Python workflows `ci.yml` and `live-data.yml`.
+- Removed every bundled skill program and the skills `nflreadpy`, `pybaseball`, `sportsdataverse-py`, and `sports-ds-bridge`.
+- sportsleader-data is the data source: public Parquet for MLB, NBA, NFL, NHL, college football, and men's college basketball, listed in the manifest and readable through the sports-leader connector.
+- Twenty skills remain. Each `SKILL.md` is `metadata.version` 1.0.0. `plugin.json` is 1.0.0.
+- `LICENSE` is plain MIT. The project disclaimer now lives in the README.
+
+## Earlier notes (never released)
+
+The notes below were on main and describe the toolkit 1.0.0 removes. They did not ship as their own release.
 
 ### Toolkit correctness
 

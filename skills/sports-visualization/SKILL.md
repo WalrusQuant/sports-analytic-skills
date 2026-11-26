@@ -6,7 +6,7 @@ description: >
   walk-forward metric comparisons. Use for exploration and communication.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Sports Visualization
@@ -114,7 +114,7 @@ zero.
 Title: <quantity> by <comparison> — <sport/competition>, <period>
 Subtitle/caption: n=<games/events/rows>; grain=<grain>; <metric definition>;
 baseline=<reference>; uncertainty=<method or unknown>; exclusions=<important filters>.
-Source: <artifact>; reproduce: <script/command>.
+Source: <artifact>; reproduce: <command the user can rerun>.
 ```
 
 Use descriptive titles such as “Held-out log-loss by season” rather than
@@ -157,48 +157,20 @@ bounded by the observed population.
 - cropped axes used to magnify small home-field changes;
 - image exports with no source data or command.
 
-## Standalone helpers
+## Plots from user tables
 
-Install `pandas` and `matplotlib`; Parquet also needs `pyarrow` or `fastparquet`.
-The table helpers accept user-owned CSV, Parquet, JSON, JSONL, or NDJSON.
+Install `pandas` and `matplotlib`. Parquet also needs `pyarrow`.
 
-For a team-game panel with `is_home` and `point_diff`:
+For team-game margins, derive `point_diff` as `score - opponent_score` on sportsleader-data team rows and plot home rows only. For home win rate, drop rows without a season and a resolved outcome, label each season's eligible home-row denominator, use a 0-to-1 scale, and show 95% Wilson intervals. Those intervals treat eligible games as Bernoulli observations and do not account for season or team dependence.
 
-```bash
-python <path-to-sports-visualization>/scripts/plot_home_margin_hist.py \
-  --input games.csv --out home_margin.png
+A fold chart needs one row per fold, a fold label, a held-out denominator, and candidate and baseline metrics. Reject duplicate fold labels and missing or nonpositive denominators. The chart cannot prove the two metrics came from identical rows. Check that before plotting, and say when sampling uncertainty is unavailable.
+
+```python
+import pandas as pd
+home = pd.read_parquet("team_games.parquet")
+home = home[home["is_home"] & home["score"].notna()]
+rate = home.assign(won=home["score"] > home["opponent_score"]).groupby("season")["won"].mean()
 ```
-
-For a panel with `season`, `is_home`, and binary `won`:
-
-```bash
-python <path-to-sports-visualization>/scripts/plot_home_win_rate.py \
-  --input games.parquet --out home_rate.png
-```
-
-Column flags map alternate schemas. The home-win helper drops rows without an
-observed season/outcome, labels each season's eligible home-row denominator,
-uses a 0-to-1 rate scale, and displays 95% Wilson intervals. Those intervals
-treat eligible games as Bernoulli observations and do not account for broader
-season/team dependence.
-
-For a JSON report containing a `folds` array, each row needs an explicit fold
-label, held-out denominator (`n_test` by default), and candidate and baseline
-metric fields:
-
-```bash
-python <path-to-sports-visualization>/scripts/plot_walkforward_metrics.py \
-  --json metrics.json \
-  --fold-col fold \
-  --metric logistic_log_loss \
-  --baseline constant_log_loss \
-  --out comparison.png
-```
-
-The helper rejects duplicate fold labels and missing/nonpositive denominators,
-but cannot verify that the two metric columns came from identical rows or
-derive sampling uncertainty from aggregate scores. Perform the row-identity
-check before plotting; its default title labels uncertainty unavailable.
 
 ## Worked examples
 
@@ -232,6 +204,3 @@ method, important exclusions, one bounded interpretation, and remaining limits.
   the visual form for a sports question.
 - [`references/honest_labels.md`](references/honest_labels.md) — read when writing
   titles, captions, denominators, and uncertainty notes.
-- `scripts/plot_home_margin_hist.py` — standalone home-margin distribution plot.
-- `scripts/plot_home_win_rate.py` — standalone home-win-rate plot.
-- `scripts/plot_walkforward_metrics.py` — standalone fold comparison plot.

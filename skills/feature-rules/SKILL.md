@@ -1,8 +1,9 @@
 ---
 name: feature-rules
 description: Define, review, and document point-in-time legal sports-model features. Use when creating rolling form, rest, matchup, rating, roster, injury, or contextual predictors.
+license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Feature Rules
@@ -93,6 +94,8 @@ documenting the final inventory.
 
 ## Construction patterns
 
+`panel` is the team-game panel from `data-sources`.
+
 ### Shift, then aggregate
 
 ```python
@@ -145,11 +148,16 @@ current outcome fields on either side.
 ### Rest, minimum history, and priors
 
 ```python
+import pandas as pd
+
 panel = panel.sort_values(["team", "event_time", "game_id"])
-panel["rest_days"] = (
-    panel.groupby("team")["event_time"].diff().dt.total_seconds() / 86400
-)
+panel["game_date"] = pd.to_datetime(panel["game_date"])
+panel["rest_days"] = panel.groupby("team")["game_date"].diff().dt.days
 panel["pre_games_played"] = panel.groupby("team").cumcount()
+opp_hist = panel[["game_id", "team", "pre_games_played"]].rename(
+    columns={"team": "opponent", "pre_games_played": "opp_pre_games_played"}
+)
+panel = panel.merge(opp_hist, on=["game_id", "opponent"], how="left", validate="one_to_one")
 model_df = panel.loc[
     panel["pre_games_played"].ge(3)
     & panel["opp_pre_games_played"].ge(3)
@@ -195,75 +203,26 @@ assert all feature values at or before the cutoff remain unchanged.
 | zero-filled early form | invented history | explicit prior/threshold |
 | shifted but late-published source | source remains illegal | publication-time policy |
 
-## Standalone helpers
+## Build a team-game feature table
 
-The helpers read user-owned CSV, Parquet, JSON, JSONL, or NDJSON and require
-`pandas`. Candidate features are explicit; there is no hidden feature list.
+Start from the team-game panel in `data-sources` (`team`, `opponent`, `game_id`, `event_time`, `game_date`, `is_home`, `won`, `point_diff`). Candidate features are explicit; there is no hidden feature list.
 
-### Build a portable team-game feature table
+Sort by `team`, `event_time`, and `game_id`, then `shift(1)` before any rolling or expanding form. Rest days use `pd.to_datetime(game_date)` before `.dt`. Opponent values come from the opponent's own pre-event row joined on `game_id`. Current outcomes remain labels only. This does **not** replace `leakage-audit`.
 
-From a doubled team-game panel (exactly two rows per `game_id`), build shifted
-pre-game form features and opponent differentials without freehand pandas:
-
-```bash
-python /path/to/feature-rules/scripts/build_team_game_features.py \
-  --input team_games.parquet \
-  --out features.csv \
-  --manifest-out feature_manifest.json
-```
-
-Defaults expect columns `game_id`, `team`, `opponent`, `is_home`, `won`,
-`point_diff`, and sortable `gameday` (plus `season` when present). Generated
-modeling defaults:
+Useful differentials when the inputs exist:
 
 - `is_home`
-- `feature_win_pct_diff`
-- `feature_diff_diff`
-- `feature_rest_diff` (when dates parse)
+- prior win-rate differential
+- prior point-differential differential
+- rest-day differential, from `game_date`
 
-All form fields use `shift(1)` before aggregation. Opponent values come from the
-opponent's own pre-event row joined on `game_id`. Current outcomes remain labels
-only. This does **not** replace `leakage-audit`.
+### Feature catalog
 
-Hand off next:
-
-```bash
-python /path/to/leakage-audit/scripts/audit_pregame_features.py \
-  --input features.csv --target won \
-  --features is_home,feature_win_pct_diff,feature_diff_diff \
-  --entity-col team --time-col gameday --out leakage.json
-
-python /path/to/baseline-models/scripts/run_baselines.py \
-  --input features.csv --target won --split-col season \
-  --features is_home,feature_win_pct_diff,feature_diff_diff \
-  --min-train-groups 1 \
-  --out baseline-folds.json \
-  --predictions-out baseline-predictions.csv
-```
-
-### Preview and catalog helpers
-
-```bash
-python /path/to/feature-rules/scripts/feature_preview.py \
-  --input features.csv --features pre_win_rate,rest_days,rating_diff \
-  --context season,event_id,team --rows 12
-
-python /path/to/feature-rules/scripts/legality_report.py \
-  --input feature_catalog.csv --feature-col feature \
-  --available-at-col availability --out feature_legality.json
-```
-
-The legality input is a catalog with one row per feature—not a modeling matrix.
+The legality input is a catalog with one row per feature, not a modeling matrix.
 It requires a unique feature-name column and a timing classification column.
 Canonical classifications are `known_by_t`, `delayed`, `conditional`, `unknown`,
 and `post_t`; common pregame/pre-decision spelling variants are normalized.
-Use `--features` only to select named catalog rows and `--banned` to extend the
-exact forbidden-name list. Exact forbidden names or `post_t` fields return
-`ILLEGAL` and status 2. Duplicate names, missing/unrecognized classifications,
-and unresolved timing return `REVIEW REQUIRED` and status 1. Even an otherwise
-passing catalog remains `REVIEW REQUIRED`, because strings cannot prove
-timestamps, sorting, joins, shifts, or fold-fitting. `LEGAL` is issued only
-after the manual evidence review below.
+Exact forbidden names or `post_t` fields are `ILLEGAL`. Duplicate names, missing or unrecognized classifications, and unresolved timing are `REVIEW REQUIRED`. Even an otherwise complete catalog stays `REVIEW REQUIRED`, because strings cannot prove timestamps, sorting, joins, shifts, or fold-fitting. `LEGAL` is issued only after the manual evidence review below.
 
 Minimum catalog:
 
@@ -297,7 +256,7 @@ Inventory every model input, not just engineered columns.
 For pre-game team form: sort by entity/time/stable event ID; shift outcomes;
 compute expanding and rolling form; define prior or three-game threshold; join
 the opponent's shifted row; derive differences; hand-check first and midseason
-rows; perturb future outcomes; run both helpers; then complete `leakage-audit`.
+rows; perturb future outcomes; then complete `leakage-audit`.
 
 1. Declare T before construction; unknown availability is not a pass.
 2. A shift does not repair a post-T source.

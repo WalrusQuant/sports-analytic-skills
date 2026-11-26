@@ -6,7 +6,7 @@ description: >
   reproducibility. Use when asked to clean up or audit analytical presentation.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Anti-Slop Analytics
@@ -190,32 +190,9 @@ baseline on identical events; add fold sample sizes and a factual title. If the
 source metrics cannot be recovered, report the evidence as unverifiable rather
 than recreating precise values from the screenshot.
 
-When a suitable metrics JSON already contains a `folds` array, an honest
-comparison can be drawn with the standalone visualization helper:
+When a metrics JSON already contains a `folds` array, draw the comparison with `sports-visualization` and audit that figure and its JSON.
 
-```bash
-python <path-to-sports-visualization>/scripts/plot_walkforward_metrics.py \
-  --json data/metrics.json \
-  --metric logistic_log_loss \
-  --baseline constant_log_loss \
-  --out data/walkforward_log_loss.png
-```
-
-Then audit that exported artifact and its underlying JSON.
-
-## Helper
-
-Run the bundled helper by absolute path or from this skill directory:
-
-```bash
-python <path-to-anti-slop-analytics>/scripts/figure_audit_template.py \
-  --title "NBA walk-forward log-loss" \
-  --claim "Candidate improves held-out log-loss versus the locked baseline" \
-  --out data/figure_audit.md
-```
-
-The helper writes a user-owned Markdown checklist and requires no project
-package. It creates an audit scaffold; it does not decide the verdict.
+Write the audit as Markdown the user owns. A checklist does not decide the verdict.
 
 ## Output contract
 
@@ -235,4 +212,3 @@ Return:
   visual needs a named failure classification.
 - [`references/replacements.md`](references/replacements.md) — read when
   selecting the smallest honest redraw.
-- `scripts/figure_audit_template.py` — portable audit-template writer.

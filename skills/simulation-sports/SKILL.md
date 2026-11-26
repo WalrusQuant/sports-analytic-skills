@@ -6,7 +6,7 @@ description: >
   win totals, matchup distributions, and scenario analysis.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Simulation (Sports)
@@ -50,13 +50,11 @@ Do **not** use when:
 
 ## Installation
 
-The bundled simulator requires pandas and NumPy:
+Simulate in the user's environment:
 
 ```bash
-python -m pip install pandas numpy
+python -m pip install pandas numpy pyarrow
 ```
-
-Parquet input also needs `pyarrow` or `fastparquet`.
 
 ---
 
@@ -103,32 +101,15 @@ If a rating artifact must be converted, document the scale and whether home
 advantage is already included. Prefer a probability column whose calibration
 has been evaluated on forward holdouts.
 
-## Runnable Schedule-Win Simulator
+## Schedule-win simulation
 
-The helper expects one row per simulated event after filtering, with a
-pre-event win probability for the focal team:
+Expect one row per simulated event after filtering, with a pre-event win probability for the focal team:
 
 ```text
-season,game_id,is_home,team,opponent,win_probability
+season,game_id,is_home,team_id,opponent_id,win_probability
 ```
 
-```bash
-python /path/to/simulation-sports/scripts/season_win_sim.py \
-  --input schedule_probabilities.parquet \
-  --season 2024 --n-sims 5000 --seed 7 --threshold 10 \
-  --out season_win_sim_2024.json
-```
-
-It filters to `is_home == 1`, requires unique `game_id`, simulates binary
-outcomes from the supplied probabilities, aggregates participant wins across
-those rows, and writes mean and central quantiles plus optional threshold
-probabilities. It does **not** add wins from completed games omitted from the
-input. Therefore its output is a full-season total only when the supplied rows
-cover every game in that season. For a remaining-schedule projection, add each
-team's known completed wins outside this helper and label that external step.
-The JSON makes this scope explicit in `win_count_scope` and in canonical fields
-such as `mean_wins_in_supplied_games`; ambiguous legacy aliases remain only for
-backward compatibility.
+Filter to one perspective per game, require unique `game_id`, draw binary outcomes from the supplied probabilities, and aggregate wins. Write the mean, central quantiles, and any predeclared threshold probabilities. Do not add wins from completed games left out of the input. The result is a full-season total only when the rows cover every game in that season. For a remaining schedule, add each team's known completed wins outside the draw and label that step.
 
 ### Game-level only
 
@@ -140,7 +121,7 @@ rows from a symmetric panel as independent games.
 ## Design Choices
 
 ### Independence
-Default script treats games as conditionally independent given pre-game probs.
+The default draw treats games as conditionally independent given pre-game probabilities.
 That understates variance if injuries/momentum couple games. **State the shortcut.**
 
 ### Updating ratings inside the season sim
@@ -215,34 +196,19 @@ Done means:
 
 ## Worked Example
 
-```bash
-python /path/to/simulation-sports/scripts/season_win_sim.py \
-  --input schedule_probabilities.parquet \
-  --season 2024 --n-sims 5000 --seed 7 --threshold 10 \
-  --out season_win_sim_2024.json
-```
-
 Report: “Independent-game Monte Carlo from held-out-calibrated pre-event
 probabilities; mean and central quantiles by participant; simulation uncertainty
 does not include all roster, injury, schedule, or model uncertainty.”
 
 ---
 
-## Bundled Resources
+## References
 
 ### references/
 | File | Contents |
 |---|---|
 | [simulation_assumptions.md](references/simulation_assumptions.md) | assumption checklist |
 | [sensitivity.md](references/sensitivity.md) | what to stress-test |
-
-### scripts/
-| File | Contents |
-|---|---|
-| `season_win_sim.py` | Monte Carlo participant win counts across supplied pre-event probability rows |
-
-
----
 
 ## Related Skills
 
@@ -253,16 +219,5 @@ does not include all roster, injury, schedule, or model uncertainty.”
 | Calibration | `calibration-check` |
 | Reporting | `results-reporting` |
 | Rating construction | `ratings-strength-models` |
-
----
-
-## Quick Command Card
-
-```bash
-python /path/to/simulation-sports/scripts/season_win_sim.py \
-  --input schedule_probabilities.parquet \
-  --season 2024 --n-sims 5000 --seed 7 --threshold 10 \
-  --out season_win_sim_2024.json
-```
 
 ---

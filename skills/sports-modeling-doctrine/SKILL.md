@@ -6,7 +6,7 @@ description: >
   algorithms. Use at the start of any sports modeling project.
 license: MIT
 metadata:
-  version: "0.12.0"
+  version: "1.0.0"
 ---
 
 # Sports Modeling Doctrine
@@ -34,8 +34,7 @@ Use it when starting or reframing a sports analysis, deciding what “good” me
 reviewing whether a result is evaluable, or preventing exploratory work from
 quietly becoming a predictive claim.
 
-After the charter, use only the relevant specialist skills: a public-source
-loader for acquisition, `eda-sports` for data understanding, `feature-rules` for
+After the charter, use only the relevant specialist skills: `data-sources` for sportsleader-data, `eda-sports` for data understanding, `feature-rules` for
 time-safe predictors, `baseline-models` for reference models, and the relevant
 statistical, predictive, rating, simulation, or validation skill.
 
@@ -173,7 +172,7 @@ required_artifacts
 
 ```text
 Question: Do venue and shifted form improve P(team wins)?
-Sport/population: NFL completed regular-season games, 2018-2024
+Sport/population: NFL completed regular-season games, 2021-2025
 Grain: team-game; two paired rows per contest
 Decision time: scheduled kickoff
 Target: won; ties reported separately
@@ -228,15 +227,9 @@ additional compact NFL, NBA, and MLB patterns.
 - declaring victory because a complex model beats the null but not a strong simple baseline;
 - producing probabilities without a calibration plan.
 
-## Helper
+## Charter template
 
-```bash
-python <path-to-sports-modeling-doctrine>/scripts/print_charter_template.py \
-  --out data/modeling_charter.md
-```
-
-Fill the user-owned template before data acquisition or fitting. The helper
-does not choose the question, baseline, or acceptance rule.
+Fill a user-owned charter before data acquisition or fitting. The template does not choose the question, baseline, or acceptance rule.
 
 ## Operating and handoff rules
 
@@ -265,4 +258,3 @@ Do not return an algorithm recommendation without this contract.
   acceptance, failure, and stopping rules.
 - [`references/skill_path.md`](references/skill_path.md) — read when choosing
   optional specialist handoffs after the charter.
-- `scripts/print_charter_template.py` — portable charter writer.
